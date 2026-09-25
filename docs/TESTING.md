@@ -1,0 +1,52 @@
+# Testing and Verification
+
+## Backend
+
+```bash
+uv run python scripts/verify_falcon_api.py
+```
+
+Checks route/source contracts, stable envelopes, JSON-native serialization, import boundaries and bounded endpoint behavior.
+
+```bash
+uv run python scripts/verify_asgi_api.py
+uv run python scripts/verify_redis_store.py
+```
+
+These cover the ASGI middleware stack and Redis/in-memory fallback behavior.
+
+## Frontend
+
+```bash
+cd frontend
+npm run check
+npm run build
+```
+
+`npm run check` must complete without errors or warnings. `npm run build` creates the static SPA in `frontend/build/`.
+
+## Database
+
+```bash
+uv run python scripts/test_sqlite_adapter.py
+uv run python scripts/test_new_endpoints.py
+```
+
+These require a populated SQLite database configured through `PRICES_DB_PATH` or the default `data/prices.db`.
+
+## Load testing
+
+```bash
+uv run python scripts/benchmark_falcon_api.py
+uv run python scripts/benchmark_concurrent_api.py --concurrency 100
+```
+
+Use a disposable test database/snapshot. Do not benchmark against a production database while it is being rebuilt.
+
+## End-to-end manual check
+
+1. Start Falcon with `scripts/run_falcon_server.py`.
+2. Build/preview the Svelte application.
+3. Verify inventory loads and Gurmar is selected by default.
+4. Exercise all five views, filters, search, themes and error states.
+5. Stop and restart the API to confirm no frontend state is required for recovery.

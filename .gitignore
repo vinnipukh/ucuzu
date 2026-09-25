@@ -1,0 +1,44 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!frontend/.env.example
+*.pem
+*.key
+*.crt
+*.p12
+
+# Runtime data and databases
+/data/*
+!/data/README.md
+!/data/.gitkeep
+*.db
+*.db-wal
+*.db-shm
+/logs/
+
+# Node / Svelte
+node_modules/
+frontend/.svelte-kit/
+frontend/build/
+frontend/.vite/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local browser/design artifacts
+browser-artifacts/
