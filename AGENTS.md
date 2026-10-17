@@ -1,6 +1,8 @@
 # AGENTS.md
 
-Instructions for coding agents working in the Inflation Study Dashboard repository.
+Instructions for coding agents working in the Inflation Study Dashboard repository. Documentation index: [docs/README.md](docs/README.md).
+
+Known code defects are listed in [docs/ARCHITECTURE.md#known-issues](docs/ARCHITECTURE.md#known-issues); do not assume documented behaviour that is listed there.
 
 ## Repository boundary
 
@@ -9,10 +11,12 @@ This repository owns the web application only:
 | Path | Role |
 |---|---|
 | `frontend/` | Svelte 5 / SvelteKit production SPA |
-| `inflation_dashboard/` | Falcon API, domain/application logic, SQLite and CSV adapters |
+| `inflation_dashboard/` | Falcon API, domain/application logic, SQLite adapter |
 | `scripts/` | API server, database build/migration, verification and benchmarks |
 | `data/` | Committed scraper output (`raw/`, `prices_json/`, `inflation/`); no scraper source code belongs here |
 | `docs/` | Web architecture, API contract, database and deployment documentation |
+
+Source layout and request flow: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Scrapers, inflation calculators and TÜİK methodology live in the separate data repository [`vinnipukh/inflationstudymirror`](https://github.com/vinnipukh/inflationstudymirror) (mirror of the upstream [`urazkagangunes/InflationResearchStudy`](https://github.com/urazkagangunes/InflationResearchStudy)). Their output is committed here under `data/`. Do not add their source code to this repository.
 
@@ -28,7 +32,7 @@ The API must not assume that a sibling monorepo exists; everything it needs is i
 - `PRICES_DB_PATH` selects the runtime SQLite database; default: `data/prices.db`.
 - `EPEYKATFG_MONTHLY_CSV` selects the monthly inflation artifact; default: `data/inflation/EpeyKatfg/monthly_inflation.csv`.
 
-See `docs/DATA_CONTRACT.md` and `docs/DATABASE.md`.
+The API serves only from the SQLite database; a missing database gives HTTP 503 `database_unavailable`. Details: [docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md) (data layout, `data_files.py`) and [docs/DATABASE.md](docs/DATABASE.md) (schema, build). Environment variables: [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ## Architecture boundaries
 
@@ -39,27 +43,28 @@ See `docs/DATA_CONTRACT.md` and `docs/DATABASE.md`.
 - Do not add legacy Streamlit dependencies or entrypoints.
 - Keep TypeScript types and `docs/FALCON_API_CONTRACT.md` synchronized with endpoint changes.
 
+Full boundary rules and conventions: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Development
+
+Same commands as the summary in [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md), which explains each step:
 
 ```bash
 uv sync --extra dev
+uv run python scripts/data_files.py join
 uv run python scripts/build_database.py
 uv run pytest
 uv run python scripts/verify_falcon_api.py
-cd frontend && npm install && npm run check && npm run build
-```
-
-Run the API and frontend as separate processes:
-
-```bash
 uv run python scripts/run_falcon_server.py --engine granian --port 8000
-cd frontend && npm run dev
+cd frontend && npm install && npm run dev
 ```
+
+Run the API and the frontend dev server as separate processes. Before committing: `uv run pytest` and `cd frontend && npm run check && npm run build`.
 
 ## Change policy
 
 - Preserve the `{data, meta, errors}` response envelope.
 - Preserve read-only SQLite production behavior unless a migration is explicitly designed.
 - Changes to data or the database build follow the **Data rules** above.
-- Update API, database, configuration and user documentation together with behavior changes.
+- Update API, database, configuration and user documentation together with behavior changes; the per-change checklists are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 - Historical Streamlit/SQLite planning material belongs under `docs/archive/`; do not present it as current setup guidance.

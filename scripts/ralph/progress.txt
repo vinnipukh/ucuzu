@@ -254,3 +254,14 @@ Spec: tasks/prd-documentation-overhaul.md
 - **Learnings for future iterations:**
   - `npm run build` always prints a chunk-size warning (ECharts bundle); it is not new.
 ---
+
+## 2026-10-17 - US-018 (deferred)
+- Skipped at the user's request: needs a browser check (no dev-browser skill). passes=false, reason in prd.json notes.
+---
+
+## 2026-10-17 - US-019
+- AGENTS.md: CSV adapter removed from the boundary table; Known-issues pointer added near the top; each rule section links its owning doc (ARCHITECTURE, DATA_CONTRACT, DATABASE, CONFIGURATION, DEVELOPMENT); Development block replaced with the exact 7-line GETTING-STARTED command summary (diff-checked, includes `data_files.py join`); data-repo sentence matches README (diff-checked). No INFLATION_DATA_ROOT or CSV fallback mentions.
+- Files: AGENTS.md
+- **Learnings for future iterations:**
+  - If the GETTING-STARTED command summary changes, AGENTS.md and the README quickstart must change with it.
+---

@@ -438,7 +438,7 @@
       ],
       "priority": 26,
       "passes": false,
-      "notes": ""
+      "notes": "Deferred by the user (2026-10-17): its acceptance includes a browser check and the dev-browser skill is not installed. Not started; no @component blocks added. Note for later: ProductExplorer still has a 'CSV-only fallback' effect that re-queries /api/history when /api/product fails."
     },
     {
       "id": "US-019",
@@ -453,7 +453,7 @@
         "Typecheck passes"
       ],
       "priority": 27,
-      "passes": false,
+      "passes": true,
       "notes": ""
     }
   ]
