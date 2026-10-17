@@ -152,3 +152,13 @@ Spec: tasks/prd-documentation-overhaul.md
   - GitHub heading slugs drop `:`, backticks, `/` and `.`: "Large files: `scripts/data_files.py`" -> `#large-files-scriptsdata_filespy`.
   - The data-update checklist is delegated to DEVELOPMENT.md (US-006 must include it).
 ---
+
+## 2026-10-17 - US-008
+- Rewrote `docs/FALCON_API_CONTRACT.md` §1–5 from live TestClient responses against the real DB: transport/CORS (preflight headers observed), envelope, `{code, message}` errors with context on envelope `meta`, error-code table matching a grep of `inflation_dashboard/api/` (invalid_filter, not_found, method_not_allowed, http_error, server_error fixed message, database_unavailable), common filters (DEFAULT_RETAILERS Gurmar/Vakko/HomeGoods, all bool spellings, all_history doesn't widen dates), meta warnings table, every endpoint with real examples (inventory ISO datetimes + `file_count` in meta; history both modes; duplicate `retailer_averages`; movers `limit`/`mover_count` 400 not clamped; coverage `skipped_files`; search `limit` 400 `invalid_filter`; product detail example + `history` array + product_name ignored when product_id given; monthly columns incl. pct_*), new §5 Caching & compression. Last Updated 2026-10-17. Old §5–7 renumbered to §6–8 (TypeScript/client left for US-009).
+- Files: docs/FALCON_API_CONTRACT.md
+- **Learnings for future iterations:**
+  - The real DB has the console mangle Turkish text on Windows; write sample JSON to a file with `ensure_ascii=False` instead of printing.
+  - Bash heredocs with long markdown can fail in Git Bash; write big content with the Write tool.
+  - With SQLite, `skipped_files` is always `[]` and the "selected files skipped" warning cannot occur.
+  - Product detail `history[].date` is a plain date and `source_file` is `""` (differs from /api/history).
+---

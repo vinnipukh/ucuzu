@@ -1,39 +1,30 @@
 # Falcon REST API Contract & Specification
 
-**Target Frontend:** Svelte 5 / SvelteKit Frontend  
-**API Backend:** Falcon WSGI Application (`inflation_dashboard/api/falcon_app.py`)  
-**Specification Version:** 2.0.0  
-**Last Updated:** 2026-09-24  
-**Status:** Active / Regression-Verified  
+**Target Frontend:** Svelte 5 / SvelteKit SPA (`frontend/`)  
+**API Backend:** Falcon WSGI application (`inflation_dashboard/api/falcon_app.py`)  
+**Specification Version:** 2.1.0  
+**Last Updated:** 2026-10-17  
+**Status:** Authoritative. [API.md](API.md) is a summary; this file wins on any difference.
 
 ---
 
-## 1. Architectural Principles & Transport Protocol
+## 1. Transport
 
-### 1.1 Transport & Media Format
-- **Protocol:** HTTP/1.1 through the WSGI deployment interface (Granian, Gunicorn or Waitress)
-- **Base URL:** Deployment-specific. The Svelte build uses `VITE_API_BASE_URL`; same-origin deployments may leave it empty and proxy `/api`.
-- **Default Content-Type:** `application/json` (UTF-8 encoded)
-- **Serialization Engine:** Fast native JSON via `orjson` on the Falcon server, with strict standard JSON compatibility (all `NaN`, `Infinity`, `NaT`, and non-compliant floating point representations are sanitized to `null` before transmission).
-- **CORS Support:** Full cross-origin access enabled via `falcon.CORSMiddleware` in `inflation_dashboard/api/falcon_app.py` (registered 2026-09-03; honors the `FALCON_CORS_ORIGINS` env var, default `*`). Preflight `OPTIONS` requests return `200 OK` with allowed headers and methods (`GET, OPTIONS`).
-
-### 1.2 Hexagonal Architecture Separation
-The API follows strict clean architecture boundaries:
-1. **Domain (`inflation_dashboard/domain/`):** Pure normalization logic, price calculations, and invariant rules. No web framework dependencies.
-2. **Adapters (`inflation_dashboard/adapters/`):** SQLite storage (`sqlite_price_repository.py`).
-3. **Application (`inflation_dashboard/application/`):** Use cases and chart specifications.
-4. **API Layer (`inflation_dashboard/api/`):** Falcon resources, request parameter parsers, JSON serialization, and error translation.
-5. **Frontend Client:** Decoupled presentation layer communicating exclusively via this HTTP contract.
-
-The repository has no compile-time dependency on the scraper/inflation repository. The SQLite database and generated inflation artifacts are supplied through the paths documented in `DATA_CONTRACT.md`.
+- **Protocol:** HTTP/1.1 through a WSGI server (Granian, Gunicorn or Waitress; see [CONFIGURATION.md](CONFIGURATION.md)). Only `GET` routes exist.
+- **Base URL:** the SPA calls same-origin `/api/...` unless `VITE_API_BASE_URL` was set at build time.
+- **Content-Type:** `application/json`, UTF-8.
+- **Serialization:** `orjson`. `NaN`, `Infinity`, `NaT` and pandas/numpy scalars are converted to JSON-native values (`null` for missing) before encoding.
+- **CORS:** `falcon.CORSMiddleware` with `FALCON_CORS_ORIGINS` (default `*`). It adds `Access-Control-Allow-Origin` to every response, including errors. Preflight `OPTIONS` returns `200` with `Access-Control-Allow-Methods: GET`, `Access-Control-Allow-Headers: *` and `Access-Control-Max-Age: 86400`. No headers are exposed (`ETag` is not readable cross-origin from JavaScript, but the browser cache still uses it).
+- **Data source:** the read-only SQLite database built by `scripts/build_database.py` (see [DATABASE.md](DATABASE.md)); `/api/epeykatfg/monthly-inflation` reads a CSV artifact (see [DATA_CONTRACT.md](DATA_CONTRACT.md)). Architecture and layer rules are in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
-## 2. Standard API Envelope
+## 2. Envelope and errors
 
-All HTTP responses from the Falcon API adhere to a uniform top-level envelope.
+### 2.1 Envelope
 
-### 2.1 Envelope Schema
+Every response body, success or error, is:
+
 ```json
 {
   "data": null,
@@ -44,450 +35,378 @@ All HTTP responses from the Falcon API adhere to a uniform top-level envelope.
 
 | Property | Type | Description |
 |---|---|---|
-| `data` | `object \| array \| null` | The primary response payload on success. `null` when a request fails with an error (e.g. HTTP 400). |
-| `meta` | `object` | Metadata including filter reflections, row counts, inventory counts, and server warnings. Always an object (empty `{}` if no metadata). |
-| `errors` | `array<ApiError>` | Array of error objects. Empty array `[]` on successful responses. Populated with code/message pairs on error. |
+| `data` | `object \| array \| null` | The payload. `null` on every error response. |
+| `meta` | `object` | Filter reflection, counts and warnings on success; error context (for example the rejected filters) on error. Always an object. |
+| `errors` | `array<{code, message}>` | Empty on success; exactly one error object on failure. |
 
-### 2.2 Error Object Schema
+The only responses without this body are `304 Not Modified` (no body) and CORS preflight `OPTIONS` (empty body).
+
+### 2.2 Error object
+
 ```json
 {
-  "code": "invalid_filter",
-  "message": "Unknown retailer: NonExistentRetailer",
-  "meta": {
-    "filters": {
-      "retailer": ["NonExistentRetailer"]
-    }
-  }
+  "data": null,
+  "meta": {"filters": {"retailer": ["NonExistentRetailer"]}},
+  "errors": [{"code": "invalid_filter", "message": "Unknown retailer: NonExistentRetailer"}]
 }
 ```
 
-| Field | Type | Description |
-|---|---|---|
-| `code` | `string` | Machine-readable error code (e.g., `invalid_filter`, `not_found`, `bad_request`). |
-| `message` | `string` | User-friendly error message, guaranteed safe for UI display (<= 160 characters). |
-| `meta` | `object` (optional) | Contextual debugging information, such as the rejected filter parameters. |
+Error objects have exactly two fields, `code` and `message`. Context goes on the envelope's `meta`, not inside the error.
 
-### 2.3 HTTP Status Codes
-| HTTP Code | Condition | Envelope Payload |
-|---|---|---|
-| `200 OK` | Successful request, even if 0 results match | `data` populated, `meta` populated, `errors: []` |
-| `400 Bad Request` | Filter validation failure, syntax error in query string | `data: null`, `meta.filters` populated, `errors: [{code, message}]` |
-| `404 Not Found` | Unknown route or specific entity not found | `data: null`, `errors: [{code: "not_found", message: "..."}]` |
-| `500 Internal Server Error` | Unexpected backend runtime exception | Standard server error envelope |
+### 2.3 Error codes and status
+
+| Status | `code` | When | `message` |
+|---|---|---|---|
+| 400 | `invalid_filter` | Any query-parameter validation failure (sections 3–4) | Names the parameter, e.g. `Invalid limit`, `Unknown retailer: X`, `Invalid date range` |
+| 404 | `not_found` | Unknown route, or `/api/product` found no product | `Product not found: <key>` for products; Falcon's description or title for routes |
+| 405 | `method_not_allowed` | A method other than `GET`/`OPTIONS` on a known route (the `Allow` header lists `GET`) | Falcon's description or title |
+| other 4xx/5xx | `http_error` | Any other `falcon.HTTPError` raised by Falcon | Falcon's description or title |
+| 500 | `server_error` | Any unhandled exception | Always the fixed string `Internal server error`; the traceback is logged server-side (logger `inflation_dashboard.api`), never sent |
+| 503 | `database_unavailable` | The configured database file is missing or 0 bytes (every endpoint except `/api/health` and `/api/epeykatfg/monthly-inflation`) | `Database not found; run scripts/build_database.py` |
+
+The handlers for 404/405/500/503 are registered in `create_app`. Messages are short and safe to show in the UI.
 
 ---
 
-## 3. Common Query Parameters
+## 3. Common filter parameters
 
-The data query endpoints (`/api/history`, `/api/retailer-averages`, `/api/movers`, `/api/coverage`) share common filter parameters handled by `parse_common_filters`.
+`/api/history`, `/api/retailer-averages`, `/api/movers` and `/api/coverage` share these parameters (`parse_common_filters` in `inflation_dashboard/api/filters.py`).
 
-| Parameter | Type | Required | Default | Validation & Behavior |
-|---|---|---|---|---|
-| `retailer` | `string` (repeatable) | No | `DEFAULT_RETAILERS` (`Markets / Gurmar`, `ClothingStores / Vakko`, `ConstructionSuppliesMarkets / yapimaks`) | Must exist in the discovered inventory. Multiple retailers are specified by repeating the parameter: `?retailer=RetailerA&retailer=RetailerB`. If an unknown retailer is passed, returns HTTP 400 with `Unknown retailer: <name>`. |
-| `start_date` | `string` (`YYYY-MM-DD`) | No | Latest 60-day window before `max_date` (bounded by `min_date`) | Must be valid ISO date string. Cannot be later than `end_date`. Returns HTTP 400 `Invalid date` or `Invalid date range`. |
-| `end_date` | `string` (`YYYY-MM-DD`) | No | `max_date` of inventory | Must be valid ISO date string. Returns HTTP 400 `Invalid date`. |
-| `max_files` | `integer` | No | `45` (`DEFAULT_MAX_FILES_PER_RETAILER`) | Must be non-negative integer. `0` disables the file cap (uncapped load). Returns HTTP 400 `Invalid max_files` if negative or non-integer. |
-| `all_history` | `boolean` | No | `false` | Accepts boolean representations: `true, 1, t, yes, on` or `false, 0, f, no, off`. When true, forces `max_files=0` and adds server warning to `meta.warnings`. |
+| Parameter | Type | Default | Validation and behaviour |
+|---|---|---|---|
+| `retailer` | `string`, repeatable | `DEFAULT_RETAILERS`: `Markets / Gurmar`, `ClothingStores / Vakko`, `HomeGoods` (those present in the inventory; if none are, the first three inventory retailers) | Every value must be an inventory retailer, else 400 `Unknown retailer: <name>`. Repeat for several: `?retailer=A&retailer=B`. |
+| `start_date` | `YYYY-MM-DD` | 60 days before the inventory `max_date`, but not before `min_date` | 400 `Invalid date` if unparseable; 400 `Invalid date range` if after `end_date`. |
+| `end_date` | `YYYY-MM-DD` | inventory `max_date` | 400 `Invalid date` if unparseable. |
+| `max_files` | integer ≥ 0 | `45` (`DEFAULT_MAX_FILES_PER_RETAILER`) | Newest N snapshot dates per retailer inside the date window. `0` means no cap. 400 `Invalid max_files` if negative or not an integer. |
+| `all_history` | boolean | `false` | Accepts `1, true, t, yes, y, on` / `0, false, f, no, n, off` (case-insensitive). `true` (or `max_files=0`) sets the effective cap to 0, reports `all_history: true` and adds a warning. It does **not** widen the date window. 400 `Invalid all_history` otherwise. |
 
-### Common Response `meta` Fields
-When common filters are evaluated, the `meta` object contains:
+### Common response `meta`
+
 ```json
 {
   "filters": {
     "selected_retailers": ["Markets / Gurmar"],
-    "start_date": "2026-07-04",
-    "end_date": "2026-09-02",
-    "max_files_per_retailer": 45,
+    "start_date": "2026-08-18",
+    "end_date": "2026-10-17",
+    "max_files_per_retailer": 2,
     "all_history": false
   },
-  "inventory_file_count": 982,
-  "selected_inventory_file_count": 45,
-  "history_row_count": 172530,
+  "inventory_file_count": 10490,
+  "selected_inventory_file_count": 2,
+  "history_row_count": 8685,
   "skipped_file_count": 0,
   "warnings": []
 }
 ```
 
+`selected_inventory_file_count` counts the source snapshots matching the filters. `skipped_file_count` is always `0` with the SQLite adapter (skipped files are a build-time concept).
+
+### Warnings (`meta.warnings`)
+
+| Warning | Added when |
+|---|---|
+| `all_history requested; history load is uncapped` | `all_history=true` or `max_files=0` |
+| `history response may be large` | `/api/history` general mode, when `all_history` is on or more than 5000 rows are returned |
+| `selected files skipped; no usable rows loaded` | history is empty, files were reported skipped and the selection matched files. The SQLite adapter never reports skipped files, so this does not occur today. |
+
 ---
 
-## 4. Detailed Endpoint Specifications
+## 4. Endpoints
 
 ### 4.1 `GET /api/health`
-Lightweight service health probe. Never reads databases or files; designed for container health checks, load balancer pings, and frontend connection verification.
 
-- **URL:** `/api/health`
-- **Method:** `GET`
-- **Query Parameters:** None.
-- **Success Status:** `200 OK`
+Lightweight probe; never touches inventory or history. Always 200 (unless the server itself fails). `data.database` reports whether the configured database file exists and is non-empty.
 
-#### Example Response
 ```json
 {
-  "data": {
-    "status": "ok"
-  },
-  "meta": {
-    "service": "inflation-dashboard-api"
-  },
+  "data": {"status": "ok", "database": "available"},
+  "meta": {"service": "inflation-dashboard-api"},
   "errors": []
 }
 ```
 
----
+`database` is `"unavailable"` when data endpoints would return 503. Health responses are not cached.
 
 ### 4.2 `GET /api/inventory`
-Discovers and returns catalog boundaries: available retailers, earliest date, and latest date across the entire dataset.
 
-- **URL:** `/api/inventory`
-- **Method:** `GET`
-- **Query Parameters:** None.
-- **Success Status:** `200 OK`
+Retailers and the overall date range. No parameters.
 
-#### Example Response
 ```json
 {
   "data": {
-    "retailers": [
-      "ClothingStores / Vakko",
-      "ConstructionSuppliesMarkets / TasciYapiMarket",
-      "ConstructionSuppliesMarkets / yapimaks",
-      "Cosmetics / Watson",
-      "HomeGoods",
-      "HousesRent / Kayseri",
-      "HousesRent / Sivas",
-      "HousesRent / Tokat",
-      "Markets / Gurmar",
-      "Technology"
-    ],
-    "min_date": "2026-02-21T00:00:00",
-    "max_date": "2026-09-02T00:00:00"
+    "retailers": ["Alcohol Tobacco / AlkolFiyatlari", "…", "Markets / Gurmar", "…", "Technology", "…"],
+    "min_date": "2023-09-06T00:00:00",
+    "max_date": "2026-10-17T00:00:00"
   },
   "meta": {
-    "file_count": 982,
-    "inventory_file_count": 982
+    "file_count": 10490,
+    "inventory_file_count": 10490
   },
   "errors": []
 }
 ```
 
----
+- `retailers` is sorted. `min_date`/`max_date` are full ISO datetimes (`…T00:00:00`), or `null` for an empty inventory.
+- `meta.file_count` (and the duplicate `inventory_file_count`) is the number of ingested source snapshots. `meta` has no `warnings` key.
 
 ### 4.3 `GET /api/history`
-Fetches normalized price history. Operates in two distinct modes depending on whether `product_name` is supplied:
-1. **General History Mode (`product_name` omitted):** Returns full normalized observations matching filter criteria.
-2. **Product Explorer Mode (`product_name` provided):** Returns single-product time series and calculated summary statistics.
 
-- **URL:** `/api/history`
-- **Method:** `GET`
-- **Query Parameters:**
-  - Common filters (`retailer`, `start_date`, `end_date`, `max_files`, `all_history`)
-  - `product_name` (`string`, optional): Product display name to focus on.
-  - `product_retailer` (`string`, optional): Required if `product_name` is supplied and multiple retailers are selected. If omitted and exactly one retailer is selected, automatically defaults to that retailer.
+Two modes:
 
-#### Success Response: Mode A (General History)
+1. **General** (`product_name` omitted): every observation matching the common filters.
+2. **Product** (`product_name` given): one product's series inside the filtered history, plus a summary.
+
+Parameters: the common filters, plus
+
+- `product_name` (`string`, optional): exact product name.
+- `product_retailer` (`string`, optional): retailer of that product. If omitted, exactly one retailer must be selected (it is used); otherwise 400 `product_retailer is required` (with `meta.filters.selected_retailers`).
+
+**General mode**
+
 ```json
 {
   "data": {
     "history": [
       {
-        "date": "2026-09-02T00:00:00",
+        "date": "2026-10-17T00:00:00",
         "retailer": "Markets / Gurmar",
-        "product_id": "%100 Karışık 1lt",
-        "product_name": "%100 Karışık 1lt",
+        "product_id": "1000 Cc Cam Kavanoz",
+        "product_name": "1000 Cc Cam Kavanoz",
         "category": "Uncategorized",
-        "price": 120.0,
-        "source_file": "data/raw/Markets/Gurmar/gurmar_prices_2026-09-02.csv"
+        "price": 19.99,
+        "source_file": "raw/01_Food/Gurmar/gurmar_prices_2026-10-17.csv"
       }
     ]
   },
   "meta": {
-    "filters": {
-      "selected_retailers": ["Markets / Gurmar"],
-      "start_date": "2026-07-04",
-      "end_date": "2026-09-02",
-      "max_files_per_retailer": 45,
-      "all_history": false
-    },
-    "inventory_file_count": 982,
-    "selected_inventory_file_count": 45,
-    "history_row_count": 1,
+    "filters": {"selected_retailers": ["Markets / Gurmar"], "start_date": "2026-08-18", "end_date": "2026-10-17", "max_files_per_retailer": 2, "all_history": false},
+    "inventory_file_count": 10490,
+    "selected_inventory_file_count": 2,
+    "history_row_count": 8685,
     "skipped_file_count": 0,
-    "warnings": []
+    "warnings": ["history response may be large"]
   },
   "errors": []
 }
 ```
 
-#### Success Response: Mode B (Product Explorer)
+Rows are ordered by retailer, product name, date. `source_file` is relative to `data/` (`<file>.json#YYYY-MM-DD` for JSON-sourced retailers).
+
+**Product mode**
+
 ```json
 {
   "data": {
     "history": [
-      {
-        "date": "2026-08-01T00:00:00",
-        "price": 110.0,
-        "category": "Uncategorized",
-        "source_file": "data/raw/Markets/Gurmar/gurmar_prices_2026-08-01.csv"
-      },
-      {
-        "date": "2026-09-02T00:00:00",
-        "price": 120.0,
-        "category": "Uncategorized",
-        "source_file": "data/raw/Markets/Gurmar/gurmar_prices_2026-09-02.csv"
-      }
+      {"date": "2026-10-16T00:00:00", "price": 1349.9, "category": "Uncategorized", "source_file": "raw/01_Food/Gurmar/gurmar_prices_2026-10-16.csv"},
+      {"date": "2026-10-17T00:00:00", "price": 1349.9, "category": "Uncategorized", "source_file": "raw/01_Food/Gurmar/gurmar_prices_2026-10-17.csv"}
     ],
     "summary": {
-      "latest_price": 120.0,
-      "cheapest_price": 110.0,
-      "cheapest_date": "2026-08-01T00:00:00",
-      "change_since_first_pct": 9.09
-    }
-  },
-  "meta": {
-    "filters": {
-      "selected_retailers": ["Markets / Gurmar"],
-      "start_date": "2026-07-04",
-      "end_date": "2026-09-02",
-      "max_files_per_retailer": 45,
-      "all_history": false
-    },
-    "product_name": "%100 Karışık 1lt",
-    "product_retailer": "Markets / Gurmar",
-    "inventory_file_count": 982,
-    "selected_inventory_file_count": 45,
-    "history_row_count": 2,
-    "skipped_file_count": 0,
-    "warnings": []
-  },
-  "errors": []
-}
-```
-
-#### Empty Product State (Missing Product)
-If a product has no records in the selected range, it returns `200 OK` with an empty history list and zeroed/null summary:
-```json
-{
-  "data": {
-    "history": [],
-    "summary": {
-      "latest_price": null,
-      "cheapest_price": null,
-      "cheapest_date": null,
+      "latest_price": 1349.9,
+      "cheapest_price": 1349.9,
+      "cheapest_date": "2026-10-16T00:00:00",
       "change_since_first_pct": 0.0
     }
   },
   "meta": {
-    "product_name": "Nonexistent Item",
+    "filters": {"selected_retailers": ["Markets / Gurmar"], "start_date": "2026-08-18", "end_date": "2026-10-17", "max_files_per_retailer": 2, "all_history": false},
+    "inventory_file_count": 10490,
+    "selected_inventory_file_count": 2,
+    "history_row_count": 8685,
+    "skipped_file_count": 0,
+    "warnings": [],
+    "product_name": "Aptamil 1 Bebek Sütü 800 Gr",
     "product_retailer": "Markets / Gurmar"
   },
   "errors": []
 }
 ```
 
----
+`history_row_count` counts the whole filtered history, not the product's rows. An unknown product returns 200 with `history: []` and `summary` `{latest_price: null, cheapest_price: null, cheapest_date: null, change_since_first_pct: 0.0}`. Product mode adds no "large" warning.
 
 ### 4.4 `GET /api/retailer-averages`
-Returns average or median price points per date for each selected retailer, suitable for time-series trend charts.
 
-- **URL:** `/api/retailer-averages`
-- **Method:** `GET`
-- **Query Parameters:**
-  - Common filters (`retailer`, `start_date`, `end_date`, `max_files`, `all_history`)
-  - `aggregation` (`string`, optional): Metric to calculate. Either `"Average"` or `"Median"` (case-sensitive). Default is `"Average"`.
-- **Validation:** If `aggregation` is not `"Average"` or `"Median"`, returns HTTP 400 with `Invalid aggregation`.
+Average or median price per retailer per snapshot date.
 
-#### Example Response
+Parameters: the common filters, plus `aggregation` = `Average` (default) or `Median` (case-sensitive); anything else is 400 `Invalid aggregation`.
+
 ```json
 {
   "data": {
     "records": [
-      {
-        "date": "2026-09-02T00:00:00",
-        "retailer": "Markets / Gurmar",
-        "price": 183.13
-      }
+      {"date": "2026-10-16T00:00:00", "retailer": "Markets / Gurmar", "price": 182.0973773889017},
+      {"date": "2026-10-17T00:00:00", "retailer": "Markets / Gurmar", "price": 181.9625310916628}
     ],
     "retailer_averages": [
-      {
-        "date": "2026-09-02T00:00:00",
-        "retailer": "Markets / Gurmar",
-        "price": 183.13
-      }
+      {"date": "2026-10-16T00:00:00", "retailer": "Markets / Gurmar", "price": 182.0973773889017},
+      {"date": "2026-10-17T00:00:00", "retailer": "Markets / Gurmar", "price": 181.9625310916628}
     ]
   },
-  "meta": {
-    "filters": { ... },
-    "aggregation": "Average",
-    "skipped_file_count": 0
-  },
+  "meta": {"filters": {"…": "…"}, "…": "common meta", "aggregation": "Average", "skipped_file_count": 0},
   "errors": []
 }
 ```
 
----
+`data.retailer_averages` is a **duplicate** of `data.records` (the same list, kept for older clients). The SPA reads `records`.
 
 ### 4.5 `GET /api/movers`
-Calculates biggest price drops and gains for products with repeated observations over time.
 
-- **URL:** `/api/movers`
-- **Method:** `GET`
-- **Query Parameters:**
-  - Common filters (`retailer`, `start_date`, `end_date`, `max_files`, `all_history`)
-  - `scope_retailer` (`string`, optional): Retailer to isolate. Defaults to `"All retailers"`. If set to a specific retailer, it must be present in `retailer` selections.
-  - `limit` (`integer`, optional): Number of items per category (drops/gains). Default is `10`. Minimum `5`, maximum `30`.
-  - `mover_count` (`integer`, optional): Alias for `limit`.
-- **Validation:**
-  - If `scope_retailer` is not `"All retailers"` or one of the selected retailers, returns HTTP 400 `Unknown retailer: <name>`.
-  - If `limit` is not between 5 and 30, returns HTTP 400 `Invalid limit`.
+Biggest drops from peak and biggest gains since first observation, for products seen on at least two dates.
 
-#### Example Response
+Parameters: the common filters, plus
+
+- `scope_retailer` (`string`, default `All retailers`): restrict to one selected retailer; anything else is 400 `Unknown retailer: <name>`.
+- `limit` (integer 5–30, default 10): rows per list. Out of range or not an integer is 400 `Invalid limit` (not clamped).
+- `mover_count` (integer 5–30): alias used as the default for `limit`; it is validated even when `limit` is given (400 `Invalid mover_count`).
+
 ```json
 {
   "data": {
     "biggest_drops": [
-      {
-        "retailer": "Markets / Gurmar",
-        "product_name": "Zeytinyağı Riviera 1L",
-        "latest_price": 249.90,
-        "max_price": 349.90,
-        "savings_vs_peak": 100.00,
-        "drop_from_peak_pct": -28.58,
-        "last_seen": "2026-09-02T00:00:00"
-      }
+      {"retailer": "Markets / Gurmar", "product_name": "Raid Elektro Likit Yedek Şişe", "latest_price": 143.96, "max_price": 399.9, "savings_vs_peak": 255.93999999999997, "drop_from_peak_pct": -64.00100025006252, "last_seen": "2026-10-17T00:00:00"}
     ],
     "biggest_gains": [
-      {
-        "retailer": "Markets / Gurmar",
-        "product_name": "Organik Yumurta 10lu",
-        "first_price": 45.00,
-        "latest_price": 69.90,
-        "change_since_first_pct": 55.33,
-        "first_seen": "2026-03-06T00:00:00",
-        "last_seen": "2026-09-02T00:00:00"
-      }
+      {"retailer": "Markets / Gurmar", "product_name": "Duru Sabun Diamonds Series 4X90 Gr. Blue", "first_price": 89.9, "latest_price": 149.9, "change_since_first_pct": 66.74082313681868, "first_seen": "2026-10-15T00:00:00", "last_seen": "2026-10-17T00:00:00"}
     ]
   },
-  "meta": {
-    "filters": { ... },
-    "scope_retailer": "All retailers",
-    "limit": 10,
-    "eligible_product_count": 3120,
-    "skipped_file_count": 0
-  },
+  "meta": {"filters": {"…": "…"}, "…": "common meta", "scope_retailer": "All retailers", "limit": 5, "eligible_product_count": 4353, "skipped_file_count": 0},
   "errors": []
 }
 ```
 
----
-
 ### 4.6 `GET /api/coverage`
-Returns data pipeline health diagnostics: observation volume over time, category coverage, and skipped invalid files.
 
-- **URL:** `/api/coverage`
-- **Method:** `GET`
-- **Query Parameters:**
-  - Common filters (`retailer`, `start_date`, `end_date`, `max_files`, `all_history`)
-  - `category_limit` (`integer`, optional): Caps the number of top categories returned in `category_coverage`. Default `20`. Must be `>= 1`.
-- **Validation:** If `category_limit` is `< 1`, returns HTTP 400 `Invalid category_limit`.
+Observation volume over time and per category.
 
-#### Example Response
+Parameters: the common filters, plus `category_limit` (integer ≥ 1, default 20, no maximum); otherwise 400 `Invalid category_limit`.
+
 ```json
 {
   "data": {
     "summary": {
       "retailer_count": 1,
-      "product_count": 3834,
-      "observation_count": 3834,
-      "date_range": "2026-09-02 → 2026-09-02",
+      "product_count": 4342,
+      "observation_count": 4342,
+      "date_range": "2026-10-17 → 2026-10-17",
       "skipped_file_count": 0
     },
     "coverage_over_time": [
-      {
-        "date": "2026-09-02T00:00:00",
-        "retailer": "Markets / Gurmar",
-        "tracked_products": 3834
-      }
+      {"date": "2026-10-17T00:00:00", "retailer": "Markets / Gurmar", "tracked_products": 4342}
     ],
     "category_coverage": [
-      {
-        "retailer": "Markets / Gurmar",
-        "category": "Uncategorized",
-        "products": 3834
-      }
+      {"retailer": "Markets / Gurmar", "category": "Uncategorized", "products": 4342}
     ],
-    "skipped_files": [
-      {
-        "file": "data/raw/Corrupted/sample.csv",
-        "reason": "Missing required date format"
-      }
-    ]
+    "skipped_files": []
   },
-  "meta": {
-    "filters": { ... },
-    "category_limit": 20,
-    "skipped_file_count": 0
-  },
+  "meta": {"filters": {"…": "…"}, "…": "common meta", "category_limit": 2, "skipped_file_count": 0},
   "errors": []
 }
 ```
 
----
+`skipped_files` is a list of `{file, reason}` objects. With the SQLite adapter it is always empty and `skipped_file_count` is 0; files that failed to parse are reported by the database build instead.
 
+### 4.7 `GET /api/products/search`
 
-### 4.7 `GET /api/products/search` (Product autocomplete)
+Product autocomplete over the `product_prices` view. Not used by the SPA.
 
-Fast SQLite-backed product autocomplete.
+Parameters:
 
-- **Query parameters:**
-  - `q` or `query` (`string`, optional): Search text. An empty value returns the first matching products.
-  - `retailer` (`string`, optional): Retailer filter.
-  - `category` (`string`, optional): Category filter.
-  - `limit` (`integer`, optional): `1–100`, default `20`.
-- **Response:** standard envelope; `data` is an array of product summary objects.
-- **Meta:** `query`, `retailer`, `category`, `limit`, `count`.
+- `q` (or `query`) (`string`, optional): substring match on `product_name` or `product_id` (SQL `LIKE '%q%'`, case-insensitive for ASCII letters only). Empty returns the top products.
+- `retailer` (`string`, optional): exact retailer filter (not validated against the inventory).
+- `category` (`string`, optional): exact category filter.
+- `limit` (integer 1–100, default 20): out of range or not an integer is 400 `invalid_filter` `Invalid limit` (not clamped).
+
+Results are ordered by `observations_count` descending, then `product_name`. If the query itself fails, `data` is `[]` (the error is swallowed).
 
 ```json
 {
   "data": [
     {
-      "product_id": "12345",
+      "product_id": "Aptamil 1 Bebek Sütü 800 Gr",
       "retailer": "Markets / Gurmar",
-      "product_name": "Sütaş Tam Yağlı Süt 1L",
-      "category": "Süt ve Kahvaltılık",
+      "product_name": "Aptamil 1 Bebek Sütü 800 Gr",
+      "category": "Uncategorized",
       "first_date": "2026-02-21",
-      "last_date": "2026-09-02",
-      "latest_price": 34.5,
-      "min_price": 34.5,
-      "max_price": 39.9,
-      "observations_count": 120
+      "last_date": "2026-10-17",
+      "latest_price": 1349.9,
+      "min_price": 899.9,
+      "max_price": 1349.9,
+      "observations_count": 220
     }
   ],
-  "meta": {"query": "sutas", "retailer": null, "category": null, "limit": 20, "count": 1},
+  "meta": {"query": "Aptamil", "retailer": null, "category": null, "limit": 1, "count": 1},
   "errors": []
 }
 ```
 
-### 4.8 `GET /api/product` (Product detail)
+### 4.8 `GET /api/product`
 
-Returns one product summary, complete chronological price history and derived summary metrics.
+One product's summary and its complete price history (not limited by any date filter).
 
-- **Query parameters:**
-  - `product_id` (`string`, preferred) or `product_name` (`string`, fallback): required unless the other is supplied.
-  - `retailer` (`string`, optional): Disambiguates products with the same name/ID.
-- **Errors:** missing lookup key → HTTP 400 `invalid_filter`; unknown product → HTTP 404 `not_found`.
+Parameters:
+
+- `product_id` (`string`) or `product_name` (`string`): one is required (400 `product_id or product_name is required`). **When `product_id` is given, `product_name` is ignored.**
+- `retailer` (`string`, optional).
+
+Lookup: the key is matched against `product_id`, then against `product_name`. With `retailer`, only that retailer is searched; without it, the match with the most observations wins. No match (or a database error during lookup) returns 404 `not_found` with message `Product not found: <key>` and `meta` `{product_id, product_name, retailer}` echoing the request.
+
+```json
+{
+  "data": {
+    "product_id": "Aptamil 1 Bebek Sütü 800 Gr",
+    "retailer": "Markets / Gurmar",
+    "product_name": "Aptamil 1 Bebek Sütü 800 Gr",
+    "category": "Uncategorized",
+    "first_date": "2026-02-21",
+    "last_date": "2026-10-17",
+    "latest_price": 1349.9,
+    "min_price": 899.9,
+    "max_price": 1349.9,
+    "observations_count": 220,
+    "price_history": {"2026-02-21": 1109.9, "2026-02-22": 1109.9, "…": "…", "2026-10-17": 1349.9},
+    "history": [
+      {"date": "2026-02-21", "price": 1109.9, "category": "Uncategorized", "source_file": ""},
+      {"date": "2026-02-22", "price": 1109.9, "category": "Uncategorized", "source_file": ""}
+    ],
+    "summary": {
+      "latest_price": 1349.9,
+      "cheapest_price": 899.9,
+      "cheapest_date": "2026-03-19",
+      "change_since_first_pct": 21.623569690963148
+    }
+  },
+  "meta": {"product_id": "Aptamil 1 Bebek Sütü 800 Gr", "retailer": "Markets / Gurmar", "observations_count": 220},
+  "errors": []
+}
+```
+
+- `price_history` maps `YYYY-MM-DD` to price; `history` is the same data as a date-sorted array. In `history`, `date` is a plain date (not a datetime), `category` is the product's current category and `source_file` is always `""`.
+- `summary.cheapest_date` is the first date at `min_price`; `change_since_first_pct` compares `latest_price` with the first observed price (`0.0` when there is no first price).
 
 ### 4.9 `GET /api/epeykatfg/monthly-inflation`
 
-Returns the externally generated EpeyKatfg month-over-month inflation artifact.
+The EpeyKatfg month-over-month inflation artifact (`EPEYKATFG_MONTHLY_CSV`, default `data/inflation/EpeyKatfg/monthly_inflation.csv`). Does not need the database.
 
-- **Configuration:** `EPEYKATFG_MONTHLY_CSV` (default `data/inflation/EpeyKatfg/monthly_inflation.csv`).
-- **Response:** standard envelope; `data` is an array of monthly rows.
-- **Meta:** `count`, CSV `columns`, source description and weighting notes.
-- **Empty behavior:** a missing artifact returns `data: []` with a successful envelope.
+- `data`: one object per CSV row, keyed by the CSV header. `month`, `prev_month` and `groups` are strings; every other value that parses as a number is a number (counts such as `n_matched` arrive as floats, e.g. `642.0`).
+- Columns today: `month`, `prev_month`, `n_matched`, `avg_inflation`, `basic_index`, `median_inflation_nonzero`, `pct_increased`, `pct_decreased`, `pct_unchanged`, `tuik_weighted`, `covered_weight`, `groups`, then `n_<code>`, `avg_<code>`, `basic_<code>` per TÜİK group.
+- `meta`: `count` (rows), `columns` (header), `source` and `notes` (fixed description strings).
+- A missing or header-less file returns 200 with `data: []`, `count: 0`, `columns: []`.
 
 ---
 
-## 5. TypeScript Interfaces for the Svelte Frontend
+## 5. Caching and compression
+
+Applies to the successful (200) responses of every endpoint except `/api/health`. Error responses are never cached.
+
+- **Server cache:** the serialized body is cached in-process per endpoint and raw query string for 300 seconds (up to 512 entries and 1 GiB per worker). Identical requests are served from it without recomputation.
+- **ETag:** a strong ETag (quoted MD5 of the body bytes) on every cacheable response. The gzip and plain variants have different ETags.
+- **Conditional requests:** `If-None-Match` matching the current ETag (or `*`) returns `304 Not Modified` with the same `ETag`, `Cache-Control` and `Vary` headers and no body.
+- **Cache-Control:** `public, max-age=300`.
+- **Compression:** bodies of at least 1 KB (1024 bytes) also get a gzip variant. It is sent with `Content-Encoding: gzip` when `Accept-Encoding` allows gzip (q > 0). Whenever a gzip variant exists, the response carries `Vary: Accept-Encoding`, whichever variant was sent.
+
+---
+
+## 6. TypeScript Interfaces for the Svelte Frontend
 
 The following TypeScript definitions should be placed in `src/lib/types/api.ts` in the Svelte application:
 
@@ -783,9 +702,9 @@ export type MonthlyInflationResponse = ApiResponse<MonthlyInflationRecord[], Mon
 
 ---
 
-## 6. Svelte Frontend Integration Patterns
+## 7. Svelte Frontend Integration Patterns
 
-### 6.1 Recommended API Client Helper (`src/lib/api/client.ts`)
+### 7.1 Recommended API Client Helper (`src/lib/api/client.ts`)
 
 ```typescript
 import type { ApiResponse, CommonFilterParams } from '$lib/types/api';
@@ -853,7 +772,7 @@ export async function fetchApi<T, M = Record<string, unknown>>(
 }
 ```
 
-### 6.2 Svelte 5 Rune State Management Example
+### 7.2 Svelte 5 Rune State Management Example
 
 ```svelte
 <script lang="ts">
@@ -923,7 +842,7 @@ export async function fetchApi<T, M = Record<string, unknown>>(
 
 ---
 
-## 7. Verification & Compliance Checklist
+## 8. Verification & Compliance Checklist
 
 All Falcon API endpoints are validated by regression test suites:
 - `python scripts/verify_falcon_api.py` (Falcon API in-process TestClient smoke suite)
@@ -931,5 +850,5 @@ All Falcon API endpoints are validated by regression test suites:
 ### Verification Requirements:
 1. **Zero Leaked Types:** Payloads must never leak NaN, Infinity, pandas `NaT`/`NA`, or numpy scalars into JSON.
 2. **Deterministic Envelopes:** All endpoints must always return `{ "data", "meta", "errors" }`.
-3. **CORS Headers:** `Access-Control-Allow-Origin: *` must be present on responses and preflight requests.
+3. **CORS Headers:** `Access-Control-Allow-Origin` must be present on responses (including errors) and preflight requests.
 4. **Boundary Isolation:** Handlers and adapters must respect domain boundaries and never import browser presentation code.
