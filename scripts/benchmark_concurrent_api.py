@@ -70,6 +70,7 @@ ENDPOINT_SUITES = {
 
 @dataclass
 class RequestMetric:
+    """Outcome of one HTTP request: endpoint, status, duration and error text."""
     endpoint: str
     status_code: int
     duration_ms: float
@@ -78,6 +79,7 @@ class RequestMetric:
 
 @dataclass
 class BenchmarkSummary:
+    """Aggregated results of a run: counts, error rate, throughput, latency percentiles and per-endpoint breakdown."""
     engine: str
     target_url: str
     suite: str
@@ -298,6 +300,10 @@ def wait_for_server(url: str, proc: subprocess.Popen[Any] | None = None, timeout
 
 
 def main() -> int:
+    """CLI entry point: benchmark a running server (``--target-url``) or start one
+    with ``--spawn-server``, print the results and optionally save them with
+    ``--output-json``. Returns 2 if any request failed (0% error rate required), else 0.
+    """
     parser = argparse.ArgumentParser(description="Run 100+ concurrent user benchmark for Falcon API.")
     parser.add_argument(
         "--target-url",

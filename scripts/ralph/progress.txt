@@ -235,3 +235,12 @@ Spec: tasks/prd-documentation-overhaul.md
 - **Learnings for future iterations:**
   - For multi-line signatures, anchor on the closing `) -> T:` lines (with the last parameter) rather than the `def` line.
 ---
+
+## 2026-10-17 - US-016
+- Docstrings on every public function in build_database.py (discover_raw_csvs, Loader.add/finish, ingest_raw, ingest_json_fallback, build, main + private helpers), data_files.py (split, join, check, main + helpers; module docstring already existed and feeds argparse, left unchanged), verify_falcon_api.py (all functions; module docstring updated: no "Phase 02", `uv run`, with/without-DB behaviour), test_sqlite_adapter.py (run_benchmark; usage line now `uv run`), run_falcon_server.py (main), benchmark_falcon_api.py (new module docstring), benchmark_db_queries.py and benchmark_concurrent_api.py (entry points, dataclasses, functions >10 lines).
+- AST check: docstring-only for all 8 files. `--help` output byte-identical before/after for all 5 argparse scripts (no module docstring feeding `description` was changed). pytest 115 passed; verify PASS.
+- CONFIGURATION.md: `build_database.py:466` -> `:508`; launcher refs unchanged.
+- Files: scripts/*.py, docs/CONFIGURATION.md
+- **Learnings for future iterations:**
+  - scratchpad `docast.py` inserts docstrings by AST (handles multi-line signatures, "Class.method" names).
+---

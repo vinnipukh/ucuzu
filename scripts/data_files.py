@@ -28,6 +28,7 @@ BLOCK_END = "# <<< split data files"
 
 
 def _oversized(data_dir: Path) -> list[Path]:
+    """Files under ``data_dir`` larger than ``LIMIT_MB``, excluding ``.partNNN`` chunks."""
     limit = LIMIT_MB * 1024 * 1024
     return sorted(
         path
@@ -37,6 +38,7 @@ def _oversized(data_dir: Path) -> list[Path]:
 
 
 def _part_groups(data_dir: Path) -> dict[Path, list[Path]]:
+    """Map each original path to its sorted ``.partNNN`` chunks."""
     groups: dict[Path, list[Path]] = {}
     for part in data_dir.rglob("*.part[0-9][0-9][0-9]"):
         match = PART_PATTERN.match(part.name)
@@ -46,6 +48,7 @@ def _part_groups(data_dir: Path) -> dict[Path, list[Path]]:
 
 
 def _ignored_originals() -> list[str]:
+    """Entries of the managed ``.gitignore`` block (empty if the block is absent)."""
     if not GITIGNORE.exists():
         return []
     lines = GITIGNORE.read_text(encoding="utf-8").splitlines()
@@ -57,6 +60,7 @@ def _ignored_originals() -> list[str]:
 
 
 def _write_ignored_originals(entries: list[str]) -> None:
+    """Rewrite the managed ``.gitignore`` block at the end of the file with ``entries``."""
     lines = GITIGNORE.read_text(encoding="utf-8").splitlines() if GITIGNORE.exists() else []
     if BLOCK_START in lines:
         start = lines.index(BLOCK_START)
@@ -73,6 +77,11 @@ def _gitignore_entry(path: Path) -> str:
 
 
 def split(data_dir: Path) -> int:
+    """Split every file over ``LIMIT_MB`` into ``CHUNK_MB`` ``.partNNN`` chunks.
+
+    Deletes stale chunks of that file first, keeps the original on disk and lists it
+    in the managed ``.gitignore`` block. Returns the exit code (0).
+    """
     entries = _ignored_originals()
     for original in _oversized(data_dir):
         for stale in original.parent.glob(f"{original.name}.part[0-9][0-9][0-9]"):
@@ -90,6 +99,11 @@ def split(data_dir: Path) -> int:
 
 
 def join(data_dir: Path) -> int:
+    """Rebuild each original from its ``.partNNN`` chunks.
+
+    Skips originals whose size already equals the sum of their chunks. Returns the
+    exit code (0).
+    """
     for original, parts in _part_groups(data_dir).items():
         expected = sum(part.stat().st_size for part in parts)
         if original.exists() and original.stat().st_size == expected:
@@ -121,6 +135,10 @@ def _git_ignored(paths: list[Path]) -> set[Path]:
 
 
 def check(data_dir: Path) -> int:
+    """Fail (exit code 1) if a file over ``LIMIT_MB`` would be committed.
+
+    Files that Git ignores (asked via ``git check-ignore``) are allowed.
+    """
     oversized = _oversized(data_dir)
     ignored = _git_ignored(oversized)
     offenders = [path for path in oversized if path.resolve() not in ignored]
@@ -135,6 +153,7 @@ def check(data_dir: Path) -> int:
 
 
 def main() -> int:
+    """CLI entry point: ``check``, ``split`` or ``join``, with optional ``--data-dir``."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=["check", "split", "join"])
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR)

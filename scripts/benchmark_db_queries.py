@@ -134,6 +134,7 @@ BENCHMARK_QUERIES = [
 # Connection Strategies
 # -----------------------------------------------------------------------------
 def open_readonly_connection(db_path: Path, check_same_thread: bool = True) -> sqlite3.Connection:
+    """Open a read-only (``mode=ro``) connection with the benchmark's pragma set."""
     uri = f"file:{db_path.resolve().as_posix()}?mode=ro"
     conn = sqlite3.connect(uri, uri=True, check_same_thread=check_same_thread, timeout=15.0)
     conn.execute("PRAGMA busy_timeout = 5000;")
@@ -193,6 +194,7 @@ class ThreadLocalConnections:
 # -----------------------------------------------------------------------------
 @dataclass
 class QueryStat:
+    """Latencies (ms) of one named query, with percentile properties."""
     name: str
     count: int
     latencies: List[float]
@@ -228,6 +230,7 @@ class QueryStat:
 
 @dataclass
 class BenchmarkReport:
+    """Result of one strategy/concurrency run: throughput, errors and latency percentiles."""
     strategy_name: str
     concurrency: int
     total_requests: int
@@ -266,6 +269,7 @@ class BenchmarkReport:
         return float(np.max(self.all_latencies)) if self.all_latencies else 0.0
 
     def print_summary(self) -> None:
+        """Print overall latencies and a per-query table."""
         print(f"\n{'=' * 80}")
         print(f"Strategy   : {self.strategy_name}")
         print(f"Concurrency: {self.concurrency} concurrent worker threads")
@@ -295,6 +299,11 @@ def run_benchmark(
     setup_fn: Optional[Callable[[], None]] = None,
     teardown_fn: Optional[Callable[[], None]] = None,
 ) -> BenchmarkReport:
+    """Run ``total_requests`` queries on ``concurrency`` threads and collect latencies.
+
+    ``execute_query_fn(i)`` runs query ``i`` and returns ``(name, latency_ms, ok)``;
+    optional setup/teardown hooks run around the timed section.
+    """
     if setup_fn:
         setup_fn()
 
@@ -342,6 +351,7 @@ def run_benchmark(
 # Main CLI & Benchmark Suites
 # -----------------------------------------------------------------------------
 def run_comparison(db_path: Path, concurrency: int, total_requests: int) -> List[BenchmarkReport]:
+    """Compare thread-local, pooled and fresh-per-query connections at one concurrency level."""
     reports: List[BenchmarkReport] = []
 
     # 1. Thread-Local Strategy
@@ -439,6 +449,7 @@ def run_comparison(db_path: Path, concurrency: int, total_requests: int) -> List
 
 
 def run_scaling_benchmark(db_path: Path, concurrency_levels: List[int], requests_per_level: int) -> List[BenchmarkReport]:
+    """Run the thread-local strategy at each concurrency level in ``concurrency_levels``."""
     tl = ThreadLocalConnections(db_path)
 
     def worker_thread_local(i: int) -> Tuple[str, float, bool]:
@@ -473,6 +484,9 @@ def run_scaling_benchmark(db_path: Path, concurrency_levels: List[int], requests
 
 
 def main() -> None:
+    """CLI entry point: ``--db-path``, ``--concurrency``, ``--requests``, ``--mode``
+    (``compare``, ``scale`` or ``all``) and ``--json-out`` to save results.
+    """
     parser = argparse.ArgumentParser(description="Profile and Benchmark SQLite extreme read performance")
     parser.add_argument("--db-path", default=str(DEFAULT_DB_PATH), help="Path to SQLite database file")
     parser.add_argument("--concurrency", type=int, default=100, help="Number of concurrent reader threads")

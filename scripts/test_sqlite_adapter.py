@@ -3,7 +3,7 @@
 
 Tests all adapter functions and measures execution latencies.
 Usage:
-    ./.venv/bin/python scripts/test_sqlite_adapter.py
+    uv run python scripts/test_sqlite_adapter.py
 """
 
 from __future__ import annotations
@@ -41,6 +41,12 @@ from inflation_dashboard.domain.prices import HISTORY_COLUMNS
 
 
 def run_benchmark():
+    """Call every adapter function against the configured database and time it.
+
+    Checks returned column shapes, prints a latency table and ends with
+    "ALL TESTS PASSED SUCCESSFULLY!"; an assertion fails on a wrong shape. Needs a
+    built database (``PRICES_DB_PATH`` or data/prices.db).
+    """
     print("=" * 70)
     print("TESTING SQLITE PRICE REPOSITORY ADAPTER")
     print("=" * 70)

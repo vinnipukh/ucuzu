@@ -284,6 +284,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """Launch the chosen WSGI server, replacing this process.
+
+    Falls back between Granian and Gunicorn if the chosen one is not installed,
+    tunes and exports the database settings, exports ``FALCON_CORS_ORIGINS`` and
+    ``PYTHONPATH``, prints a banner and ``exec``s the server (or only prints the
+    command with ``--dry-run``). Returns 1 on failure.
+    """
     args = build_parser().parse_args()
 
     # Engine selection and fallback

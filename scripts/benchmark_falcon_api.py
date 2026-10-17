@@ -1,3 +1,10 @@
+"""Time one cold and two warm requests per API endpoint, in process.
+
+Uses Falcon's ``TestClient`` against ``create_app()`` (no server or port) and the
+configured database, and asserts every request returns 200. Shows the effect of
+the response cache. Run: ``uv run python scripts/benchmark_falcon_api.py``.
+"""
+
 import sys
 import time
 from pathlib import Path

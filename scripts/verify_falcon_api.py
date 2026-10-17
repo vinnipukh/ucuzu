@@ -1,8 +1,11 @@
 #!/usr/bin/env python
-"""Bounded Falcon API smoke verification for Phase 02.
+"""In-process Falcon API verification: import boundaries, routes and envelopes.
 
 Run from the repository root with:
-    python scripts/verify_falcon_api.py
+    uv run python scripts/verify_falcon_api.py
+
+With a built database every data endpoint is exercised; without one, the data
+endpoints must return 503 ``database_unavailable``.
 
 The script uses Falcon's in-process TestClient only; it does not bind ports or
 start a long-running server.
@@ -29,10 +32,12 @@ FORBIDDEN_CACHE_IMPORTS = ("redis", "sqlalchemy", "django", "peewee", "sqlite3")
 
 
 def _is_forbidden_import(source: str, module: str) -> bool:
+    """True if ``source`` has a top-level ``import module`` or ``from module`` line."""
     return bool(re.search(rf"^\s*(import\s+{re.escape(module)}\b|from\s+{re.escape(module)}\b)", source, re.MULTILINE))
 
 
 def _iter_python_files(*relative_paths: str) -> list[Path]:
+    """Collect ``.py`` files from the given repository-relative files or directories."""
     files: list[Path] = []
     for relative_path in relative_paths:
         path = REPO_ROOT / relative_path
@@ -44,6 +49,12 @@ def _iter_python_files(*relative_paths: str) -> list[Path]:
 
 
 def _assert_import_boundaries() -> None:
+    """Check the layer import rules.
+
+    ``api/`` must not import UI or database/cache clients (including ``sqlite3``);
+    domain, application and adapters must not import Falcon; ``HealthResource`` must
+    not load inventory or history.
+    """
     api_files = _iter_python_files("inflation_dashboard/api")
     core_files = _iter_python_files(
         "inflation_dashboard/domain",
@@ -74,6 +85,7 @@ def _assert_import_boundaries() -> None:
 
 
 def _assert_source_contracts() -> None:
+    """Check that all nine routes are registered and the stable response keys appear in resources.py."""
     app_source = (REPO_ROOT / "inflation_dashboard/api/falcon_app.py").read_text(encoding="utf-8")
     for path in (
         "/api/health",
@@ -109,6 +121,7 @@ def _assert_source_contracts() -> None:
 
 
 def _load_client() -> Any:
+    """Return a Falcon ``TestClient`` for ``create_app()``, with a hint if Falcon is not installed."""
     try:
         from falcon.testing import TestClient
     except ModuleNotFoundError as exc:
@@ -124,6 +137,7 @@ def _load_client() -> Any:
 
 
 def _assert_json_native(value: Any, path: str = "$") -> None:
+    """Recursively assert that a payload holds only JSON-native values (no NaN/Infinity, pandas or numpy)."""
     if value is None or isinstance(value, str | bool | int):
         return
     if isinstance(value, float):
@@ -144,6 +158,7 @@ def _assert_json_native(value: Any, path: str = "$") -> None:
 
 
 def _assert_envelope(payload: dict[str, Any], label: str) -> None:
+    """Assert exactly the ``{data, meta, errors}`` keys and JSON-native content."""
     assert set(payload.keys()) == ENVELOPE_KEYS, f"{label} envelope keys were {set(payload.keys())}"
     json.dumps(payload, allow_nan=False)
     _assert_json_native(payload, label)
@@ -151,6 +166,7 @@ def _assert_envelope(payload: dict[str, Any], label: str) -> None:
 
 
 def _get(client: Any, path: str, expected_status: str = "200 OK") -> dict[str, Any]:
+    """GET ``path``, assert the status and envelope, and return the parsed payload."""
     result = client.simulate_get(path)
     assert result.status == expected_status, f"{path} returned {result.status}: {result.text}"
     payload = result.json
@@ -160,6 +176,7 @@ def _get(client: Any, path: str, expected_status: str = "200 OK") -> dict[str, A
 
 
 def _assert_endpoint_shapes(responses: dict[str, dict[str, Any]]) -> None:
+    """Assert the key data/meta fields of each filter endpoint's response."""
     inventory = responses["inventory"]
     assert {"retailers", "min_date", "max_date"}.issubset(inventory["data"]), "inventory data keys missing"
     assert "file_count" in inventory["meta"] and "inventory_file_count" in inventory["meta"], "inventory counts missing"
@@ -182,6 +199,12 @@ def _assert_endpoint_shapes(responses: dict[str, dict[str, Any]]) -> None:
 
 
 def run_endpoint_smoke() -> None:
+    """Exercise the endpoints through the TestClient.
+
+    Without a database: data routes must return 503 ``database_unavailable`` and the
+    monthly inflation route must still work. With one: every data endpoint, product
+    search, monthly inflation, an unknown product and an unknown retailer (400).
+    """
     client = _load_client()
     health = _get(client, "/api/health")
     assert health["data"].get("status") == "ok"
@@ -255,6 +278,7 @@ def run_endpoint_smoke() -> None:
 
 
 def main() -> int:
+    """Run all checks; any failure raises AssertionError."""
     _assert_import_boundaries()
     _assert_source_contracts()
     run_endpoint_smoke()
