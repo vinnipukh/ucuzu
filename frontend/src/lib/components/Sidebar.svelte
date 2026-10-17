@@ -69,19 +69,19 @@
           type="text"
           bind:value={urlDraft}
           spellcheck="false"
-          placeholder="http://localhost:8000"
+          placeholder="same origin (/api)"
         />
         <button
           type="button"
           class="apply"
-          onclick={() => onApplyApiUrl(urlDraft.trim() || 'http://localhost:8000')}
+          onclick={() => onApplyApiUrl(urlDraft.trim())}
           disabled={urlDraft.trim() === filters.apiBaseUrl}
         >
           Apply
         </button>
       </div>
       {#if filters.apiBaseUrl !== API_BASE_URL}
-        <p class="hint">Build default: {API_BASE_URL}</p>
+        <p class="hint">Build default: {API_BASE_URL || 'same origin (/api)'}</p>
       {/if}
     </div>
 

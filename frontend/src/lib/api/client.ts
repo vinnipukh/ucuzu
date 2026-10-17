@@ -1,8 +1,8 @@
 import { filters, DEFAULT_API_BASE_URL } from '$lib/stores/filters.svelte';
 
 /**
- * Build-time default API origin (for display). Requests use the live
- * `apiBaseUrl` from the filter store, which starts from this value.
+ * Build-time default API origin (for display; `''` means same origin). Requests
+ * use the live `apiBaseUrl` from the filter store, which starts from this value.
  */
 export const API_BASE_URL: string = DEFAULT_API_BASE_URL;
 
@@ -46,7 +46,8 @@ export async function fetchApi<T, M = Record<string, unknown>>(
   params?: Record<string, unknown>,
   fetchFn: typeof fetch = fetch
 ): Promise<{ data: T; meta: M }> {
-  const base = (filters.apiBaseUrl || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+  // An empty base yields a relative `/api/...` URL (same origin).
+  const base = filters.apiBaseUrl.trim().replace(/\/+$/, '');
   const queryString = params ? `?${buildQueryParams(params).toString()}` : '';
   const url = `${base}${endpoint}${queryString}`;
 

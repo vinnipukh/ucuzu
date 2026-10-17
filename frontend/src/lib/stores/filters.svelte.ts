@@ -3,11 +3,12 @@ import type { CommonFilterParams } from '$lib/types/api';
 const ENV_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
 
 /**
- * Build-time default API origin (VITE_API_BASE_URL), fallback to the local
- * Falcon API on :8000. The user can override it at runtime in the sidebar.
+ * Build-time default API origin (VITE_API_BASE_URL, trailing slashes removed).
+ * Empty when unset or blank, meaning same-origin `/api/...` requests (served by
+ * the Vite dev proxy or a reverse proxy). The user can override it at runtime in
+ * the sidebar.
  */
-export const DEFAULT_API_BASE_URL: string =
-  ENV_BASE && ENV_BASE.trim() ? ENV_BASE.replace(/\/+$/, '') : 'http://localhost:8000';
+export const DEFAULT_API_BASE_URL: string = ENV_BASE?.trim() ? ENV_BASE.trim().replace(/\/+$/, '') : '';
 
 // Retailers load one category at a time (per owner request): the first visit opens on
 // Markets, later visits on the last category used. All files in the date range are loaded.

@@ -82,3 +82,16 @@ Spec: tasks/prd-documentation-overhaul.md
   - Falcon's CORSMiddleware still adds `Access-Control-Allow-Origin` to responses rendered by error handlers.
   - Patch a resource method with `monkeypatch.setattr(resources.X, "on_get", ...)` before `create_app()`; routes bind responders at `add_route` time.
 ---
+
+## 2026-10-17 - US-027
+- `DEFAULT_API_BASE_URL` (filters.svelte.ts) is `''` when `VITE_API_BASE_URL` is unset/blank; a set value is trimmed and has trailing slashes removed.
+- `fetchApi` uses `filters.apiBaseUrl` directly (no `|| DEFAULT` fallback), so `''` gives a relative `/api/...` URL and a user can switch back to same-origin at runtime.
+- Sidebar: placeholder "same origin (/api)"; Apply sends the trimmed value (empty = same origin); hint shows "same origin (/api)" when the build default is empty.
+- `frontend/.env.example` now `VITE_API_BASE_URL=` with a same-origin comment; `vite.config.ts` comments now say the proxy is dev-only.
+- `npm run check` and `npm run build` pass; build output contains no `localhost:8000`.
+- Browser verification NOT done (no dev-browser skill). curl through the user's running dev server (:5173 -> :8000) returned 200 for /api/health and /api/inventory.
+- Files: frontend/src/lib/stores/filters.svelte.ts, frontend/src/lib/api/client.ts, frontend/src/lib/components/Sidebar.svelte, frontend/.env.example, frontend/vite.config.ts
+- **Learnings for future iterations:**
+  - The user keeps their own API on :8000 and Vite on :5173 running; don't kill them. Use other ports for test servers.
+  - The Vite proxy only exists in `npm run dev`; `npm run preview`/static hosting need a reverse proxy or `VITE_API_BASE_URL` (document in US-003/US-013).
+---
