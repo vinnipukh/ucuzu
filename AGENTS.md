@@ -14,7 +14,7 @@ This repository owns the web application only:
 | `data/` | Committed scraper output (`raw/`, `prices_json/`, `inflation/`); no scraper source code belongs here |
 | `docs/` | Web architecture, API contract, database and deployment documentation |
 
-Scrapers, inflation calculators and TÜİK methodology live in the separate `inflationstudymirror` data repository (upstream: `urazkagangunes/InflationResearchStudy`). Do not add their source code to this repository. Their *output* is committed under `data/`.
+Scrapers, inflation calculators and TÜİK methodology live in the separate data repository [`vinnipukh/inflationstudymirror`](https://github.com/vinnipukh/inflationstudymirror) (mirror of the upstream [`urazkagangunes/InflationResearchStudy`](https://github.com/urazkagangunes/InflationResearchStudy)). Their output is committed here under `data/`. Do not add their source code to this repository.
 
 ## Data rules
 

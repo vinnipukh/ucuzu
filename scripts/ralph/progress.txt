@@ -187,3 +187,11 @@ Spec: tasks/prd-documentation-overhaul.md
 - **Learnings for future iterations:**
   - The 7-line "Command summary" block in GETTING-STARTED is what AGENTS.md must copy byte-for-byte (US-019); README quickstart (US-004) must use lines from it.
 ---
+
+## 2026-10-17 - US-004
+- README.md reduced from 143 to 44 lines: pitch, repo name/remote `github.com/vinnipukh/cimri-clone` (notes the old `inflationstudymirror-web` name once), one-line data flow, 4-command quickstart copied from GETTING-STARTED's summary, five views, doc links (ARCHITECTURE, FALCON_API_CONTRACT, GETTING-STARTED, docs index, AGENTS). Removed layout, route list, command blocks and "async repositories".
+- Data-repo sentence is now identical in README.md and AGENTS.md (mirror `vinnipukh/inflationstudymirror`, upstream `urazkagangunes/InflationResearchStudy`).
+- Files: README.md, AGENTS.md
+- **Learnings for future iterations:**
+  - AGENTS.md still says "SQLite and CSV adapters" in its boundary table; fix in US-019.
+---
