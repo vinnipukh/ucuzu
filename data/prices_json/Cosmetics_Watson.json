@@ -1,0 +1,832 @@
+{
+  "104541.0": {
+    "name": "DOVE (104541.0)",
+    "category": "DOVE",
+    "latest_price": 59.95,
+    "min_price": 59.95,
+    "max_price": 59.95,
+    "prices": {
+      "2026-04-22": 59.95
+    }
+  },
+  "114229.0": {
+    "name": "PALETTE (114229.0)",
+    "category": "PALETTE",
+    "latest_price": 314.9,
+    "min_price": 314.9,
+    "max_price": 314.9,
+    "prices": {
+      "2026-04-22": 314.9
+    }
+  },
+  "114255.0": {
+    "name": "PALETTE (114255.0)",
+    "category": "PALETTE",
+    "latest_price": 379.9,
+    "min_price": 379.9,
+    "max_price": 379.9,
+    "prices": {
+      "2026-04-22": 379.9
+    }
+  },
+  "123646.0": {
+    "name": "KOLESTON (123646.0)",
+    "category": "KOLESTON",
+    "latest_price": 349.9,
+    "min_price": 349.9,
+    "max_price": 349.9,
+    "prices": {
+      "2026-04-22": 349.9
+    }
+  },
+  "1250515.0": {
+    "name": "SHOW BY PASTEL (1250515.0)",
+    "category": "SHOW BY PASTEL",
+    "latest_price": 139.9,
+    "min_price": 139.9,
+    "max_price": 139.9,
+    "prices": {
+      "2026-04-22": 139.9
+    }
+  },
+  "1250536.0": {
+    "name": "SHOW BY PASTEL (1250536.0)",
+    "category": "SHOW BY PASTEL",
+    "latest_price": 139.9,
+    "min_price": 139.9,
+    "max_price": 139.9,
+    "prices": {
+      "2026-04-22": 139.9
+    }
+  },
+  "125989.0": {
+    "name": "BIOBLAS (125989.0)",
+    "category": "BIOBLAS",
+    "latest_price": 119.9,
+    "min_price": 119.9,
+    "max_price": 119.9,
+    "prices": {
+      "2026-04-22": 119.9
+    }
+  },
+  "128134.0": {
+    "name": "JOHN FRIEDA (128134.0)",
+    "category": "JOHN FRIEDA",
+    "latest_price": 279.9,
+    "min_price": 279.9,
+    "max_price": 279.9,
+    "prices": {
+      "2026-04-22": 279.9
+    }
+  },
+  "1290723.0": {
+    "name": "WATSONS (1290723.0)",
+    "category": "WATSONS",
+    "latest_price": 59.0,
+    "min_price": 59.0,
+    "max_price": 59.0,
+    "prices": {
+      "2026-04-22": 59.0
+    }
+  },
+  "1320347.0": {
+    "name": "SLIPSTOP (1320347.0)",
+    "category": "SLIPSTOP",
+    "latest_price": 199.9,
+    "min_price": 199.9,
+    "max_price": 199.9,
+    "prices": {
+      "2026-04-22": 199.9
+    }
+  },
+  "1322790.0": {
+    "name": "MAX FACTOR (1322790.0)",
+    "category": "MAX FACTOR",
+    "latest_price": 139.9,
+    "min_price": 139.9,
+    "max_price": 139.9,
+    "prices": {
+      "2026-04-22": 139.9
+    }
+  },
+  "1323245.0": {
+    "name": "LE PETIT MARSEILLAIS (1323245.0)",
+    "category": "LE PETIT MARSEILLAIS",
+    "latest_price": 309.9,
+    "min_price": 309.9,
+    "max_price": 309.9,
+    "prices": {
+      "2026-04-22": 309.9
+    }
+  },
+  "1323588.0": {
+    "name": "WATSONS (1323588.0)",
+    "category": "WATSONS",
+    "latest_price": 99.95,
+    "min_price": 99.95,
+    "max_price": 99.95,
+    "prices": {
+      "2026-04-22": 99.95
+    }
+  },
+  "1332345.0": {
+    "name": "GOLDEN ROSE (1332345.0)",
+    "category": "GOLDEN ROSE",
+    "latest_price": 249.9,
+    "min_price": 249.9,
+    "max_price": 249.9,
+    "prices": {
+      "2026-04-22": 249.9
+    }
+  },
+  "1332366.0": {
+    "name": "GOLDEN ROSE (1332366.0)",
+    "category": "GOLDEN ROSE",
+    "latest_price": 249.9,
+    "min_price": 249.9,
+    "max_price": 249.9,
+    "prices": {
+      "2026-04-22": 249.9
+    }
+  },
+  "1332373.0": {
+    "name": "GOLDEN ROSE (1332373.0)",
+    "category": "GOLDEN ROSE",
+    "latest_price": 249.9,
+    "min_price": 249.9,
+    "max_price": 249.9,
+    "prices": {
+      "2026-04-22": 249.9
+    }
+  },
+  "1334291.0": {
+    "name": "MORFOSE EXC. (1334291.0)",
+    "category": "MORFOSE EXC.",
+    "latest_price": 149.0,
+    "min_price": 149.0,
+    "max_price": 149.0,
+    "prices": {
+      "2026-04-22": 149.0
+    }
+  },
+  "1345141.0": {
+    "name": "WATSONS (1345141.0)",
+    "category": "WATSONS",
+    "latest_price": 89.0,
+    "min_price": 89.0,
+    "max_price": 89.0,
+    "prices": {
+      "2026-04-22": 89.0
+    }
+  },
+  "1347500.0": {
+    "name": "PASTEL (1347500.0)",
+    "category": "PASTEL",
+    "latest_price": 279.9,
+    "min_price": 279.9,
+    "max_price": 279.9,
+    "prices": {
+      "2026-04-22": 279.9
+    }
+  },
+  "1352750.0": {
+    "name": "MOLPED (1352750.0)",
+    "category": "MOLPED",
+    "latest_price": 144.9,
+    "min_price": 144.9,
+    "max_price": 144.9,
+    "prices": {
+      "2026-04-22": 144.9
+    }
+  },
+  "1353016.0": {
+    "name": "SHOW BY PASTEL (1353016.0)",
+    "category": "SHOW BY PASTEL",
+    "latest_price": 169.9,
+    "min_price": 169.9,
+    "max_price": 169.9,
+    "prices": {
+      "2026-04-22": 169.9
+    }
+  },
+  "1353044.0": {
+    "name": "SHOW BY PASTEL (1353044.0)",
+    "category": "SHOW BY PASTEL",
+    "latest_price": 169.9,
+    "min_price": 169.9,
+    "max_price": 169.9,
+    "prices": {
+      "2026-04-22": 169.9
+    }
+  },
+  "1355032.0": {
+    "name": "KOLESTON (1355032.0)",
+    "category": "KOLESTON",
+    "latest_price": 159.9,
+    "min_price": 159.9,
+    "max_price": 159.9,
+    "prices": {
+      "2026-04-22": 159.9
+    }
+  },
+  "1357881.0": {
+    "name": "EYÜP SABRİ TUNCER (1357881.0)",
+    "category": "EYÜP SABRİ TUNCER",
+    "latest_price": 99.95,
+    "min_price": 99.95,
+    "max_price": 99.95,
+    "prices": {
+      "2026-04-22": 99.95
+    }
+  },
+  "1367674.0": {
+    "name": "REVOLUTION (1367674.0)",
+    "category": "REVOLUTION",
+    "latest_price": 349.9,
+    "min_price": 349.9,
+    "max_price": 349.9,
+    "prices": {
+      "2026-04-22": 349.9
+    }
+  },
+  "1369151.0": {
+    "name": "LOREAL PARIS (1369151.0)",
+    "category": "LOREAL PARIS",
+    "latest_price": 1019.9,
+    "min_price": 1019.9,
+    "max_price": 1019.9,
+    "prices": {
+      "2026-04-22": 1019.9
+    }
+  },
+  "1374702.0": {
+    "name": "DOVE (1374702.0)",
+    "category": "DOVE",
+    "latest_price": 169.9,
+    "min_price": 169.9,
+    "max_price": 169.9,
+    "prices": {
+      "2026-04-22": 169.9
+    }
+  },
+  "1374737.0": {
+    "name": "ARİFOĞLU (1374737.0)",
+    "category": "ARİFOĞLU",
+    "latest_price": 229.9,
+    "min_price": 229.9,
+    "max_price": 229.9,
+    "prices": {
+      "2026-04-22": 229.9
+    }
+  },
+  "1377271.0": {
+    "name": "PASTEL (1377271.0)",
+    "category": "PASTEL",
+    "latest_price": 393.9,
+    "min_price": 393.9,
+    "max_price": 393.9,
+    "prices": {
+      "2026-04-22": 393.9
+    }
+  },
+  "1378251.0": {
+    "name": "BANILA CO (1378251.0)",
+    "category": "BANILA CO",
+    "latest_price": 409.9,
+    "min_price": 409.9,
+    "max_price": 409.9,
+    "prices": {
+      "2026-04-22": 409.9
+    }
+  },
+  "1379301.0": {
+    "name": "WATSONS (1379301.0)",
+    "category": "WATSONS",
+    "latest_price": 74.95,
+    "min_price": 74.95,
+    "max_price": 74.95,
+    "prices": {
+      "2026-04-22": 74.95
+    }
+  },
+  "1381688.0": {
+    "name": "HERSCHEL (1381688.0)",
+    "category": "HERSCHEL",
+    "latest_price": 269.9,
+    "min_price": 269.9,
+    "max_price": 269.9,
+    "prices": {
+      "2026-04-22": 269.9
+    }
+  },
+  "1383235.0": {
+    "name": "MIA KLINIKA (1383235.0)",
+    "category": "MIA KLINIKA",
+    "latest_price": 269.9,
+    "min_price": 269.9,
+    "max_price": 269.9,
+    "prices": {
+      "2026-04-22": 269.9
+    }
+  },
+  "1390459.0": {
+    "name": "GILLETTE (1390459.0)",
+    "category": "GILLETTE",
+    "latest_price": 381.9,
+    "min_price": 381.9,
+    "max_price": 381.9,
+    "prices": {
+      "2026-04-22": 381.9
+    }
+  },
+  "1392279.0": {
+    "name": "SENSODYNE (1392279.0)",
+    "category": "SENSODYNE",
+    "latest_price": 299.9,
+    "min_price": 299.9,
+    "max_price": 299.9,
+    "prices": {
+      "2026-04-22": 299.9
+    }
+  },
+  "139373.0": {
+    "name": "GILLETTE VENUS (139373.0)",
+    "category": "GILLETTE VENUS",
+    "latest_price": 519.9,
+    "min_price": 519.9,
+    "max_price": 519.9,
+    "prices": {
+      "2026-04-22": 519.9
+    }
+  },
+  "1395324.0": {
+    "name": "HERBAL ESSENCES (1395324.0)",
+    "category": "HERBAL ESSENCES",
+    "latest_price": 234.9,
+    "min_price": 234.9,
+    "max_price": 234.9,
+    "prices": {
+      "2026-04-22": 234.9
+    }
+  },
+  "1397312.0": {
+    "name": "LOREAL PARIS (1397312.0)",
+    "category": "LOREAL PARIS",
+    "latest_price": 647.9,
+    "min_price": 647.9,
+    "max_price": 647.9,
+    "prices": {
+      "2026-04-22": 647.9
+    }
+  },
+  "1398131.0": {
+    "name": "NOTE (1398131.0)",
+    "category": "NOTE",
+    "latest_price": 439.9,
+    "min_price": 439.9,
+    "max_price": 439.9,
+    "prices": {
+      "2026-04-22": 439.9
+    }
+  },
+  "1399755.0": {
+    "name": "SLIPSTOP (1399755.0)",
+    "category": "SLIPSTOP",
+    "latest_price": 149.9,
+    "min_price": 149.9,
+    "max_price": 149.9,
+    "prices": {
+      "2026-04-22": 149.9
+    }
+  },
+  "140014.0": {
+    "name": "PANTENE (140014.0)",
+    "category": "PANTENE",
+    "latest_price": 217.9,
+    "min_price": 217.9,
+    "max_price": 217.9,
+    "prices": {
+      "2026-04-22": 217.9
+    }
+  },
+  "1404515.0": {
+    "name": "WATSONS (1404515.0)",
+    "category": "WATSONS",
+    "latest_price": 59.95,
+    "min_price": 59.95,
+    "max_price": 59.95,
+    "prices": {
+      "2026-04-22": 59.95
+    }
+  },
+  "1404662.0": {
+    "name": "WATSONS (1404662.0)",
+    "category": "WATSONS",
+    "latest_price": 29.95,
+    "min_price": 29.95,
+    "max_price": 29.95,
+    "prices": {
+      "2026-04-22": 29.95
+    }
+  },
+  "1409737.0": {
+    "name": "ELİDOR (1409737.0)",
+    "category": "ELİDOR",
+    "latest_price": 149.0,
+    "min_price": 149.0,
+    "max_price": 149.0,
+    "prices": {
+      "2026-04-22": 149.0
+    }
+  },
+  "1409905.0": {
+    "name": "ROBERTO CAVALLI (1409905.0)",
+    "category": "ROBERTO CAVALLI",
+    "latest_price": 3999.0,
+    "min_price": 3999.0,
+    "max_price": 3999.0,
+    "prices": {
+      "2026-04-22": 3999.0
+    }
+  },
+  "1417934.0": {
+    "name": "REVOLUTION (1417934.0)",
+    "category": "REVOLUTION",
+    "latest_price": 519.9,
+    "min_price": 519.9,
+    "max_price": 519.9,
+    "prices": {
+      "2026-04-22": 519.9
+    }
+  },
+  "1419110.0": {
+    "name": "NOTE (1419110.0)",
+    "category": "NOTE",
+    "latest_price": 149.9,
+    "min_price": 149.9,
+    "max_price": 149.9,
+    "prices": {
+      "2026-04-22": 149.9
+    }
+  },
+  "1425067.0": {
+    "name": "MAYBELLINE (1425067.0)",
+    "category": "MAYBELLINE",
+    "latest_price": 699.9,
+    "min_price": 699.9,
+    "max_price": 699.9,
+    "prices": {
+      "2026-04-22": 699.9
+    }
+  },
+  "1427020.0": {
+    "name": "CLEAR (1427020.0)",
+    "category": "CLEAR",
+    "latest_price": 159.0,
+    "min_price": 159.0,
+    "max_price": 159.0,
+    "prices": {
+      "2026-04-22": 159.0
+    }
+  },
+  "1427069.0": {
+    "name": "1427069.0",
+    "category": "Uncategorized",
+    "latest_price": 159.9,
+    "min_price": 159.9,
+    "max_price": 159.9,
+    "prices": {
+      "2026-04-22": 159.9
+    }
+  },
+  "1427615.0": {
+    "name": "MICHEAL KORS (1427615.0)",
+    "category": "MICHEAL KORS",
+    "latest_price": 3999.0,
+    "min_price": 3999.0,
+    "max_price": 3999.0,
+    "prices": {
+      "2026-04-22": 3999.0
+    }
+  },
+  "1433796.0": {
+    "name": "PANTENE (1433796.0)",
+    "category": "PANTENE",
+    "latest_price": 87.95,
+    "min_price": 87.95,
+    "max_price": 87.95,
+    "prices": {
+      "2026-04-22": 87.95
+    }
+  },
+  "1434146.0": {
+    "name": "LADOR (1434146.0)",
+    "category": "LADOR",
+    "latest_price": 539.9,
+    "min_price": 539.9,
+    "max_price": 539.9,
+    "prices": {
+      "2026-04-22": 539.9
+    }
+  },
+  "1434790.0": {
+    "name": "AXE (1434790.0)",
+    "category": "AXE",
+    "latest_price": 174.9,
+    "min_price": 174.9,
+    "max_price": 174.9,
+    "prices": {
+      "2026-04-22": 174.9
+    }
+  },
+  "1442987.0": {
+    "name": "I HEART REVOLUTION (1442987.0)",
+    "category": "I HEART REVOLUTION",
+    "latest_price": 339.9,
+    "min_price": 339.9,
+    "max_price": 339.9,
+    "prices": {
+      "2026-04-22": 339.9
+    }
+  },
+  "1443456.0": {
+    "name": "REVOLUTION (1443456.0)",
+    "category": "REVOLUTION",
+    "latest_price": 199.0,
+    "min_price": 199.0,
+    "max_price": 199.0,
+    "prices": {
+      "2026-04-22": 199.0
+    }
+  },
+  "1443974.0": {
+    "name": "WELLA (1443974.0)",
+    "category": "WELLA",
+    "latest_price": 129.9,
+    "min_price": 129.9,
+    "max_price": 129.9,
+    "prices": {
+      "2026-04-22": 129.9
+    }
+  },
+  "1447166.0": {
+    "name": "RIMMEL LONDON (1447166.0)",
+    "category": "RIMMEL LONDON",
+    "latest_price": 339.9,
+    "min_price": 339.9,
+    "max_price": 339.9,
+    "prices": {
+      "2026-04-22": 339.9
+    }
+  },
+  "1453578.0": {
+    "name": "D'FEYS (1453578.0)",
+    "category": "D'FEYS",
+    "latest_price": 264.9,
+    "min_price": 264.9,
+    "max_price": 264.9,
+    "prices": {
+      "2026-04-22": 264.9
+    }
+  },
+  "1455902.0": {
+    "name": "COLLAGEN BY WATSONS (1455902.0)",
+    "category": "COLLAGEN BY WATSONS",
+    "latest_price": 399.9,
+    "min_price": 399.9,
+    "max_price": 399.9,
+    "prices": {
+      "2026-04-22": 399.9
+    }
+  },
+  "1459864.0": {
+    "name": "UDV (1459864.0)",
+    "category": "UDV",
+    "latest_price": 193.9,
+    "min_price": 193.9,
+    "max_price": 193.9,
+    "prices": {
+      "2026-04-22": 193.9
+    }
+  },
+  "1460053.0": {
+    "name": "DICORA URBAN FIT (1460053.0)",
+    "category": "DICORA URBAN FIT",
+    "latest_price": 499.9,
+    "min_price": 499.9,
+    "max_price": 499.9,
+    "prices": {
+      "2026-04-22": 499.9
+    }
+  },
+  "1476020.0": {
+    "name": "AUSSIE (1476020.0)",
+    "category": "AUSSIE",
+    "latest_price": 487.9,
+    "min_price": 487.9,
+    "max_price": 487.9,
+    "prices": {
+      "2026-04-22": 487.9
+    }
+  },
+  "1477119.0": {
+    "name": "DURU (1477119.0)",
+    "category": "DURU",
+    "latest_price": 149.0,
+    "min_price": 149.0,
+    "max_price": 149.0,
+    "prices": {
+      "2026-04-22": 149.0
+    }
+  },
+  "1480647.0": {
+    "name": "LOREAL PARIS (1480647.0)",
+    "category": "LOREAL PARIS",
+    "latest_price": 949.9,
+    "min_price": 949.9,
+    "max_price": 949.9,
+    "prices": {
+      "2026-04-22": 949.9
+    }
+  },
+  "1480703.0": {
+    "name": "PASTEL (1480703.0)",
+    "category": "PASTEL",
+    "latest_price": 174.9,
+    "min_price": 174.9,
+    "max_price": 174.9,
+    "prices": {
+      "2026-04-22": 174.9
+    }
+  },
+  "1481039.0": {
+    "name": "NOTE (1481039.0)",
+    "category": "NOTE",
+    "latest_price": 239.9,
+    "min_price": 239.9,
+    "max_price": 239.9,
+    "prices": {
+      "2026-04-22": 239.9
+    }
+  },
+  "1481046.0": {
+    "name": "NOTE (1481046.0)",
+    "category": "NOTE",
+    "latest_price": 239.9,
+    "min_price": 239.9,
+    "max_price": 239.9,
+    "prices": {
+      "2026-04-22": 239.9
+    }
+  },
+  "1481221.0": {
+    "name": "REBUL EXC. (1481221.0)",
+    "category": "REBUL EXC.",
+    "latest_price": 199.9,
+    "min_price": 199.9,
+    "max_price": 199.9,
+    "prices": {
+      "2026-04-22": 199.9
+    }
+  },
+  "1481655.0": {
+    "name": "HEAD&amp;SHOULDERS (1481655.0)",
+    "category": "HEAD&amp;SHOULDERS",
+    "latest_price": 999.9,
+    "min_price": 999.9,
+    "max_price": 999.9,
+    "prices": {
+      "2026-04-22": 999.9
+    }
+  },
+  "1485400.0": {
+    "name": "MATSU PROFESSIONAL (1485400.0)",
+    "category": "MATSU PROFESSIONAL",
+    "latest_price": 699.9,
+    "min_price": 699.9,
+    "max_price": 699.9,
+    "prices": {
+      "2026-04-22": 699.9
+    }
+  },
+  "149404.0": {
+    "name": "PASTEL (149404.0)",
+    "category": "PASTEL",
+    "latest_price": 223.9,
+    "min_price": 223.9,
+    "max_price": 223.9,
+    "prices": {
+      "2026-04-22": 223.9
+    }
+  },
+  "154077.0": {
+    "name": "SENSODYNE (154077.0)",
+    "category": "SENSODYNE",
+    "latest_price": 285.9,
+    "min_price": 285.9,
+    "max_price": 285.9,
+    "prices": {
+      "2026-04-22": 285.9
+    }
+  },
+  "157356.0": {
+    "name": "GOLDEN ROSE (157356.0)",
+    "category": "GOLDEN ROSE",
+    "latest_price": 474.9,
+    "min_price": 474.9,
+    "max_price": 474.9,
+    "prices": {
+      "2026-04-22": 474.9
+    }
+  },
+  "158072.0": {
+    "name": "GARNIER (158072.0)",
+    "category": "GARNIER",
+    "latest_price": 334.9,
+    "min_price": 334.9,
+    "max_price": 334.9,
+    "prices": {
+      "2026-04-22": 334.9
+    }
+  },
+  "160376.0": {
+    "name": "REVOLUTION (160376.0)",
+    "category": "REVOLUTION",
+    "latest_price": 199.9,
+    "min_price": 199.9,
+    "max_price": 199.9,
+    "prices": {
+      "2026-04-22": 199.9
+    }
+  },
+  "161826.0": {
+    "name": "DOVE (161826.0)",
+    "category": "DOVE",
+    "latest_price": 199.9,
+    "min_price": 199.9,
+    "max_price": 199.9,
+    "prices": {
+      "2026-04-22": 199.9
+    }
+  },
+  "163648.0": {
+    "name": "MOLPED (163648.0)",
+    "category": "MOLPED",
+    "latest_price": 154.9,
+    "min_price": 154.9,
+    "max_price": 154.9,
+    "prices": {
+      "2026-04-22": 154.9
+    }
+  },
+  "165863.0": {
+    "name": "MAYBELLINE (165863.0)",
+    "category": "MAYBELLINE",
+    "latest_price": 419.9,
+    "min_price": 419.9,
+    "max_price": 419.9,
+    "prices": {
+      "2026-04-22": 419.9
+    }
+  },
+  "166179.0": {
+    "name": "WATSONS (166179.0)",
+    "category": "WATSONS",
+    "latest_price": 79.95,
+    "min_price": 79.95,
+    "max_price": 79.95,
+    "prices": {
+      "2026-04-22": 79.95
+    }
+  },
+  "168033.0": {
+    "name": "168033.0",
+    "category": "Uncategorized",
+    "latest_price": 159.9,
+    "min_price": 159.9,
+    "max_price": 159.9,
+    "prices": {
+      "2026-04-22": 159.9
+    }
+  },
+  "168042.0": {
+    "name": "GOLDEN ROSE (168042.0)",
+    "category": "GOLDEN ROSE",
+    "latest_price": 323.9,
+    "min_price": 323.9,
+    "max_price": 323.9,
+    "prices": {
+      "2026-04-22": 323.9
+    }
+  },
+  "173911.0": {
+    "name": "ELSEVE (173911.0)",
+    "category": "ELSEVE",
+    "latest_price": 199.9,
+    "min_price": 199.9,
+    "max_price": 199.9,
+    "prices": {
+      "2026-04-22": 199.9
+    }
+  }
+}

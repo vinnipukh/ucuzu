@@ -1,0 +1,32 @@
+{
+  "Lon Metodu ile Boy Uzatma Ameliyatı Fiyatı (SGK'sız)": {
+    "name": "Lon Metodu ile Boy Uzatma Ameliyatı Fiyatı (SGK'sız)",
+    "category": "Uncategorized",
+    "latest_price": 1000000.0,
+    "min_price": 1000000.0,
+    "max_price": 1000000.0,
+    "prices": {
+      "2026-05-29": 1000000.0
+    }
+  },
+  "Manyetik Çivi ile Boy Uzatma Ameliyatı Fiyatı (SGK'sız)": {
+    "name": "Manyetik Çivi ile Boy Uzatma Ameliyatı Fiyatı (SGK'sız)",
+    "category": "Uncategorized",
+    "latest_price": 2500000.0,
+    "min_price": 2500000.0,
+    "max_price": 2500000.0,
+    "prices": {
+      "2026-05-29": 2500000.0
+    }
+  },
+  "Menisküs Nakli Ameliyatı Fiyatı (SGK'sız)": {
+    "name": "Menisküs Nakli Ameliyatı Fiyatı (SGK'sız)",
+    "category": "Uncategorized",
+    "latest_price": 900000.0,
+    "min_price": 900000.0,
+    "max_price": 900000.0,
+    "prices": {
+      "2026-05-29": 900000.0
+    }
+  }
+}
