@@ -24,3 +24,7 @@
 *.db binary
 *.db-wal binary
 *.db-shm binary
+
+# Scraper data is stored byte-for-byte (no line-ending conversion or text diffs).
+data/** -text -diff
+data/README.md text eol=lf diff
