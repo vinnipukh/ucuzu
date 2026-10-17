@@ -1,0 +1,460 @@
+{
+  "project": "Inflation Study Dashboard",
+  "branchName": "ralph/docs-overhaul",
+  "description": "Documentation consolidation and accuracy pass, plus fixes for the code defects found in the docs audit. Full spec, line references and rationale: tasks/prd-documentation-overhaul.md (read it before each story). Typecheck = `cd frontend && npm run check`. Tests = `uv run pytest`. Never write tests that check docs against code.",
+  "userStories": [
+    {
+      "id": "US-020",
+      "title": "Fix CI",
+      "description": "As a maintainer, I want CI to pass and run the tests so that regressions are caught.",
+      "acceptanceCriteria": [
+        "Remove the `scripts/verify_redis_store.py` step from `.github/workflows/ci.yml` (the script does not exist)",
+        "CI runs `uv sync --extra dev` and `uv run pytest`",
+        "CI pins Node to '24'",
+        "CI still runs `npm ci`, `npm run check` and `npm run build` in `frontend/`",
+        "CI does not build the full database; if `verify_falcon_api.py` cannot run without it, it is omitted from CI",
+        "Add `\"engines\": { \"node\": \">=22.12\" }` to `frontend/package.json` and create `frontend/.nvmrc` containing `24`",
+        "The workflow YAML parses (e.g. `uv run python -c \"import yaml,sys;yaml.safe_load(open('.github/workflows/ci.yml'))\"` or equivalent)",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "verify_falcon_api.py kept in CI: it passes without data/prices.db (checks the no-database envelopes). YAML validated with pyyaml locally; workflow not pushed."
+    },
+    {
+      "id": "US-025",
+      "title": "Ignore database build staging files",
+      "description": "As a maintainer, I want every temporary database build file ignored so that a crashed build cannot be committed.",
+      "acceptanceCriteria": [
+        "`.gitignore` covers `*.db.staging*` in addition to `*.db.building*`, added outside the `data_files.py` managed block",
+        "`git check-ignore data/prices.db.staging` exits 0",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "Launcher respects PRICES_DB_PATH",
+      "description": "As an operator, I want PRICES_DB_PATH to select the database when I don't pass --sqlite-db.",
+      "acceptanceCriteria": [
+        "In `scripts/run_falcon_server.py`, `--sqlite-db` defaults to `os.environ.get(\"PRICES_DB_PATH\")`, falling back to `data/prices.db`",
+        "Precedence `--sqlite-db` > `PRICES_DB_PATH` > default is stated in the `--help` text",
+        "A unit test shows that with `PRICES_DB_PATH=/x.db` and no flag, the resolved path is `/x.db`",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Remove dead launcher SQLite options",
+      "description": "As an operator, I want launcher options that do nothing to be removed so that I am not misled.",
+      "acceptanceCriteria": [
+        "Remove the `--no-sqlite-readonly` flag from `scripts/run_falcon_server.py`",
+        "Remove the unused exports `SQLITE_DB_PATH`, `SQLITE_READ_ONLY`, `SQLITE_JOURNAL_MODE`, `SQLITE_SYNCHRONOUS`, `SQLITE_URI`; keep `SQLITE_BUSY_TIMEOUT`, `SQLITE_CACHE_SIZE`, `SQLITE_MMAP_SIZE`",
+        "Grep shows no remaining references to the removed names in code, scripts or CI (docs are handled in US-010)",
+        "`uv run python scripts/run_falcon_server.py --help` runs without error",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "Remove the runtime CSV fallback",
+      "description": "As a maintainer, I want the API to serve only from the SQLite database so that there is one data path to maintain.",
+      "acceptanceCriteria": [
+        "Delete `inflation_dashboard/adapters/csv_price_repository.py`",
+        "`inflation_dashboard/api/filters.py` no longer imports it; inventory and history loading call only `sqlite_price_repository`",
+        "When the database is missing or empty, `/api/health` stays 200 and reports the database as unavailable",
+        "When the database is missing or empty, data endpoints return HTTP 503 with error code `database_unavailable` and message \"Database not found; run scripts/build_database.py\"",
+        "Move `DEFAULT_RETAILERS` (and `SUPPORTED_RETAILERS` if still used) out of the deleted module",
+        "Remove `INFLATION_DATA_ROOT` from the code, `.env.example` and the Data rules in `AGENTS.md`",
+        "`scripts/verify_falcon_api.py` no longer checks for the `discover_csv_inventory` / `load_price_history` tokens",
+        "Update the docstrings in `sqlite_price_repository.py` that mention csv_price_repository",
+        "Grep for `pandas`; keep the dependency only if still used",
+        "A unit test shows that with `PRICES_DB_PATH` pointing to a missing file, `GET /api/inventory` returns 503 with `errors[0].code == \"database_unavailable\"`",
+        "`uv run python scripts/verify_falcon_api.py` passes",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-026",
+      "title": "Single definition of retailer constants",
+      "description": "As a developer, I want one definition of supported and default retailers so that they can't drift apart.",
+      "acceptanceCriteria": [
+        "Remove the unused `SUPPORTED_RETAILERS` / `DEFAULT_RETAILERS` copies in `sqlite_price_repository.py` (confirm they are unused with grep first)",
+        "`DEFAULT_RETAILERS` is defined in exactly one module",
+        "Every retailer in `DEFAULT_RETAILERS` exists in `data/prices.db` (`SELECT name FROM retailers`)",
+        "`SUPPORTED_RETAILERS` is deleted if unused; otherwise it is derived from the `retailers` table, not hardcoded",
+        "`uv run python scripts/verify_falcon_api.py` passes",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "Envelope for 404/500 and no leaked exception text",
+      "description": "As an API consumer, I want every error, including unknown routes and crashes, to use the {data, meta, errors} envelope without exposing internals.",
+      "acceptanceCriteria": [
+        "`create_app` registers handlers that render the envelope for `falcon.HTTPError` (including 404/405) and for unhandled `Exception` (500), with codes `not_found`, `method_not_allowed` and `server_error`",
+        "Unhandled exceptions are logged with a traceback server-side; the response message is a fixed string such as \"Internal server error\"",
+        "The existing catches in `/api/products/search` and `/api/product` no longer send raw exception text",
+        "CORS headers are present on error responses",
+        "A unit test using `falcon.testing.TestClient` shows `GET /api/does-not-exist` returns 404 with `errors[0].code == \"not_found\"`",
+        "A unit test shows a resource forced to raise returns 500 with `server_error` and no exception text in the body",
+        "`uv run python scripts/verify_falcon_api.py` passes",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-027",
+      "title": "Empty VITE_API_BASE_URL means same-origin /api",
+      "description": "As an operator, I want a build without VITE_API_BASE_URL to call the API on its own origin so that a forgotten env var doesn't make every visitor's browser call its own localhost:8000.",
+      "acceptanceCriteria": [
+        "`DEFAULT_API_BASE_URL` in `frontend/src/lib/stores/filters.svelte.ts` is `''` when `VITE_API_BASE_URL` is unset or blank; a non-empty value is used with trailing slashes removed",
+        "`fetchApi` in `frontend/src/lib/api/client.ts` builds a relative `/api/...` URL when the base is `''` (never `//api` or `undefined/api`)",
+        "The sidebar API settings field shows a placeholder such as \"same origin (/api)\" when empty, and an explicit URL still overrides it at runtime",
+        "`frontend/.env.example` sets `VITE_API_BASE_URL=` (empty), with a comment describing same-origin as the default",
+        "The proxy comment in `vite.config.ts` is accurate, and the `/api` -> `http://localhost:8000` proxy is kept",
+        "`cd frontend && npm run build` passes",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: with `npm run dev`, no `.env` and the API on :8000, all 5 views load data and requests go to `http://localhost:5173/api/...`"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Browser criterion UNVERIFIED (dev-browser skill not installed). Partial substitute: curl through the already-running dev server, http://localhost:5173/api/health and /api/inventory returned 200 via the Vite proxy, and the served filters.svelte.ts has the '' default. Not checked: all 5 views loading in a browser, or the network tab."
+    },
+    {
+      "id": "US-001",
+      "title": "Docs index and archive SEPARATION.md",
+      "description": "As a new contributor, I want one index that links every doc so that I can find the owning file for any topic.",
+      "acceptanceCriteria": [
+        "Move `docs/SEPARATION.md` to `docs/archive/SEPARATION.md` with a top banner: \"Historical: describes the 2026 extraction from the monorepo; not current setup guidance.\"; update inbound links",
+        "`docs/README.md` has markdown links (not code spans) to every file in `docs/`, each of the three files in `docs/research/`, `docs/benchmarks/`, `docs/db_benchmark_results.json` and `docs/archive/`",
+        "Each index entry has a one-line description matching the Target structure table in the PRD",
+        "The \"database research\" claim is corrected to describe the actual research files",
+        "Every relative link in `docs/README.md` resolves to an existing file (checked by hand)",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Fix broken links in research and report docs",
+      "description": "As a reader of the optimization reports, I want their links to work so that I can follow the cited research.",
+      "acceptanceCriteria": [
+        "`docs/FALCON-API-OPTIMIZATION-REPORT-2026-09-03.md` research-note links point to `docs/research/research-notes-*.md`",
+        "That report's `scripts/precompute_artifacts.py` reference is marked \"(not present in this repository)\"",
+        "`docs/FALCON-DEPLOYMENT-TUNING-RESEARCH.md` and `docs/research/falcon-benchmarks-case-studies.md` point to `docs/archive/monorepo/TECH-STACK-SEARCH.md`",
+        "`docs/research/research-notes-falcon-framework-optimization.md` points to `docs/research/research-notes-profiling-db-caching-falcon.md`",
+        "Only paths change; the reports' findings are not rewritten",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Consolidate ARCHITECTURE.md (absorb CONVENTIONS and CONCERNS)",
+      "description": "As a developer changing code, I want one place that describes layout, boundaries and known issues so that I know where code belongs and what is fragile.",
+      "acceptanceCriteria": [
+        "`docs/ARCHITECTURE.md` contains: source layout (including `frontend/src` top level), layer boundaries, request flow (SPA -> Falcon WSGI -> filters/cache -> SQLite adapter, no CSV fallback) and the coding conventions from `CONVENTIONS.md`",
+        "Remove the claim that the repository does not contain raw data",
+        "Add a `## Known issues` section listing only the Appendix A items marked doc-only (A8: nothing loads `.env`; A11: client type `InventoryMeta.warnings` is never sent), each with file:line and impact",
+        "`docs/CONVENTIONS.md` and `docs/CONCERNS.md` are reduced to a one-line pointer to ARCHITECTURE.md; inbound links are updated",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Correct and complete CONFIGURATION.md",
+      "description": "As an operator, I want every environment variable and launcher flag documented with its real effect so that configuration does what I expect.",
+      "acceptanceCriteria": [
+        "State that no `.env` file is loaded and values must be exported; note that `.env.example`'s `FALCON_CORS_ORIGINS` differs from the code default `*`",
+        "Document the launcher precedence `--sqlite-db` > `PRICES_DB_PATH` > `data/prices.db` (US-021)",
+        "Document `HOST`, `PORT`, `WEB_CONCURRENCY`, `SERVER_THREADS`, `SERVER_BACKLOG` with defaults verified in `run_falcon_server.py`, and every current CLI flag (from `--help`)",
+        "Remove `INFLATION_DATA_ROOT`, `--no-sqlite-readonly` and the removed `SQLITE_*` exports",
+        "Document `FALCON_TIMING_LOG` truthy values `1`, `true`, `yes`, `on`",
+        "Document `VITE_API_BASE_URL`: empty means same-origin `/api` (US-027)",
+        "State that a relative `PRICES_DB_PATH` resolves against the current working directory",
+        "Every variable row has: name, default, read by (file:line), effect",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Correct DATABASE.md",
+      "description": "As a developer changing the build, I want the database doc to match build_database.py exactly so that I can reason about schema and ingestion.",
+      "acceptanceCriteria": [
+        "List the 4 indexes created in `scripts/build_database.py` (`idx_products_retailer_name`, `idx_products_name`, `idx_products_product_id`, `idx_sources_retailer_date`)",
+        "Group-label rules match the code, including underscore handling with and without a store sub-folder, non-TÜİK folder labels and the `Health_Diagnostic_Surgical_Services` alias",
+        "The column-alias list is complete (copy it from the code)",
+        "Skip reasons include \"no usable rows\" and \"unparseable\"",
+        "Document the build lifecycle: `<db>.building` staging, `os.replace`, stale `-wal`/`-shm` removal, final WAL mode",
+        "Document the JSON fallback: only for retailers with no ingested CSV; only `name`, `category`, `prices` are read; EpeyKatfg/Technology come only from `prices_json`",
+        "Replace \"does not require write access\" with the real behaviour: the launcher opens read-write once to set WAL; request connections are `mode=ro` with `synchronous=NORMAL`, `temp_store=MEMORY`",
+        "Document that a missing or empty DB returns 503 `database_unavailable`",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Correct DATA_CONTRACT.md",
+      "description": "As a data maintainer, I want the data contract to match what the build actually accepts.",
+      "acceptanceCriteria": [
+        "Delimiters: comma, semicolon and tab; encoding UTF-8 with cp1254 fallback",
+        "State that `scripts/build_database.py` is the only reader of `data/raw` (remove \"the shared reader\")",
+        "Remove every mention of the runtime CSV fallback and `INFLATION_DATA_ROOT` from `DATA_CONTRACT.md`, `ARCHITECTURE.md`, `GETTING-STARTED.md`, `API.md` and `FALCON_API_CONTRACT.md` (grep to confirm none remain outside `docs/archive/` and `docs/research/`)",
+        "Document `data_files.py`: 80 MB chunks vs 85 MB limit, `.partNNN` naming, stale-part removal, the managed `.gitignore` block, `join` skipping intact originals, `check` using `git check-ignore`, `--data-dir`, and the currently split file",
+        "The JSON section states which fields the build reads",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Correct FALCON_API_CONTRACT.md: envelope, errors and endpoints",
+      "description": "As an API consumer, I want the contract to describe exactly what the server returns so that I can rely on it.",
+      "acceptanceCriteria": [
+        "Default retailers match the single `DEFAULT_RETAILERS` definition from US-026",
+        "Error objects are documented as `{code, message}`, with `meta` on the envelope",
+        "The error-code list matches the codes emitted in `inflation_dashboard/api/` (grep), including `not_found`, `method_not_allowed`, `server_error`, `database_unavailable`; remove `bad_request` and the 160-character cap",
+        "Document that 404/405/500 now return the envelope and that `server_error` uses a fixed message (US-024)",
+        "Inventory: full ISO datetimes, `file_count` in `meta`",
+        "Product search: out-of-range `limit` returns 400 `invalid_filter`",
+        "Product detail: document the `history` array, add a response example, and note that `product_name` is ignored when `product_id` is given",
+        "Retailer averages: document the duplicate `retailer_averages` key. Coverage: document `skipped_files`",
+        "Document the meta warnings (large history; selected files skipped)",
+        "Add a Caching & compression section: strong ETag, If-None-Match -> 304, `Cache-Control: public, max-age=300`, gzip >= 1 KB with `Vary: Accept-Encoding`",
+        "Update \"Last Updated\" to today's date",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Sync the contract's TypeScript section with api.ts",
+      "description": "As a frontend developer, I want the contract's TypeScript block to match the real types file so that I know what the client expects.",
+      "acceptanceCriteria": [
+        "§5 says it mirrors `frontend/src/lib/types/api.ts` as of today's date and matches that file",
+        "`MonthlyInflationRecord` includes `pct_increased`, `pct_decreased`, `pct_unchanged`",
+        "List the client/server differences: no client types for `/api/products/search` (unused by the SPA); `InventoryMeta.warnings` never sent; `ProductDetailMeta` fields are `string|null`",
+        "Replace the client example with an accurate description of `frontend/src/lib/api/client.ts` (base URL from the filters store, empty = same-origin, `network_error`/`bad_response` codes, returns `{data, meta}`)",
+        "Do not change `api.ts` in this story",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Reduce API.md to a correct summary",
+      "description": "As an API consumer, I want the short API doc to agree with the contract so that I am not misled by an outdated summary.",
+      "acceptanceCriteria": [
+        "`docs/API.md` has: one envelope paragraph, an endpoint table (method, path, purpose, key params), a link to `FALCON_API_CONTRACT.md` as authoritative, and the performance notes",
+        "Performance notes describe product search as a substring match over the `product_prices` view, not a covering-index seek",
+        "Remove the per-endpoint sections (US-008 already moved any missing content into the contract)",
+        "No text claims `meta` carries pagination limits or timestamps",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Make GETTING-STARTED.md the single setup guide",
+      "description": "As a new developer, I want one page that takes me from git clone to a running API and SPA so that I don't reconcile conflicting command lists.",
+      "acceptanceCriteria": [
+        "Prerequisites: Python >=3.14, uv, npm, Node.js 24 LTS recommended (>=22.12 minimum)",
+        "State that the data is committed under `data/`; remove the \"data artifact from the separate repo\" prerequisite",
+        "Steps in order: `uv sync --extra dev`, `uv run python scripts/data_files.py join`, `uv run python scripts/build_database.py`, `uv run pytest`, `uv run python scripts/verify_falcon_api.py`, run the API, `cd frontend && npm install && npm run dev`",
+        "Explain the API connection: empty `VITE_API_BASE_URL` = same-origin `/api`, forwarded by the Vite proxy in dev; in production either use a reverse proxy routing `/api`, or set `VITE_API_BASE_URL` at build time and allow the origin in `FALCON_CORS_ORIGINS`",
+        "Include a minimal nginx or Caddy example (about 10 lines) serving `frontend/build` with an index.html fallback and proxying `/api`",
+        "Troubleshooting: a missing DB gives 503 `database_unavailable`; fix by running `build_database.py`",
+        "Every command was run or `--help`-checked; record results in progress notes",
+        "Remove setup commands from `DEVELOPMENT.md`, `TESTING.md`, `frontend/README.md` and replace them with links here",
+        "Typecheck passes"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": "Command check results: uv sync --extra dev OK (27 pkgs, no changes); data_files.py join OK (exit 0, originals already intact); build_database.py --help OK (full build not re-run: it would replace the user's 1.4 GB DB while their API on :8000 has it open); pytest 115 passed; verify_falcon_api.py PASS with DB and with PRICES_DB_PATH missing; run_falcon_server.py --engine granian --port 8000 --dry-run OK (live start verified in US-023 on :8765); npm install OK; npm run dev not started (user's dev server already on :5173, proxied /api 200 in US-027); vite 8.2.2 on node 26.7.0. nginx example not run."
+    },
+    {
+      "id": "US-004",
+      "title": "Shrink README.md to pitch and quickstart",
+      "description": "As a visitor to the repo, I want a short README so that I understand what the project is and where to go next.",
+      "acceptanceCriteria": [
+        "Replace `inflationstudymirror-web` with `cimri-clone` / `github.com/vinnipukh/cimri-clone`",
+        "The data-repository reference names both `vinnipukh/inflationstudymirror` (mirror) and `urazkagangunes/InflationResearchStudy` (upstream), with the same wording as `AGENTS.md`",
+        "Remove \"async repositories\"",
+        "Replace the source layout, route list and full command blocks with links to `ARCHITECTURE.md`, `FALCON_API_CONTRACT.md`, `GETTING-STARTED.md`",
+        "Quickstart is at most 5 commands, identical to the GETTING-STARTED commands",
+        "README.md is at most about 60 lines",
+        "Typecheck passes"
+      ],
+      "priority": 19,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Rewrite DEVELOPMENT.md as change checklists",
+      "description": "As a contributor making a change, I want a checklist per change type so that I update every file that must change together.",
+      "acceptanceCriteria": [
+        "Checklist for an API endpoint change: resource, `FALCON_API_CONTRACT.md`, `frontend/src/lib/types/api.ts`, `API.md` table, `verify_falcon_api.py`",
+        "Checklist for a schema/data layout change: `build_database.py`, `tests/test_build_database.py`, `DATABASE.md`, `DATA_CONTRACT.md`",
+        "Checklist for a data update: `data_files.py check`/`split`, 85 MB limit, ~500 MB push batches",
+        "Checklist for a frontend change: `npm run check`, `USER_GUIDE.md` if the UI changed",
+        "Remove the \"consumes external artifacts\" / \"do not add raw retailer datasets\" claim and \"async repositories\"",
+        "No setup commands; link to GETTING-STARTED.md instead",
+        "Typecheck passes"
+      ],
+      "priority": 20,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Correct USER_GUIDE.md, TESTING.md and frontend/README.md",
+      "description": "As a dashboard user, I want the guide to describe what I actually see so that I can use the category selector and settings.",
+      "acceptanceCriteria": [
+        "USER_GUIDE: replace \"every retailer selected by default\" with category-based selection (default `Markets`, or the last category remembered in localStorage)",
+        "USER_GUIDE: document the Category field, the API settings / Load settings sections and the Auto/Light/Dark theme toggle",
+        "TESTING: replace \"Gurmar is selected by default\"; list `tests/test_build_database.py` and the tests added by US-021/US-022/US-024; note what CI runs (US-020)",
+        "frontend/README: real defaults (`DEFAULT_CATEGORY`, all-history on -> `max_files=0`), same-origin behaviour from US-027 linking to GETTING-STARTED, and `themes.svelte.ts`, `routes/+layout.svelte`, `lib/index.ts` added to the source layout",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: every UI element and default named in USER_GUIDE.md exists in `npm run dev`"
+      ],
+      "priority": 21,
+      "passes": true,
+      "notes": "Browser criterion UNVERIFIED (dev-browser skill not installed). Every UI element and default in USER_GUIDE.md was checked against the source instead (Sidebar.svelte, Header.svelte, themes.svelte.ts, filters.svelte.ts, the five views), not in a running browser."
+    },
+    {
+      "id": "US-014",
+      "title": "Docstrings for the Falcon API layer",
+      "description": "As a developer reading inflation_dashboard/api/, I want each module and resource documented so that I understand the HTTP layer without reading every line.",
+      "acceptanceCriteria": [
+        "Module docstrings in `falcon_app.py`, `resources.py`, `filters.py`, `serialization.py`",
+        "Docstrings on the CORS middleware functions, every resource class and every `on_get` (route, params, response), and on `_set_filter_error`, `_single_selected_retailer`, `_parse_bounded_int`, `ParsedFilters`, `parse_bool_param`, `clear_response_cache` (if they still exist)",
+        "Docstrings describe current behaviour",
+        "The diff contains only docstring/comment lines",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 22,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Docstrings for domain, application and adapters",
+      "description": "As a developer, I want the core logic documented so that I can change it safely.",
+      "acceptanceCriteria": [
+        "Module docstrings and docstrings on all public functions in `domain/prices.py`, `application/chart_specs.py`, `application/use_cases.py` and any adapter module missing them",
+        "The diff contains only docstring/comment lines",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 23,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Docstrings for scripts",
+      "description": "As a maintainer running scripts, I want each script and its functions documented.",
+      "acceptanceCriteria": [
+        "Every public function has a docstring in `build_database.py`, `data_files.py` (plus module docstring), `verify_falcon_api.py`, `test_sqlite_adapter.py`, `run_falcon_server.py`; `benchmark_falcon_api.py` has a module docstring",
+        "`benchmark_db_queries.py` and `benchmark_concurrent_api.py` have a module docstring plus docstrings on entry points and functions longer than ~10 lines",
+        "The diff contains only docstring/comment lines; if a module docstring feeds argparse `description`, the `--help` change is noted in progress",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 24,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "TSDoc for frontend lib and types",
+      "description": "As a frontend developer, I want exported types and functions documented so that the editor shows what each one means.",
+      "acceptanceCriteria": [
+        "Every exported interface/type in `frontend/src/lib/types/api.ts` has a TSDoc block naming the endpoint it models; `InventoryMeta.warnings` notes it is never sent by the server",
+        "Every export in `themes.svelte.ts`, `chartOptions.svelte.ts`, `format.ts`, `search.ts`, `chartTheme.svelte.ts`, `filters.svelte.ts`, `client.ts` has TSDoc",
+        "The diff contains only comment lines",
+        "`cd frontend && npm run build` passes with no new warnings",
+        "Typecheck passes"
+      ],
+      "priority": 25,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Component docs for Svelte files",
+      "description": "As a frontend developer, I want each component to say what it renders and which stores and props it uses.",
+      "acceptanceCriteria": [
+        "Every `.svelte` file under `frontend/src` has an `<!-- @component ... -->` block: purpose, props, stores read/written, API endpoints triggered",
+        "The diff contains only comment lines",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: all 5 views render as before"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": "Deferred by the user (2026-10-17): its acceptance includes a browser check and the dev-browser skill is not installed. Not started; no @component blocks added. Note for later: ProductExplorer still has a 'CSV-only fallback' effect that re-queries /api/history when /api/product fails."
+    },
+    {
+      "id": "US-019",
+      "title": "Final consistency pass on AGENTS.md",
+      "description": "As an AI agent, I want AGENTS.md to be short, correct and linked to the owning docs so that I follow the current rules.",
+      "acceptanceCriteria": [
+        "Keep the rule sections; the data-repo reference matches README.md",
+        "Each rule section links its owning doc (`DATA_CONTRACT.md`, `DATABASE.md`, `ARCHITECTURE.md`, `DEVELOPMENT.md`)",
+        "The Development command block is identical to GETTING-STARTED.md (including `data_files.py join`)",
+        "No mention of `INFLATION_DATA_ROOT` or the CSV fallback remains",
+        "Add: \"Known code defects are listed in docs/ARCHITECTURE.md#known-issues\"",
+        "Typecheck passes"
+      ],
+      "priority": 27,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}

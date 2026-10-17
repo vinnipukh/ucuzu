@@ -1,0 +1,267 @@
+# Ralph Progress Log
+Started: 2026-10-17
+Spec: tasks/prd-documentation-overhaul.md
+
+## Codebase Patterns
+- Checks: `uv run pytest` (repo root) and `cd frontend && npm run check`. Both are fast (<10 s).
+- Simulate CI (no database) with `PRICES_DB_PATH=/nonexistent/x.db uv run ...`.
+- `.gitattributes` normalizes *.md/*.py/*.json/*.yml to LF on commit; Windows Python `open(p, "w")` writes CRLF, so pass `newline="\n"` when scripting edits.
+- PyYAML is not a project dependency: validate YAML with `uv run --with pyyaml python -c ...`.
+- After editing `frontend/package.json`, run `npm install --package-lock-only` so `npm ci` stays in sync.
+
+## 2026-10-17 - US-020
+- CI: removed the nonexistent `verify_redis_store.py` step, added `uv run pytest`, pinned Node 24. `verify_falcon_api.py` kept: it passes without a database (empty-deployment path).
+- `frontend/package.json` engines `node >=22.12`; `frontend/.nvmrc` = 24; lockfile synced.
+- Files: .github/workflows/ci.yml, frontend/package.json, frontend/package-lock.json, frontend/.nvmrc
+- **Learnings for future iterations:**
+  - Tests do not need `data/prices.db`; `verify_falcon_api.py` has an explicit no-inventory branch. Keep it working without a DB so CI can keep running it (relevant to US-022).
+  - YAML validated locally with pyyaml; workflow not run on GitHub.
+---
+
+## 2026-10-17 - US-025
+- Added `*.db.staging*` to `.gitignore` next to `*.db.building*`, outside the data_files.py managed block.
+- Files: .gitignore
+- **Learnings for future iterations:**
+  - `build_database.py` builds into `<db>.building` and ATTACHes a scratch `<db>.staging` (journal off). Both are now ignored.
+  - `data_files.py check` still passes, so the managed block parser is unaffected.
+---
+
+## 2026-10-17 - US-021
+- `scripts/run_falcon_server.py`: parser extracted into `build_parser()`; `--sqlite-db` defaults to `PRICES_DB_PATH`, then `data/prices.db`. Precedence and CWD-relative resolution stated in `--help`.
+- Added `tests/test_run_falcon_server.py` (env default, flag override, repo fallback).
+- Files: scripts/run_falcon_server.py, tests/test_run_falcon_server.py
+- **Learnings for future iterations:**
+  - Tests import scripts by inserting `scripts/` on `sys.path` (see tests/test_build_database.py); `build_parser().parse_args([])` makes launcher defaults testable.
+  - The launcher still exports `PRICES_DB_PATH` (resolved) for the worker processes; it now equals the env value when no flag is given.
+  - `--dry-run` prints the banner and server command without exec, handy for checking flags.
+---
+
+## 2026-10-17 - US-023
+- Removed `--no-sqlite-readonly` and the never-read exports `SQLITE_DB_PATH`, `SQLITE_READ_ONLY`, `SQLITE_JOURNAL_MODE`, `SQLITE_SYNCHRONOUS`, `SQLITE_URI` from `scripts/run_falcon_server.py`. Kept `SQLITE_BUSY_TIMEOUT`/`SQLITE_CACHE_SIZE`/`SQLITE_MMAP_SIZE` (read by `sqlite_price_repository.pragma_values`).
+- Verified: `--help` and `--dry-run` work; server started on :8765 (granian) and `/api/health` returned the envelope.
+- Files: scripts/run_falcon_server.py
+- **Learnings for future iterations:**
+  - On Windows, granian workers are spawned `multiprocessing` children; stopping the launcher PID leaves the worker listening. Kill by port owner and then any child (`Get-NetTCPConnection -LocalPort N`).
+  - Docs still mention the removed names; CONFIGURATION.md is fixed in US-010.
+---
+
+## 2026-10-17 - US-022
+- Deleted `inflation_dashboard/adapters/csv_price_repository.py`. `api/filters.py` now serves inventory/history from `sqlite_price_repository` only; `require_database()` raises `DatabaseUnavailableError` (code `database_unavailable`, message "Database not found; run scripts/build_database.py") when `PRICES_DB_PATH` is missing or 0 bytes.
+- `create_app` registers an error handler rendering that error as a 503 envelope. `/api/products/search` and `/api/product` call `require_database()` and re-raise it past their `except Exception`.
+- `/api/health` stays 200 and now returns `data.database: "available" | "unavailable"`.
+- `DEFAULT_RETAILERS` and `DEFAULT_MAX_FILES_PER_RETAILER` now live in `api/filters.py`. `UNCAPPED_WARNING` text changed to "all_history requested; history load is uncapped".
+- Removed `INFLATION_DATA_ROOT` from `.env.example` and AGENTS.md; removed the unused `load_price_history` alias in the SQLite adapter; launcher banner no longer says "CSV fallback".
+- `verify_falcon_api.py`: dropped the CSV tokens; with no database it now asserts 503 `database_unavailable` on data routes (still runs in CI). Verified with and without `data/prices.db`.
+- Tests: `tests/test_api.py` (503 on missing/empty DB for inventory/history/coverage/search/product, health reports unavailable).
+- pandas kept: used by domain, application, serialization, filters, adapter and build_database.
+- **Learnings for future iterations:**
+  - Falcon 4.3: `app.add_error_handler(ExcClass, handler(req, resp, ex, params))`; most specific class wins, so a later generic `Exception` handler (US-024) won't shadow it.
+  - `get_inventory` is `lru_cache`d, but exceptions are not cached, so a DB that appears later is picked up.
+  - Use `clear_inventory_cache()` in API tests to reset the lru/response/parse caches between tests.
+  - Docs still describe the CSV fallback; they're corrected in US-010/US-012.
+---
+
+## 2026-10-17 - US-026
+- Removed the unused `SUPPORTED_RETAILERS`, `DEFAULT_RETAILERS` and `DEFAULT_MAX_FILES_PER_RETAILER` copies from `sqlite_price_repository.py` (grep confirmed only `scripts/test_sqlite_adapter.py` imported `DEFAULT_RETAILERS`; it now imports from `api/filters.py`).
+- `DEFAULT_RETAILERS` is defined once, in `inflation_dashboard/api/filters.py`. `SUPPORTED_RETAILERS` is gone (unused after US-022).
+- Checked `SELECT name FROM retailers`: Markets / Gurmar, ClothingStores / Vakko, HomeGoods all exist.
+- `scripts/test_sqlite_adapter.py`, `verify_falcon_api.py`, pytest, npm check all pass.
+- Files: inflation_dashboard/adapters/sqlite_price_repository.py, scripts/test_sqlite_adapter.py
+- **Learnings for future iterations:**
+  - The serving DB has 200+ retailers named "<Group> / <Store>" (some top-level only, e.g. `HomeGoods`, `Technology`, `EpeyKatfg`).
+  - `scripts/test_sqlite_adapter.py` needs a built `data/prices.db` and takes ~1 min.
+---
+
+## 2026-10-17 - US-024
+- `create_app` registers three error handlers: `Exception` -> 500 `server_error` with fixed message "Internal server error" (traceback logged on logger `inflation_dashboard.api`); `falcon.HTTPError` -> envelope with `not_found` (404), `method_not_allowed` (405, `Allow` header kept) or `http_error` (any other status); `DatabaseUnavailableError` -> 503.
+- Removed the `except Exception: ... str(exc)` catches in `/api/products/search` and `/api/product`; those errors now reach the global handler. The inner "repository error -> empty result / 404" catches are unchanged.
+- Tests in `tests/test_api.py`: unknown route 404, POST 405, forced raise 500 without exception text, CORS header on an error response.
+- Files: inflation_dashboard/api/falcon_app.py, inflation_dashboard/api/resources.py, tests/test_api.py
+- **Learnings for future iterations:**
+  - Error codes now emitted by `inflation_dashboard/api/`: `invalid_filter`, `not_found`, `method_not_allowed`, `http_error`, `server_error`, `database_unavailable` (needed for US-008).
+  - Falcon's CORSMiddleware still adds `Access-Control-Allow-Origin` to responses rendered by error handlers.
+  - Patch a resource method with `monkeypatch.setattr(resources.X, "on_get", ...)` before `create_app()`; routes bind responders at `add_route` time.
+---
+
+## 2026-10-17 - US-027
+- `DEFAULT_API_BASE_URL` (filters.svelte.ts) is `''` when `VITE_API_BASE_URL` is unset/blank; a set value is trimmed and has trailing slashes removed.
+- `fetchApi` uses `filters.apiBaseUrl` directly (no `|| DEFAULT` fallback), so `''` gives a relative `/api/...` URL and a user can switch back to same-origin at runtime.
+- Sidebar: placeholder "same origin (/api)"; Apply sends the trimmed value (empty = same origin); hint shows "same origin (/api)" when the build default is empty.
+- `frontend/.env.example` now `VITE_API_BASE_URL=` with a same-origin comment; `vite.config.ts` comments now say the proxy is dev-only.
+- `npm run check` and `npm run build` pass; build output contains no `localhost:8000`.
+- Browser verification NOT done (no dev-browser skill). curl through the user's running dev server (:5173 -> :8000) returned 200 for /api/health and /api/inventory.
+- Files: frontend/src/lib/stores/filters.svelte.ts, frontend/src/lib/api/client.ts, frontend/src/lib/components/Sidebar.svelte, frontend/.env.example, frontend/vite.config.ts
+- **Learnings for future iterations:**
+  - The user keeps their own API on :8000 and Vite on :5173 running; don't kill them. Use other ports for test servers.
+  - The Vite proxy only exists in `npm run dev`; `npm run preview`/static hosting need a reverse proxy or `VITE_API_BASE_URL` (document in US-003/US-013).
+---
+
+## 2026-10-17 - US-001
+- Moved `docs/SEPARATION.md` -> `docs/archive/SEPARATION.md` with the "Historical: ..." banner. The only inbound link was `docs/README.md`.
+- Rewrote `docs/README.md`: markdown links to every doc, the three research notes, `benchmarks/`, `db_benchmark_results.json` and the archive (SEPARATION, monorepo/, planning/, static report), each with a one-line description from the Target structure table. "Database research" replaced by the real research topics.
+- Checked every relative link with a throwaway shell loop (not committed).
+- Files: docs/README.md, docs/archive/SEPARATION.md
+- **Learnings for future iterations:**
+  - When CONVENTIONS.md / CONCERNS.md become pointers (US-005), update their entries in `docs/README.md`.
+  - Link check one-liner: `grep -o "](\([^)]*\))" FILE | sed 's/](\(.*\))/\1/' | while read l; do [ -e "$l" ] || echo MISSING $l; done` (run from the file's directory; strip `#anchors` first if present).
+---
+
+## 2026-10-17 - US-002
+- Path-only fixes: optimization report table now points at `docs/research/research-notes-*.md`; `scripts/precompute_artifacts.py` marked "(not present in this repository)"; deployment research and benchmarks case studies point at `docs/archive/monorepo/TECH-STACK-SEARCH.md`; framework notes (2 places) point at `docs/research/research-notes-profiling-db-caching-falcon.md`.
+- These references are code spans, not markdown links; no real relative markdown links in those files are broken.
+- Files: docs/FALCON-API-OPTIMIZATION-REPORT-2026-09-03.md, docs/FALCON-DEPLOYMENT-TUNING-RESEARCH.md, docs/research/falcon-benchmarks-case-studies.md, docs/research/research-notes-falcon-framework-optimization.md
+- **Learnings for future iterations:**
+  - Dated reports/research: change paths only (FR-4).
+---
+
+## 2026-10-17 - US-005
+- Rewrote `docs/ARCHITECTURE.md`: system boundary (data committed under `data/`), mermaid flow without CSV fallback, full source layout incl. `frontend/src` top level, layer boundaries, 7-step request flow (SPA -> Falcon WSGI -> response/filter/history caches -> SQLite adapter), conventions (from CONVENTIONS.md), operational notes (from CONCERNS.md, "repo has no raw data" claim dropped), deployment topology, `## Known issues` with A8 (.env never loaded) and A11 (`InventoryMeta.warnings` never sent) only.
+- `docs/CONVENTIONS.md` and `docs/CONCERNS.md` are one-line pointers; their entries in `docs/README.md` updated. No other inbound links existed.
+- Files: docs/ARCHITECTURE.md, docs/CONVENTIONS.md, docs/CONCERNS.md, docs/README.md
+- **Learnings for future iterations:**
+  - Known-issues anchor is `ARCHITECTURE.md#known-issues` (US-019 links it).
+  - Vite loads `frontend/.env` itself, so A8 only applies to the root `.env.example` (API side).
+  - `/api/products/search` and `/api/product` bypass use cases and query the `product_prices` view directly; `load_*_from_db` aggregate helpers in the adapter are only used by scripts.
+---
+
+## 2026-10-17 - US-010
+- Rewrote `docs/CONFIGURATION.md`: "no .env is loaded" (A8, linked to Known issues), `.env.example` CORS value vs code default `*`, Vite reads `frontend/.env`, relative paths resolve against CWD; tables with name/default/read-by file:line/effect for PRICES_DB_PATH, EPEYKATFG_MONTHLY_CSV, FALCON_CORS_ORIGINS, FALCON_TIMING_LOG (1/true/yes/on), SQLITE_BUSY_TIMEOUT/CACHE_SIZE/MMAP_SIZE, HOST, PORT, WEB_CONCURRENCY, SERVER_THREADS, SERVER_BACKLOG, VITE_API_BASE_URL (empty = same-origin /api); full flag table from `--help` with `--sqlite-db` > `PRICES_DB_PATH` > `data/prices.db`.
+- Removed INFLATION_DATA_ROOT, `--no-sqlite-readonly` and the removed SQLITE_* exports.
+- Files: docs/CONFIGURATION.md
+- **Learnings for future iterations:**
+  - CONFIGURATION.md and ARCHITECTURE.md Known issues cite file:line. The docstring stories (US-014/015/016/017) shift lines: re-grep and update those references in the same commit.
+  - `scripts/build_database.py --db-path` also defaults to `PRICES_DB_PATH`.
+  - FALCON_TIMING_LOG logs at INFO, but nothing configures Python logging, so the lines show only if the server process does.
+---
+
+## 2026-10-17 - US-011
+- Rewrote `docs/DATABASE.md` from `scripts/build_database.py`: 8-step build lifecycle (join, cleanup of stale building/staging files, `<db>.building` + attached `<db>.staging`, raw ingest, JSON fallback, last-row-wins observations, indexes/views/ANALYZE, WAL, `os.replace` swap after removing stale `-wal`/`-shm`); date patterns; label table (non-TÜİK join, TÜİK-only keeps underscores, nested groups, Housing leaf, others underscores->spaces); complete NAME/PRICE alias lists plus the domain's canonical columns; all six skip reasons; JSON fallback rules (only uncovered retailers; only name/category/prices read; stems + `Health_Diagnostic_Surgical_Services` alias; EpeyKatfg/Technology/HomeGoods from JSON); 4 indexes + automatic unique indexes; runtime: launcher RW once for WAL, request connections `mode=ro` + pragmas; 503 `database_unavailable` when missing/empty.
+- Label examples were checked by calling `raw_retailer_label`/`retailer_from_stem` directly.
+- Validation commands moved out (linked to TESTING.md); build command lives in GETTING-STARTED.
+- Files: docs/DATABASE.md
+- **Learnings for future iterations:**
+  - `sources.file_path` is relative to `data/` for raw CSVs (`raw/...`) and `<file>.json#date` for JSON.
+  - The live DB: EpeyKatfg 1084 JSON dates, Technology 121, HomeGoods 122.
+---
+
+## 2026-10-17 - US-012
+- Rewrote `docs/DATA_CONTRACT.md`: ownership table (build_database.py is the only reader of data/raw and data/prices_json), committed-data rules, full `data_files.py` behaviour (85 MB limit vs 80 MB chunks, `.partNNN`, stale-part removal, managed `.gitignore` block, `join` skips intact originals, `check` via `git check-ignore` with managed-block fallback, `--data-dir`, currently split `data/raw/EpeyKatfg/series.csv`), raw CSV format (comma/semicolon/tab, UTF-8 then cp1254), JSON fields read (name/category/prices only), monthly inflation CSV behaviour (empty array when missing), troubleshooting 503.
+- Removed runtime CSV fallback / INFLATION_DATA_ROOT mentions from API.md, FALCON_API_CONTRACT.md, GETTING-STARTED.md (troubleshooting now says 503 -> run build_database.py). Grep outside docs/archive and docs/research is clean.
+- Files: docs/DATA_CONTRACT.md, docs/API.md, docs/FALCON_API_CONTRACT.md, docs/GETTING-STARTED.md, docs/ARCHITECTURE.md, docs/DATABASE.md
+- **Learnings for future iterations:**
+  - GitHub heading slugs drop `:`, backticks, `/` and `.`: "Large files: `scripts/data_files.py`" -> `#large-files-scriptsdata_filespy`.
+  - The data-update checklist is delegated to DEVELOPMENT.md (US-006 must include it).
+---
+
+## 2026-10-17 - US-008
+- Rewrote `docs/FALCON_API_CONTRACT.md` §1–5 from live TestClient responses against the real DB: transport/CORS (preflight headers observed), envelope, `{code, message}` errors with context on envelope `meta`, error-code table matching a grep of `inflation_dashboard/api/` (invalid_filter, not_found, method_not_allowed, http_error, server_error fixed message, database_unavailable), common filters (DEFAULT_RETAILERS Gurmar/Vakko/HomeGoods, all bool spellings, all_history doesn't widen dates), meta warnings table, every endpoint with real examples (inventory ISO datetimes + `file_count` in meta; history both modes; duplicate `retailer_averages`; movers `limit`/`mover_count` 400 not clamped; coverage `skipped_files`; search `limit` 400 `invalid_filter`; product detail example + `history` array + product_name ignored when product_id given; monthly columns incl. pct_*), new §5 Caching & compression. Last Updated 2026-10-17. Old §5–7 renumbered to §6–8 (TypeScript/client left for US-009).
+- Files: docs/FALCON_API_CONTRACT.md
+- **Learnings for future iterations:**
+  - The real DB has the console mangle Turkish text on Windows; write sample JSON to a file with `ensure_ascii=False` instead of printing.
+  - Bash heredocs with long markdown can fail in Git Bash; write big content with the Write tool.
+  - With SQLite, `skipped_files` is always `[]` and the "selected files skipped" warning cannot occur.
+  - Product detail `history[].date` is a plain date and `source_file` is `""` (differs from /api/history).
+---
+
+## 2026-10-17 - US-009
+- Contract §6 now says it mirrors `frontend/src/lib/types/api.ts` as of 2026-10-17 and embeds the file verbatim (diff-checked; `MonthlyInflationRecord` has `pct_increased`/`pct_decreased`/`pct_unchanged`). §6.1 lists client/server differences: no search types (SPA never calls /api/products/search), `InventoryMeta.warnings` never sent, `ProductDetailMeta` `string|null`, plus `ApiError.meta` never sent, `HealthData` lacks `database`, product-detail history dates/source_file, always-sent optional meta fields.
+- Replaced the old client example and Svelte example with §7 describing the real `client.ts` (base from filters store, '' = same origin, query building, `{data, meta}` return, `network_error`/`bad_response`/`http_error` codes, AsyncResource). §8 verification mentions pytest. `api.ts` unchanged.
+- Files: docs/FALCON_API_CONTRACT.md
+- **Learnings for future iterations:**
+  - US-017 adds TSDoc to `api.ts`: re-copy it into contract §6.2 in the same commit (`diff <(sed -n '/^```typescript$/,/^```$/p' docs/FALCON_API_CONTRACT.md | sed '1d;$d') frontend/src/lib/types/api.ts`).
+---
+
+## 2026-10-17 - US-007
+- `docs/API.md` reduced to: one envelope paragraph, a 9-row endpoint table (method, path, purpose, key params), an "authoritative contract" link, and performance notes. Per-endpoint sections removed (the product-detail example already lives in the contract since US-008).
+- Product search is described as `LIKE '%q%'` substring match over `product_prices` (no index usable, adapter cache 5 min), not a covering-index seek. Dropped the unverifiable "0.09–0.23 ms" figure. No pagination/timestamp claims for `meta`.
+- Files: docs/API.md
+- **Learnings for future iterations:**
+  - DEVELOPMENT.md (US-006) must list the API.md endpoint table in the API-change checklist.
+---
+
+## 2026-10-17 - US-003
+- Rewrote `docs/GETTING-STARTED.md`: prerequisites (Python >=3.14, uv, Node 24 LTS recommended / >=22.12 minimum, npm, ~9 GB disk), data committed under `data/` (no separate repo download), a 7-line command summary in the required order (uv sync --extra dev, data_files join, build_database, pytest, verify, run API, `cd frontend && npm install && npm run dev`), step explanations, API connection model (empty VITE_API_BASE_URL = same-origin; dev proxy; preview/static have no proxy; reverse proxy or VITE_API_BASE_URL + FALCON_CORS_ORIGINS), nginx example, before-committing checks, troubleshooting (503 -> build_database.py).
+- Removed setup command blocks from DEVELOPMENT.md, TESTING.md (uv sync, verify, npm check/build) and frontend/README.md (quick start, production build, checks) and linked to GETTING-STARTED.
+- Command results: uv sync OK; data_files join OK; build_database --help OK (full build skipped: user's API holds the DB open); pytest 115 passed; verify PASS with and without DB; launcher --dry-run OK; npm install OK; dev server already running (user's), proxied /api OK earlier. Measured data size: raw 3.8 GB, prices_json 129 MB, inflation 1.9 GB, .git 754 MB.
+- Files: docs/GETTING-STARTED.md, docs/DEVELOPMENT.md, docs/TESTING.md, frontend/README.md
+- **Learnings for future iterations:**
+  - The 7-line "Command summary" block in GETTING-STARTED is what AGENTS.md must copy byte-for-byte (US-019); README quickstart (US-004) must use lines from it.
+---
+
+## 2026-10-17 - US-004
+- README.md reduced from 143 to 44 lines: pitch, repo name/remote `github.com/vinnipukh/cimri-clone` (notes the old `inflationstudymirror-web` name once), one-line data flow, 4-command quickstart copied from GETTING-STARTED's summary, five views, doc links (ARCHITECTURE, FALCON_API_CONTRACT, GETTING-STARTED, docs index, AGENTS). Removed layout, route list, command blocks and "async repositories".
+- Data-repo sentence is now identical in README.md and AGENTS.md (mirror `vinnipukh/inflationstudymirror`, upstream `urazkagangunes/InflationResearchStudy`).
+- Files: README.md, AGENTS.md
+- **Learnings for future iterations:**
+  - AGENTS.md still says "SQLite and CSV adapters" in its boundary table; fix in US-019.
+---
+
+## 2026-10-17 - US-006
+- Rewrote `docs/DEVELOPMENT.md` as checklists: API endpoint change (resource/route, contract incl. §6 api.ts copy, api.ts, API.md table, verify_falcon_api.py, tests), schema/data layout change (build_database.py, tests/test_build_database.py, DATABASE.md, DATA_CONTRACT.md, adapter views), data update (data_files check/split, 85 MB, never commit db/.env, ~500 MB push batches, rebuild + skip counts), frontend change (npm run check no warnings, build, USER_GUIDE.md, frontend/README.md), configuration change, known issues pointer.
+- Removed the "consumes external artifacts ... do not add raw retailer datasets" claim (replaced: data committed under data/, env vars only override default paths) and "async repositories". No setup commands; links to GETTING-STARTED.
+- Files: docs/DEVELOPMENT.md
+- **Learnings for future iterations:**
+  - DEVELOPMENT.md links `ARCHITECTURE.md#known-issues`; keep that heading name.
+---
+
+## 2026-10-17 - US-013
+- USER_GUIDE.md rewritten from the Svelte source: header (API status, Auto/Light/Dark toggle and how it behaves), sidebar 01 API settings (same-origin placeholder, Apply, build-default hint, inventory counts) and 02 Load settings (Category default Markets / remembered in localStorage, Retailers to load, dates, Load all files on by default, 10–160 slider default 45), the five views with their real controls, tips and troubleshooting (503 message).
+- TESTING.md rewritten: per-file pytest table incl. test_build_database.py, test_run_falcon_server.py (US-021), test_api.py (US-022/US-024); verify script with/without DB; what CI runs (US-020, no DB build); DB scripts; load testing; manual QA with the category default (no "Gurmar selected").
+- frontend/README.md: real defaults (DEFAULT_CATEGORY, DEFAULT_ALL_HISTORY -> max_files=0, 45 cap), same-origin API URL linking to GETTING-STARTED, themes.svelte.ts / routes/+layout.svelte / lib/index.ts added to the layout.
+- Browser verification NOT done (no dev-browser skill); elements checked against source only.
+- Files: docs/USER_GUIDE.md, docs/TESTING.md, frontend/README.md
+- **Learnings for future iterations:**
+  - The theme button toggles Light<->Dark from the effective theme; it never returns to Auto.
+  - Header connection status is only refreshed on load, Apply and retry, not on failed data requests.
+  - ProductExplorer has a leftover "CSV-only fallback" that re-fetches /api/history when /api/product fails; worth describing in its @component block (US-018).
+---
+
+## 2026-10-17 - US-014
+- Module docstrings for falcon_app.py, resources.py, filters.py, serialization.py. Docstrings on TimingMiddleware.process_request/process_response, `_cors_middleware`, the three error handlers, all 9 resource classes and every `on_get` (route, params, response, quirks such as duplicate `retailer_averages`, `mover_count` alias, swallowed search errors, product_name ignored when product_id given), `_set_filter_error`, `_single_selected_retailer`, `_parse_bounded_int`, `ParsedFilters`, `parse_bool_param`, `clear_response_cache`. Three existing class docstrings reworded to name their route.
+- Verified docstring-only with an AST comparison against HEAD (docstrings stripped; comments aren't in the AST). pytest 115 passed; verify_falcon_api PASS.
+- Updated the shifted `falcon_app.py:<line>` refs in docs/CONFIGURATION.md (83, 42).
+- Files: inflation_dashboard/api/*.py, docs/CONFIGURATION.md
+- **Learnings for future iterations:**
+  - Docstring-only check: scratchpad `astcheck.py` (compares `ast.dump` of HEAD vs working tree with docstrings stripped). Rewrite it if the scratchpad is gone.
+  - Don't put `get_inventory`/`load_filtered_history` in HealthResource docstrings: verify_falcon_api.py greps that class body for those tokens.
+  - After adding docstrings, re-grep `docs/*.md` for `<file>.py:<line>` refs (CONFIGURATION.md, ARCHITECTURE.md Known issues).
+---
+
+## 2026-10-17 - US-015
+- Module docstrings + docstrings on all public functions in `domain/prices.py` (parse_date_from_name, coerce_price, first_non_empty_column, build_product_frame; coerce_price_series already had one), `application/chart_specs.py` (module + 4 spec functions), `application/use_cases.py` (module + 8 functions). Adapter: only `_format_date` lacked one (added); module docstrings already existed for sqlite_price_repository, epeykatfg_monthly and all `__init__`s. (The PRD's csv_price_repository items are moot: deleted in US-022.)
+- Docstrings record current facts: `parse_date_from_name`/`coerce_price` are now used only by tests; the `*_chart_spec` functions are Streamlit leftovers unused by API and SPA.
+- AST check: docstring-only. pytest 115 passed. Doc line refs to the adapter unchanged.
+- Files: inflation_dashboard/domain/prices.py, inflation_dashboard/application/chart_specs.py, inflation_dashboard/application/use_cases.py, inflation_dashboard/adapters/sqlite_price_repository.py
+- **Learnings for future iterations:**
+  - For multi-line signatures, anchor on the closing `) -> T:` lines (with the last parameter) rather than the `def` line.
+---
+
+## 2026-10-17 - US-016
+- Docstrings on every public function in build_database.py (discover_raw_csvs, Loader.add/finish, ingest_raw, ingest_json_fallback, build, main + private helpers), data_files.py (split, join, check, main + helpers; module docstring already existed and feeds argparse, left unchanged), verify_falcon_api.py (all functions; module docstring updated: no "Phase 02", `uv run`, with/without-DB behaviour), test_sqlite_adapter.py (run_benchmark; usage line now `uv run`), run_falcon_server.py (main), benchmark_falcon_api.py (new module docstring), benchmark_db_queries.py and benchmark_concurrent_api.py (entry points, dataclasses, functions >10 lines).
+- AST check: docstring-only for all 8 files. `--help` output byte-identical before/after for all 5 argparse scripts (no module docstring feeding `description` was changed). pytest 115 passed; verify PASS.
+- CONFIGURATION.md: `build_database.py:466` -> `:508`; launcher refs unchanged.
+- Files: scripts/*.py, docs/CONFIGURATION.md
+- **Learnings for future iterations:**
+  - scratchpad `docast.py` inserts docstrings by AST (handles multi-line signatures, "Class.method" names).
+---
+
+## 2026-10-17 - US-017
+- TSDoc on every exported interface/type in `frontend/src/lib/types/api.ts`, each naming its endpoint; client/server differences noted inline (`InventoryMeta.warnings` never sent, `ApiError.meta` never sent, `HealthData` lacks `database`, `/api/product` history dates, `ProductDetailMeta` never null on 200). The three existing envelope docs reworded.
+- TSDoc on every export in themes.svelte.ts, chartOptions.svelte.ts, format.ts, search.ts, chartTheme.svelte.ts, filters.svelte.ts (notes `buildCommonParams` is unused) and client.ts (`ApiErrorResponse`).
+- Diff is comment-only (every added/removed line starts with `/**`, `*`, `*/` or `//`). `npm run check` 0/0; `npm run build` OK with only the pre-existing chunk-size warning.
+- Re-copied api.ts into FALCON_API_CONTRACT.md §6.2 (diff-identical); ARCHITECTURE.md known-issue ref `api.ts:76` -> `api.ts:91`.
+- Files: frontend/src/lib/**/*.ts, docs/FALCON_API_CONTRACT.md, docs/ARCHITECTURE.md
+- **Learnings for future iterations:**
+  - `npm run build` always prints a chunk-size warning (ECharts bundle); it is not new.
+---
+
+## 2026-10-17 - US-018 (deferred)
+- Skipped at the user's request: needs a browser check (no dev-browser skill). passes=false, reason in prd.json notes.
+---
+
+## 2026-10-17 - US-019
+- AGENTS.md: CSV adapter removed from the boundary table; Known-issues pointer added near the top; each rule section links its owning doc (ARCHITECTURE, DATA_CONTRACT, DATABASE, CONFIGURATION, DEVELOPMENT); Development block replaced with the exact 7-line GETTING-STARTED command summary (diff-checked, includes `data_files.py join`); data-repo sentence matches README (diff-checked). No INFLATION_DATA_ROOT or CSV fallback mentions.
+- Files: AGENTS.md
+- **Learnings for future iterations:**
+  - If the GETTING-STARTED command summary changes, AGENTS.md and the README quickstart must change with it.
+---
