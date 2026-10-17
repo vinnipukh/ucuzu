@@ -1,53 +1,61 @@
 # Inflation Study Dashboard — Svelte Frontend
 
-Svelte 5 / SvelteKit production client for the standalone Inflation Study Dashboard. It is a static, client-side SPA that queries the Falcon REST API over HTTP; it does not scan CSV/JSON files and has no server-side rendering.
+Svelte 5 / SvelteKit client for the Inflation Study Dashboard. It is a static, client-side SPA that queries the Falcon REST API over HTTP; it does not read data files and has no server-side rendering.
 
-- **Framework:** Svelte 5 runes + SvelteKit (`adapter-static`, `ssr = false`)
+- **Framework:** Svelte 5 runes + SvelteKit (`adapter-static` with an `index.html` fallback, `ssr = false`)
 - **Charts:** Apache ECharts
-- **API contract:** `../docs/FALCON_API_CONTRACT.md`
-- **Design system:** Minimal Swiss-style tokens in `src/app.css`
+- **API contract:** [`../docs/FALCON_API_CONTRACT.md`](../docs/FALCON_API_CONTRACT.md)
+- **Design tokens:** `src/app.css`
+- **Node.js:** 24 LTS recommended (`.nvmrc`), ≥ 22.12 required (`engines`)
 
 ## Setup
 
-Install, run and build commands, and how the SPA reaches the API in development and production, are in [docs/GETTING-STARTED.md](../docs/GETTING-STARTED.md). `npm run build` writes the static site to `frontend/build/`.
+Install, run and build commands are in [docs/GETTING-STARTED.md](../docs/GETTING-STARTED.md). `npm run build` writes the static site to `frontend/build/`.
 
 ## API URL
 
-- Build-time default: `VITE_API_BASE_URL` in `frontend/.env.example`.
-- Empty value: use same-origin `/api` requests through the Vite/server proxy.
-- Runtime override: edit the API URL in the sidebar and apply it.
+- `VITE_API_BASE_URL` (see [`.env.example`](.env.example)) is read at build time. **Empty or unset (the default) means same origin:** the SPA requests relative `/api/...` URLs.
+- In `npm run dev`, Vite proxies `/api` to `http://localhost:8000` (`vite.config.ts`). `npm run preview` and static hosting have no proxy: serve the build behind a reverse proxy that routes `/api`, or build with `VITE_API_BASE_URL` set to the API's origin. Both setups are described in [GETTING-STARTED.md](../docs/GETTING-STARTED.md#how-the-dashboard-reaches-the-api).
+- Runtime override: the sidebar's API settings change `filters.apiBaseUrl` for the session (empty = same origin).
 
 ## Views
 
-1. **Product Explorer** — latest/cheapest metrics, full-history monthly average, optional daily chart and raw history.
-2. **Retailer Averages** — average/median trends across selected retailers.
-3. **Price Movers** — largest drops from peak and gains since first observation.
-4. **Coverage Overview** — products, observations, categories and skipped-file diagnostics.
-5. **EpeyKatfg Monthly** — generated month-over-month Carli, Dutot and TÜİK-weighted inflation series.
+1. **Product explorer** — latest/cheapest metrics, full-history monthly average chart (`/api/product`), optional daily chart and raw history (`/api/history`).
+2. **Retailer averages** — average/median trends across loaded retailers.
+3. **Price movers** — largest drops from peak and gains since first observation.
+4. **Coverage overview** — products, observations, categories over time.
+5. **EpeyKatfg monthly** — month-over-month Carli, Dutot and TÜİK-weighted inflation series.
 
-## State and filters
+User-facing behaviour is described in [docs/USER_GUIDE.md](../docs/USER_GUIDE.md).
 
-- `src/lib/stores/filters.svelte.ts` owns API URL, retailer, date and file-bound state.
-- Gurmar is selected by default when present in inventory.
-- Date range defaults to the latest 60 days.
-- The file cap defaults to 45 per retailer; all-history mode sends `max_files=0`.
-- Search normalizes Turkish characters and ranks prefix, substring and fuzzy matches.
+## State and defaults
+
+`src/lib/stores/filters.svelte.ts` owns the API URL, category, retailer, date and file-cap state.
+
+- **Category:** retailers load one category at a time. The initial category is the one remembered in `localStorage` (`inflation-dashboard:category`), else `DEFAULT_CATEGORY` (`'Markets'`), else the first category. Editing the retailer list by hand clears the category label unless it still matches exactly.
+- **Dates:** the last 60 days of the inventory range (not before its first date).
+- **Files:** `DEFAULT_ALL_HISTORY = true`, so requests send `all_history=true` and `max_files=0`. With all-history off, the file cap (`maxFiles`) defaults to 45 and the slider ranges 10–160.
+- **Theme:** `src/lib/themes.svelte.ts` stores `auto | light | dark` in `localStorage` (`inflation-dashboard-theme`); `auto` follows `prefers-color-scheme`.
+- **Search:** `src/lib/utils/search.ts` normalizes Turkish characters and ranks prefix, substring and fuzzy matches.
 
 ## Source layout
 
 ```text
 src/
-  app.css
+  app.css, app.html, app.d.ts
   lib/
-    api/client.ts
-    types/api.ts
-    stores/filters.svelte.ts
-    components/
-    utils/
-    views/
+    index.ts                 $lib entry (empty)
+    themes.svelte.ts         Auto/Light/Dark theme state
+    api/client.ts            fetchApi(): the only HTTP client
+    types/api.ts             TypeScript mirror of the API contract
+    stores/filters.svelte.ts global filter state
+    components/              Header, Sidebar, Chart, DataTable, selects, alerts, spinner
+    utils/                   chart options/theme, formatting, search, AsyncResource
+    views/                   the five dashboard views
   routes/
-    +layout.ts
-    +page.svelte
+    +layout.ts               ssr = false
+    +layout.svelte           imports app.css, applies the theme
+    +page.svelte             dashboard shell: inventory, sidebar, tabs
 ```
 
 ## Checks

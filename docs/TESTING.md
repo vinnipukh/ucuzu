@@ -1,27 +1,60 @@
 # Testing and Verification
 
-## Unit tests
+This file owns the test suite, verification scripts and manual QA. Installing dependencies and the everyday commands (`uv run pytest`, `verify_falcon_api.py`, `npm run check`) are in [GETTING-STARTED.md](GETTING-STARTED.md).
 
-Install and run commands are in [GETTING-STARTED.md](GETTING-STARTED.md) (`uv sync --extra dev`, then `uv run pytest`).
+## Unit tests (`uv run pytest`)
 
-Pytest suite under `tests/` for the pure domain and application logic (`domain/prices.py`, `application/use_cases.py`). Uses small in-memory DataFrames; no database or API server required. Runs in well under a second.
+No database, server or network needed; the suite runs in a few seconds.
 
-## Backend
+| File | Covers |
+|---|---|
+| `tests/test_prices.py` | `inflation_dashboard/domain/prices.py`: date parsing, price coercion, column detection, product frames |
+| `tests/test_use_cases.py` | `inflation_dashboard/application/use_cases.py`: history, averages, movers, coverage calculations |
+| `tests/test_build_database.py` | `scripts/build_database.py` (file-name dates, retailer labels, header aliases, small end-to-end builds) and `scripts/data_files.py` split/join |
+| `tests/test_run_falcon_server.py` | Launcher database path precedence: `--sqlite-db` > `PRICES_DB_PATH` > `data/prices.db` |
+| `tests/test_api.py` | Falcon `TestClient`: 503 `database_unavailable` (missing or empty database) on data endpoints and `/api/health` reporting it; 404 `not_found` and 405 `method_not_allowed` envelopes; 500 `server_error` with a fixed message and no exception text; CORS header on error responses |
 
-`scripts/verify_falcon_api.py` (command in [GETTING-STARTED.md](GETTING-STARTED.md)) checks route/source contracts, stable envelopes, JSON-native serialization, import boundaries and bounded endpoint behavior.
+`tests/conftest.py` provides small in-memory history fixtures.
+
+## API verification (`scripts/verify_falcon_api.py`)
+
+Runs in-process with Falcon's `TestClient` (no port). It checks:
+
+- import boundaries: no Streamlit/Plotly in `api/`, no `sqlite3`/Redis/ORMs in `api/`, no Falcon in `domain/`, `application/`, `adapters/`; `/api/health` does not load inventory or history;
+- that all nine routes are registered and the response-key tokens exist in `resources.py`;
+- endpoint smoke tests, depending on the database:
+  - **with a built database:** every data endpoint returns a JSON-native envelope with the expected keys, plus product search, monthly inflation, an unknown product name in `/api/history` (200 with an empty summary) and an unknown retailer (400 `invalid_filter`);
+  - **without a database:** inventory, history, product search and product detail return 503 `database_unavailable`, and the monthly inflation endpoint still works.
 
 ## Frontend
 
-`npm run check` and `npm run build` in `frontend/` (commands in [GETTING-STARTED.md](GETTING-STARTED.md#before-committing)). `npm run check` must complete without errors or warnings. `npm run build` creates the static SPA in `frontend/build/`.
+In `frontend/`: `npm run check` (svelte-check) must finish with **0 errors and 0 warnings**; `npm run build` must produce `frontend/build/`. There are no frontend unit tests.
 
-## Database
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on pushes to `main` and on pull requests, on Ubuntu with Python 3.14 and Node 24:
+
+1. `uv sync --extra dev --frozen`
+2. `uv run python -m compileall -q inflation_dashboard scripts`
+3. `uv run pytest`
+4. `uv run python scripts/verify_falcon_api.py` — CI does not build the database (it takes minutes and about 1.4 GB), so this runs the **no-database** checks only.
+5. `npm ci`, `npm run check`, `npm run build` in `frontend/`
+
+The full-database checks of `verify_falcon_api.py` and the scripts below must be run locally.
+
+## Database scripts (need a built database)
+
+These use `PRICES_DB_PATH` or the default `data/prices.db`.
 
 ```bash
 uv run python scripts/test_sqlite_adapter.py
 uv run python scripts/test_new_endpoints.py
+uv run python scripts/benchmark_db_queries.py --mode compare
 ```
 
-These require a populated SQLite database configured through `PRICES_DB_PATH` or the default `data/prices.db`.
+- `test_sqlite_adapter.py` times every adapter function (inventory, history with and without a file cap, product detail, averages, movers, coverage) and prints a table; about a minute.
+- `test_new_endpoints.py` prints the responses of product search, product detail, an unknown product (404), a missing lookup key (400) and the monthly inflation endpoint.
+- `benchmark_db_queries.py` compares SQLite connection strategies under concurrent readers (`--mode compare|scale|all`, `--concurrency`, `--requests`, `--db-path`, `--json-out`). Earlier results are in `docs/db_benchmark_results.json`.
 
 ## Load testing
 
@@ -30,12 +63,18 @@ uv run python scripts/benchmark_falcon_api.py
 uv run python scripts/benchmark_concurrent_api.py --concurrency 100
 ```
 
-Use a disposable test database/snapshot. Do not benchmark against a production database while it is being rebuilt.
+- `benchmark_falcon_api.py` times one cold and two warm in-process requests per endpoint.
+- `benchmark_concurrent_api.py` sends concurrent HTTP requests to a running server (`--target-url`, default `http://127.0.0.1:8000`), or starts one with `--spawn-server` (`--engine`, `--workers`, `--threads`, `--port`). `--endpoint-suite health|inventory|mixed|all` picks the endpoints; `--output-json` saves results. Earlier results are in `docs/benchmarks/`.
 
-## End-to-end manual check
+Run load tests against a disposable copy of the database, not one that is being rebuilt or serving users.
 
-1. Start Falcon with `scripts/run_falcon_server.py`.
-2. Build/preview the Svelte application.
-3. Verify inventory loads and Gurmar is selected by default.
-4. Exercise all five views, filters, search, themes and error states.
-5. Stop and restart the API to confirm no frontend state is required for recovery.
+## Manual end-to-end check
+
+1. Build the database and start the API and the dashboard ([GETTING-STARTED.md](GETTING-STARTED.md)).
+2. The header shows **API connected**; the sidebar's API settings show the inventory file count and dates.
+3. On a first visit (or after clearing site data) the **Category** is **Markets** and "Retailers to load" lists the Markets retailers. Choose another category, reload the page, and check it is remembered.
+4. "Load all files in date range" is on; turning it off enables the file-cap slider (default 45).
+5. Open all five views; change dates, retailers, aggregation, mover scope and count; search with Turkish characters and a typo.
+6. Toggle the theme and reload: the choice is remembered.
+7. Stop the API and change a filter: the view shows a network error. (The header status only updates when the API is checked: on page load, on Apply, or with its retry button.) Restart the API: the next filter change loads data again without a page reload.
+8. Point the API at a missing database (`--sqlite-db missing.db`): the dashboard shows "Database not found; run scripts/build_database.py".

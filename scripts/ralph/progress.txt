@@ -203,3 +203,15 @@ Spec: tasks/prd-documentation-overhaul.md
 - **Learnings for future iterations:**
   - DEVELOPMENT.md links `ARCHITECTURE.md#known-issues`; keep that heading name.
 ---
+
+## 2026-10-17 - US-013
+- USER_GUIDE.md rewritten from the Svelte source: header (API status, Auto/Light/Dark toggle and how it behaves), sidebar 01 API settings (same-origin placeholder, Apply, build-default hint, inventory counts) and 02 Load settings (Category default Markets / remembered in localStorage, Retailers to load, dates, Load all files on by default, 10–160 slider default 45), the five views with their real controls, tips and troubleshooting (503 message).
+- TESTING.md rewritten: per-file pytest table incl. test_build_database.py, test_run_falcon_server.py (US-021), test_api.py (US-022/US-024); verify script with/without DB; what CI runs (US-020, no DB build); DB scripts; load testing; manual QA with the category default (no "Gurmar selected").
+- frontend/README.md: real defaults (DEFAULT_CATEGORY, DEFAULT_ALL_HISTORY -> max_files=0, 45 cap), same-origin API URL linking to GETTING-STARTED, themes.svelte.ts / routes/+layout.svelte / lib/index.ts added to the layout.
+- Browser verification NOT done (no dev-browser skill); elements checked against source only.
+- Files: docs/USER_GUIDE.md, docs/TESTING.md, frontend/README.md
+- **Learnings for future iterations:**
+  - The theme button toggles Light<->Dark from the effective theme; it never returns to Auto.
+  - Header connection status is only refreshed on load, Apply and retry, not on failed data requests.
+  - ProductExplorer has a leftover "CSV-only fallback" that re-fetches /api/history when /api/product fails; worth describing in its @component block (US-018).
+---
