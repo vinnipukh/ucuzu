@@ -9,8 +9,33 @@ const ENV_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
 export const DEFAULT_API_BASE_URL: string =
   ENV_BASE && ENV_BASE.trim() ? ENV_BASE.replace(/\/+$/, '') : 'http://localhost:8000';
 
-// Auto-load only Gurmar on open (per owner request). Users can add more in the sidebar.
-export const DEFAULT_RETAILERS = ['Markets / Gurmar'];
+// Retailers load one category at a time (per owner request): the first visit opens on
+// Markets, later visits on the last category used. All files in the date range are loaded.
+export const DEFAULT_CATEGORY = 'Markets';
+const CATEGORY_STORAGE_KEY = 'inflation-dashboard:category';
+const DEFAULT_ALL_HISTORY = true;
+
+/** Category of a retailer label: the group before " / " (e.g. "Markets / Gurmar" -> "Markets"). */
+export function retailerCategory(retailer: string): string {
+  const separator = retailer.indexOf(' / ');
+  return separator === -1 ? retailer : retailer.slice(0, separator);
+}
+
+function readStoredCategory(): string | null {
+  try {
+    return localStorage.getItem(CATEGORY_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function storeCategory(category: string): void {
+  try {
+    localStorage.setItem(CATEGORY_STORAGE_KEY, category);
+  } catch {
+    // Storage unavailable (private mode, blocked site data): the choice just isn't remembered.
+  }
+}
 
 /**
  * Global dashboard filter state (Svelte 5 runes, object form so components can
@@ -21,6 +46,10 @@ export const filters = $state({
   /** Live API origin used by every request. */
   apiBaseUrl: DEFAULT_API_BASE_URL,
   retailerOptions: [] as string[],
+  /** Sorted distinct retailer categories present in the inventory. */
+  categoryOptions: [] as string[],
+  /** Category whose retailers are loaded; null once the selection is edited by hand. */
+  category: null as string | null,
   inventoryMinDate: null as string | null,
   inventoryMaxDate: null as string | null,
   inventoryFileCount: null as number | null,
@@ -28,13 +57,15 @@ export const filters = $state({
   startDate: null as string | null,
   endDate: null as string | null,
   maxFiles: 45,
-  allHistory: false,
+  allHistory: DEFAULT_ALL_HISTORY,
   /** True once inventory has been loaded successfully for the current API. */
   inventoryReady: false
 });
 
 export function resetFilters(): void {
   filters.retailerOptions.length = 0;
+  filters.categoryOptions.length = 0;
+  filters.category = null;
   filters.inventoryMinDate = null;
   filters.inventoryMaxDate = null;
   filters.inventoryFileCount = null;
@@ -42,7 +73,7 @@ export function resetFilters(): void {
   filters.startDate = null;
   filters.endDate = null;
   filters.maxFiles = 45;
-  filters.allHistory = false;
+  filters.allHistory = DEFAULT_ALL_HISTORY;
   filters.inventoryReady = false;
 }
 
@@ -52,9 +83,19 @@ export function initInventory(retailers: string[], minDate: string | null, maxDa
   filters.inventoryMinDate = minDate;
   filters.inventoryMaxDate = maxDate;
 
-  const defaults = DEFAULT_RETAILERS.filter((name) => retailers.includes(name));
-  filters.selectedRetailers.length = 0;
-  filters.selectedRetailers.push(...(defaults.length ? defaults : retailers.slice(0, Math.min(3, retailers.length))));
+  filters.categoryOptions.length = 0;
+  filters.categoryOptions.push(...[...new Set(retailers.map(retailerCategory))].sort((a, b) => a.localeCompare(b)));
+
+  const remembered = readStoredCategory();
+  const initial = [remembered, DEFAULT_CATEGORY, filters.categoryOptions[0]].find(
+    (candidate): candidate is string => !!candidate && filters.categoryOptions.includes(candidate)
+  );
+  if (initial) {
+    selectCategory(initial);
+  } else {
+    filters.category = null;
+    filters.selectedRetailers.length = 0;
+  }
 
   const min = parseDate(minDate);
   const max = parseDate(maxDate);
@@ -68,6 +109,25 @@ export function initInventory(retailers: string[], minDate: string | null, maxDa
     filters.endDate = null;
   }
   filters.inventoryReady = true;
+}
+
+/** Load every retailer of one category and remember the choice for the next visit. */
+export function selectCategory(category: string): void {
+  filters.category = category;
+  filters.selectedRetailers.length = 0;
+  filters.selectedRetailers.push(...filters.retailerOptions.filter((name) => retailerCategory(name) === category));
+  storeCategory(category);
+}
+
+/** Hand-edited retailer selection; the category label is kept only while it still matches exactly. */
+export function setSelectedRetailers(next: string[]): void {
+  filters.selectedRetailers.length = 0;
+  filters.selectedRetailers.push(...next);
+  if (filters.category) {
+    const members = filters.retailerOptions.filter((name) => retailerCategory(name) === filters.category);
+    const matches = members.length === next.length && members.every((name) => next.includes(name));
+    if (!matches) filters.category = null;
+  }
 }
 
 /** Build the common filter params reactively from the current state. */

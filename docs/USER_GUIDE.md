@@ -9,10 +9,10 @@ The API base URL is configurable in the sidebar. The default is `http://localhos
 ## Sidebar
 
 - **API base URL** — change the Falcon server and reload inventory.
-- **Retailers** — search and select one or more data sources. Gurmar is selected by default when available.
-- **Date range** — restrict time-series queries.
-- **Max files per retailer** — bound history loading; default 45.
-- **Load all files** — bypass the file cap only when a complete bounded range is intentional.
+- **Retailers** — search and select one or more data sources. Every retailer in the inventory is selected by default; remove some to speed up views.
+- **Date range** — restrict time-series queries; defaults to the last 60 days of data.
+- **Max files per retailer** — bound history loading (45) when **Load all files** is off.
+- **Load all files** — on by default: every file in the date range is used, without the per-retailer cap.
 - **Inventory summary** — file count and available date range.
 
 ## Views

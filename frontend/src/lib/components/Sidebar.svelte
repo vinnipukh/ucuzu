@@ -1,7 +1,8 @@
 <script lang="ts">
   import SearchableMultiSelect from '$lib/components/SearchableMultiSelect.svelte';
+  import SearchableSelect from '$lib/components/SearchableSelect.svelte';
   import ApiAlert from '$lib/components/ApiAlert.svelte';
-  import { filters, buildQueryMap } from '$lib/stores/filters.svelte';
+  import { filters, buildQueryMap, selectCategory, setSelectedRetailers } from '$lib/stores/filters.svelte';
   import { API_BASE_URL } from '$lib/api/client';
 
   interface Props {
@@ -108,13 +109,22 @@
         <h2 class="section-title">Load settings</h2>
       </div>
 
+      <SearchableSelect
+        label="Category"
+        options={filters.categoryOptions}
+        value={filters.category}
+        placeholder={filters.category ? 'Type a category' : 'Custom selection'}
+        help="Loads every retailer in the category. Your last choice is remembered."
+        onSelect={selectCategory}
+      />
+
       <SearchableMultiSelect
-        label="Retailers to load"
+        label={`Retailers to load (${filters.selectedRetailers.length})`}
         options={filters.retailerOptions}
         value={filters.selectedRetailers}
         placeholder="Type a few letters; misspellings are okay"
-        help="Loading fewer retailers is much faster. Add the large datasets only when needed."
-        onChange={(next) => { filters.selectedRetailers.length = 0; filters.selectedRetailers.push(...next); }}
+        help="Fine-tune the category: remove retailers or add ones from other categories."
+        onChange={setSelectedRetailers}
       />
 
       <div class="dates">
