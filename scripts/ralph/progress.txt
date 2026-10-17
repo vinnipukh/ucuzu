@@ -143,3 +143,12 @@ Spec: tasks/prd-documentation-overhaul.md
   - `sources.file_path` is relative to `data/` for raw CSVs (`raw/...`) and `<file>.json#date` for JSON.
   - The live DB: EpeyKatfg 1084 JSON dates, Technology 121, HomeGoods 122.
 ---
+
+## 2026-10-17 - US-012
+- Rewrote `docs/DATA_CONTRACT.md`: ownership table (build_database.py is the only reader of data/raw and data/prices_json), committed-data rules, full `data_files.py` behaviour (85 MB limit vs 80 MB chunks, `.partNNN`, stale-part removal, managed `.gitignore` block, `join` skips intact originals, `check` via `git check-ignore` with managed-block fallback, `--data-dir`, currently split `data/raw/EpeyKatfg/series.csv`), raw CSV format (comma/semicolon/tab, UTF-8 then cp1254), JSON fields read (name/category/prices only), monthly inflation CSV behaviour (empty array when missing), troubleshooting 503.
+- Removed runtime CSV fallback / INFLATION_DATA_ROOT mentions from API.md, FALCON_API_CONTRACT.md, GETTING-STARTED.md (troubleshooting now says 503 -> run build_database.py). Grep outside docs/archive and docs/research is clean.
+- Files: docs/DATA_CONTRACT.md, docs/API.md, docs/FALCON_API_CONTRACT.md, docs/GETTING-STARTED.md, docs/ARCHITECTURE.md, docs/DATABASE.md
+- **Learnings for future iterations:**
+  - GitHub heading slugs drop `:`, backticks, `/` and `.`: "Large files: `scripts/data_files.py`" -> `#large-files-scriptsdata_filespy`.
+  - The data-update checklist is delegated to DEVELOPMENT.md (US-006 must include it).
+---

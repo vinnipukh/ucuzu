@@ -6,7 +6,7 @@ This file owns the database schema, indexes, build pipeline and runtime connecti
 
 `data/prices.db` is the read-optimized serving database for the Falcon API. It is generated from the committed `data/` tree by `scripts/build_database.py` and is never committed to Git (`*.db`, `*.db-wal`, `*.db-shm`, `*.db.building*` and `*.db.staging*` are ignored).
 
-If the database file is missing or 0 bytes, `/api/health` still returns 200 with `data.database: "unavailable"`, and every data endpoint returns HTTP 503 with error code `database_unavailable` and message "Database not found; run scripts/build_database.py". There is no CSV fallback.
+If the database file is missing or 0 bytes, `/api/health` still returns 200 with `data.database: "unavailable"`, and every data endpoint returns HTTP 503 with error code `database_unavailable` and message "Database not found; run scripts/build_database.py". The API reads no other data source.
 
 ## Build pipeline
 

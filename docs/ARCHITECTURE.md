@@ -72,7 +72,7 @@ frontend/src/
 4. On a miss, filter endpoints parse and validate the common filters (cached per query signature), then load the matching history frame from SQLite (cached per filter signature) via `sqlite_price_repository.load_price_history_from_db`.
 5. Application use cases compute the response tables in pandas; `api/serialization.py` converts them to JSON-native values inside the envelope; the bytes are cached and sent.
 6. `/api/products/search` and `/api/product` query the `product_prices` view through the adapter directly. `/api/epeykatfg/monthly-inflation` reads the monthly inflation CSV.
-7. Errors: filter validation returns 400 `invalid_filter`; a missing or empty database returns 503 `database_unavailable`; unknown routes, wrong methods and unhandled exceptions are rendered as envelopes by the error handlers in `create_app`. There is no CSV fallback: the SQLite database is the only data path.
+7. Errors: filter validation returns 400 `invalid_filter`; a missing or empty database returns 503 `database_unavailable`; unknown routes, wrong methods and unhandled exceptions are rendered as envelopes by the error handlers in `create_app`. The SQLite database is the only data path.
 
 ## Conventions
 

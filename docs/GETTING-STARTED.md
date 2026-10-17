@@ -61,7 +61,7 @@ cd frontend && npm run check && npm run build
 
 ## Troubleshooting
 
-- **API has no inventory:** confirm `PRICES_DB_PATH` points to a built database, or configure `INFLATION_DATA_ROOT` for fallback reads.
+- **Data endpoints return 503 `database_unavailable`:** the database is missing or empty; run `uv run python scripts/build_database.py` (or point `PRICES_DB_PATH` at a built database).
 - **Epey monthly view is empty:** set `EPEYKATFG_MONTHLY_CSV` to the generated artifact.
 - **Frontend cannot reach API:** verify port 8000 and `VITE_API_BASE_URL`/CORS settings.
 - **Read-only SQLite error:** keep the database directory and WAL sidecars available to the reader; do not deploy a WAL database on a filesystem that prevents SQLite from opening its sidecar state.

@@ -1,50 +1,53 @@
 # Data Contract
 
-This document defines the boundary between the `inflationstudymirror` data repository and this web repository.
+This file owns the `data/` layout and the input file formats. How the build turns these files into SQLite is in [DATABASE.md](DATABASE.md).
 
 ## Ownership
 
-| Artifact | Producer | Consumer |
-|---|---|---|
-| Raw retailer CSVs | Scraper workflows in `InflationItems/Datas/` | `scripts/build_database.py`; optional CSV fallback |
-| Partitioned JSON histories | Scraper/ETL code in `InflationItems/prices_json/` | `scripts/build_database.py` (retailers without raw CSVs) |
-| Generated inflation CSVs | Calculators in `Inflations/Datas/` | API artifact endpoints |
-| SQLite serving database | Web repository build/deployment job | Falcon WSGI API |
+| Artifact | Producer (data repository) | Path here | Consumer |
+|---|---|---|---|
+| Raw retailer CSVs | Scrapers, `InflationItems/Datas/` | `data/raw/` | `scripts/build_database.py` only |
+| Partitioned JSON histories | Scraper/ETL code, `InflationItems/prices_json/` | `data/prices_json/` | `scripts/build_database.py` (retailers without raw CSVs) |
+| Generated inflation CSVs | Inflation calculators, `Inflations/Datas/` | `data/inflation/` | `/api/epeykatfg/monthly-inflation` (`EpeyKatfg/monthly_inflation.csv`) |
+| SQLite serving database | `scripts/build_database.py` in this repository | `data/prices.db` (never committed) | Falcon WSGI API |
 
-The SQLite file is a serving artifact, not the data repository's source of truth.
+The data repository is `vinnipukh/inflationstudymirror` (mirror) with upstream `urazkagangunes/InflationResearchStudy`. When both have a file at the same path, the mirror's copy wins (upstream renamed CSV headers such as `product-name,product_price` → `product_name,price`; both spellings are accepted).
 
-## Committed data
+The SQLite file is a serving artifact built from `data/`, not a source of truth. The API never reads `data/raw` or `data/prices_json` at runtime; `scripts/build_database.py` is the only reader of those folders.
 
-Scraper output is copied into this repository and committed:
+## Rules for committed data
 
-| Source path (data repository) | Path here |
+- `data/raw/`, `data/prices_json/` and `data/inflation/` are committed. `*.db`, `*.db-wal`, `*.db-shm` and build scratch files are never committed. `scripts/build_database.py` must always rebuild `data/prices.db` from the committed data alone.
+- No committed file may exceed 85 MB (see [Large files](#large-files-scriptsdata_filespy)).
+- Large data imports are pushed in batches of about 500 MB, so no single push approaches GitHub's 2 GB limit.
+- Windows cannot create file names containing `\ : * ? " < > |`; such upstream paths are imported with `\` treated as a folder separator and the other characters replaced by `_`.
+- `.gitattributes` stores everything under `data/` byte-for-byte (`-text -diff`): no line-ending conversion.
+
+## Large files: `scripts/data_files.py`
+
+Git hosts reject large blobs, so oversized files under `data/` are committed as chunks.
+
+| Command | Behaviour |
 |---|---|
-| `InflationItems/Datas/` | `data/raw/` |
-| `InflationItems/prices_json/` | `data/prices_json/` |
-| `Inflations/Datas/` | `data/inflation/` |
+| `check` | Lists every file under `data/` larger than **85 MB** (`LIMIT_MB`) that is not itself a part file, asks `git check-ignore` which of them Git would skip, and fails (exit 1) for any that would be committed. If Git cannot be run, it falls back to the managed `.gitignore` block. |
+| `split` | Splits each file over 85 MB into **80 MB** (`CHUNK_MB`) chunks named `<name>.part001`, `<name>.part002`, … (three digits). Old `.partNNN` files for that original are deleted first, so re-splitting leaves no stale parts. The original stays on disk and is added to the managed `.gitignore` block. |
+| `join` | Rebuilds every original from its parts in order. An original whose size already equals the sum of its parts is left alone. `build_database.py` runs this first. |
 
-Sources are `vinnipukh/inflationstudymirror` and its upstream `urazkagangunes/InflationResearchStudy`. When both have a file at the same path, the mirror's copy wins (upstream renamed CSV headers such as `product-name,product_price` → `product_name,price`; both spellings are accepted).
+All commands accept `--data-dir PATH` (default `data/`).
 
-Rules:
+The managed block in `.gitignore` is delimited by `# >>> split data files (managed by scripts/data_files.py; originals rebuilt by \`join\`)` and `# <<< split data files`; `split` rewrites it, so add other ignore rules outside it. The file currently split is `data/raw/EpeyKatfg/series.csv` (two parts).
 
-- `*.db` files are never committed. `scripts/build_database.py` must always rebuild `data/prices.db` from the committed data alone.
-- No committed file may exceed 85 MB. `scripts/data_files.py check` enforces this; `scripts/data_files.py split` commits oversized files as `.partNNN` chunks, and `build_database.py` rejoins them.
-- Large data imports are pushed in batches of about 500 MB.
-- Windows cannot create file names containing `\ : * ? " < > |`; such upstream paths are imported with `\` treated as a folder separator and other characters replaced by `_`.
+## Raw CSV input (`data/raw/`)
 
-## Configuration
+- **Layout:** TÜİK COICOP folders (`01_Food/<store>/…`, `03_Clothing/<store>/…`, `04_Housing/<region>/<city>/…`, …) plus a few non-TÜİK top-level folders such as `EpeyKatfg/`. The folder path determines the retailer label; the rules are in [DATABASE.md](DATABASE.md#raw-csv-ingestion).
+- **File name:** must contain a full date (`YYYY-MM-DD`, `DD-MM-YYYY` or `YYYYMMDD`; `-`, `_` or `.` separators). Undated files are skipped.
+- **Delimiter:** comma, semicolon or tab (whichever is most frequent in the header line).
+- **Encoding:** UTF-8 (with or without BOM), falling back to cp1254.
+- **Columns:** schemas are scraper-specific. A file needs a price column and, ideally, a product id, name and category column. Accepted spellings are the domain's canonical columns (`inflation_dashboard/domain/prices.py`) plus the header aliases listed in [DATABASE.md](DATABASE.md#raw-csv-ingestion).
 
-| Variable | Meaning | Default |
-|---|---|---|
-| `INFLATION_DATA_ROOT` | Root of externally supplied raw CSV snapshots | `data/raw` |
-| `PRICES_DB_PATH` | Runtime SQLite database | `data/prices.db` |
-| `EPEYKATFG_MONTHLY_CSV` | EpeyKatfg monthly inflation CSV | `data/inflation/EpeyKatfg/monthly_inflation.csv` |
+## Partitioned JSON input (`data/prices_json/`)
 
-Paths may point to a sibling checkout, mounted volume, extracted release archive or CI artifact. The API does not require a repository named `inflationstudymirror` to exist next to it.
-
-## Partitioned JSON input
-
-Each JSON file represents one logical retailer partition:
+One file per retailer; the file stem gives the label (`Markets_Gurmar.json` → `Markets / Gurmar`, `_` → ` / `). Shape:
 
 ```json
 {
@@ -62,24 +65,21 @@ Each JSON file represents one logical retailer partition:
 }
 ```
 
-The builder derives the retailer label from the file stem and creates normalized observation rows plus the ingestion ledger.
+The build reads only `name` (defaults to the product id), `category` (defaults to `Uncategorized`) and `prices` (`null` prices are skipped). `latest_price`, `min_price` and `max_price` are ignored and recomputed from the observations. A partition is used only when its retailer has no successfully ingested raw CSV.
 
-## Raw CSV input
+## Generated inflation input (`data/inflation/`)
 
-CSV schemas remain source-specific. The shared reader supports common price/product/category column variants, UTF-8 with BOM, comma/semicolon delimiters and filename-driven dates. The fallback must remain bounded by retailer, date and file count.
+`/api/epeykatfg/monthly-inflation` serves `data/inflation/EpeyKatfg/monthly_inflation.csv` (override with `EPEYKATFG_MONTHLY_CSV`): a UTF-8 CSV with a header and one row per month. Values in `month`, `prev_month` and `groups` stay strings; other values are converted to numbers when they parse. Per-group columns follow the `n_<code>`, `avg_<code>` and `basic_<code>` naming. The response shape is in [FALCON_API_CONTRACT.md](FALCON_API_CONTRACT.md).
 
-## Generated inflation input
+If the file is absent or has no header, the endpoint returns 200 with an empty `data` array.
 
-The EpeyKatfg endpoint consumes a CSV with a header and one row per month. The current web contract expects the columns documented in `docs/FALCON_API_CONTRACT.md`; per-group columns use the `n_<code>`, `avg_<code>` and `basic_<code>` naming convention.
+Other files under `data/inflation/` are committed for reference and are not read by the API.
 
-If the artifact is absent, the endpoint returns a valid empty response rather than importing code from the data repository.
+## Updating the data
 
-## Recommended publication flow
+The checklist (copy, `data_files.py check`/`split`, push batches, rebuild, verify) is in [DEVELOPMENT.md](DEVELOPMENT.md).
 
-1. Run and validate the data repository's scrapers and inflation calculators.
-2. Copy new or changed files into `data/raw`, `data/prices_json` and `data/inflation`, recording the source commits in the commit message.
-3. Run `uv run python scripts/data_files.py check` (split or ignore anything over 85 MB) and commit in batches of about 500 MB.
-4. Build `data/prices.db` with `uv run python scripts/build_database.py`.
-5. Run API verification against the built database.
-6. Deploy the database as a read-only runtime artifact.
-7. Rebuild when new data is committed; do not mutate the database in API workers.
+## Troubleshooting
+
+- **Data endpoints return 503 `database_unavailable`:** `data/prices.db` (or `PRICES_DB_PATH`) is missing or empty. Build it with `scripts/build_database.py` (see [GETTING-STARTED.md](GETTING-STARTED.md)).
+- **A retailer is missing after a build:** check the build summary's skip counts; the usual causes are an undated file name or an unrecognised price header.

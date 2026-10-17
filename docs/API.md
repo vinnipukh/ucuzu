@@ -2,7 +2,7 @@
 
 This document provides the complete specification for the Falcon REST API implemented under `inflation_dashboard/api/`.
 
-The API is backed by the generated SQLite time-series database (`data/prices.db` by default, configurable with `PRICES_DB_PATH`) with optional bounded CSV fallback from `INFLATION_DATA_ROOT`. It serves the Svelte production frontend in `frontend/`.
+The API is backed by the generated SQLite time-series database (`data/prices.db` by default, configurable with `PRICES_DB_PATH`); a missing database makes data endpoints return 503 `database_unavailable`. It serves the Svelte production frontend in `frontend/`.
 
 > **Canonical spec:** [`FALCON_API_CONTRACT.md`](FALCON_API_CONTRACT.md) is the regression-verified, authoritative contract (envelope shapes, TypeScript types, validation rules). This document is a quick reference summary and may lag the canonical spec.
 
@@ -297,8 +297,7 @@ Returns the externally generated EpeyKatfg month-over-month inflation artifact.
 - **Warm latency**: all endpoints serve in **0.09–0.23 ms** on warm requests (`scripts/benchmark_falcon_api.py`).
 - **Response cache**: `api/filters.py` keeps a thread-safe LRU/TTL cache of pre-serialized `orjson` bytes
   (via `get_cached_response`/`put_cached_response`); warm requests bypass recalculation and serialization.
-- **Dynamic routing**: data endpoints route through `sqlite_price_repository` when the configured SQLite database
-  exists and fall back to `csv_price_repository` otherwise (`is_sqlite_available()` in `api/filters.py`).
+- **Data path**: data endpoints read only from `sqlite_price_repository`.
 - **Boundary**: `inflation_dashboard/api/` never imports `sqlite3`; database access lives only in the adapters layer.
 
 ## TypeScript Interfaces for Svelte Frontend

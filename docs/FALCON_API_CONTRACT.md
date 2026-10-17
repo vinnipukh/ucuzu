@@ -20,12 +20,12 @@
 ### 1.2 Hexagonal Architecture Separation
 The API follows strict clean architecture boundaries:
 1. **Domain (`inflation_dashboard/domain/`):** Pure normalization logic, price calculations, and invariant rules. No web framework dependencies.
-2. **Adapters (`inflation_dashboard/adapters/`):** Storage implementations (`csv_price_repository.py` and `sqlite_price_repository.py`).
+2. **Adapters (`inflation_dashboard/adapters/`):** SQLite storage (`sqlite_price_repository.py`).
 3. **Application (`inflation_dashboard/application/`):** Use cases and chart specifications.
 4. **API Layer (`inflation_dashboard/api/`):** Falcon resources, request parameter parsers, JSON serialization, and error translation.
 5. **Frontend Client:** Decoupled presentation layer communicating exclusively via this HTTP contract.
 
-The repository has no compile-time dependency on the scraper/inflation repository. SQLite, raw CSV fallback and generated inflation artifacts are supplied through the paths documented in `DATA_CONTRACT.md`.
+The repository has no compile-time dependency on the scraper/inflation repository. The SQLite database and generated inflation artifacts are supplied through the paths documented in `DATA_CONTRACT.md`.
 
 ---
 
