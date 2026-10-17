@@ -113,3 +113,13 @@ Spec: tasks/prd-documentation-overhaul.md
 - **Learnings for future iterations:**
   - Dated reports/research: change paths only (FR-4).
 ---
+
+## 2026-10-17 - US-005
+- Rewrote `docs/ARCHITECTURE.md`: system boundary (data committed under `data/`), mermaid flow without CSV fallback, full source layout incl. `frontend/src` top level, layer boundaries, 7-step request flow (SPA -> Falcon WSGI -> response/filter/history caches -> SQLite adapter), conventions (from CONVENTIONS.md), operational notes (from CONCERNS.md, "repo has no raw data" claim dropped), deployment topology, `## Known issues` with A8 (.env never loaded) and A11 (`InventoryMeta.warnings` never sent) only.
+- `docs/CONVENTIONS.md` and `docs/CONCERNS.md` are one-line pointers; their entries in `docs/README.md` updated. No other inbound links existed.
+- Files: docs/ARCHITECTURE.md, docs/CONVENTIONS.md, docs/CONCERNS.md, docs/README.md
+- **Learnings for future iterations:**
+  - Known-issues anchor is `ARCHITECTURE.md#known-issues` (US-019 links it).
+  - Vite loads `frontend/.env` itself, so A8 only applies to the root `.env.example` (API side).
+  - `/api/products/search` and `/api/product` bypass use cases and query the `product_prices` view directly; `load_*_from_db` aggregate helpers in the adapter are only used by scripts.
+---

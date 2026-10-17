@@ -26,8 +26,8 @@ Each topic has one owning document; other files link to it instead of repeating 
 
 - [Development](DEVELOPMENT.md) — change checklists (API change, schema/data layout change, data update, frontend change).
 - [Testing](TESTING.md) — test suite, verification scripts and manual QA.
-- [Conventions](CONVENTIONS.md) — code, API and documentation conventions.
-- [Concerns](CONCERNS.md) — operational risks and mitigations.
+- [Conventions](CONVENTIONS.md) — pointer; merged into [Architecture](ARCHITECTURE.md#conventions).
+- [Concerns](CONCERNS.md) — pointer; merged into [Architecture](ARCHITECTURE.md#operational-notes).
 
 ## Research and reports
 

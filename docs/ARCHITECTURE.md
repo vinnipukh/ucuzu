@@ -1,62 +1,132 @@
 # Architecture
 
+This file owns the source layout, layer boundaries, request flow, coding conventions and the list of known code issues. Setup commands are in [GETTING-STARTED.md](GETTING-STARTED.md).
+
 ## System boundary
 
-This repository contains the presentation and serving tiers only. Data acquisition and inflation computation are owned by the separate `inflationstudymirror` repository.
+This repository contains the serving and presentation tiers. Scrapers, inflation calculators and TÜİK methodology live in the separate data repository; their **output** is committed here under `data/` (`raw/`, `prices_json/`, `inflation/`). See [DATA_CONTRACT.md](DATA_CONTRACT.md).
 
 ```mermaid
 flowchart LR
-    DataRepo[Data repository\nraw CSV + prices_json + inflation artifacts]
-    Builder[SQLite builder]
-    DB[(data/prices.db)]
+    Data[data/ committed\nraw CSV + prices_json + inflation artifacts]
+    Builder[scripts/build_database.py]
+    DB[(data/prices.db\nbuilt locally, never committed)]
     API[Falcon WSGI API]
     SPA[SvelteKit static SPA]
 
-    DataRepo -->|external path or deployment artifact| Builder
+    Data --> Builder
     Builder --> DB
-    DB --> API
-    DataRepo -->|optional CSV fallback| API
-    DataRepo -->|monthly inflation CSV| API
-    API -->|JSON over HTTP| SPA
+    DB -->|read-only| API
+    Data -->|data/inflation/EpeyKatfg/monthly_inflation.csv| API
+    API -->|JSON over HTTP /api| SPA
 ```
 
-## Components
+## Source layout
 
-| Component | Path | Responsibility |
-|---|---|---|
-| Svelte SPA | `frontend/` | Dashboard views, filters, charts and API client |
-| Falcon API | `inflation_dashboard/api/` | Routing, validation, serialization, caching and middleware |
-| Application layer | `inflation_dashboard/application/` | History, averages, movers, coverage and chart contracts |
-| Domain layer | `inflation_dashboard/domain/` | Price/date normalization and shared data contracts |
-| SQLite adapter | `inflation_dashboard/adapters/sqlite_price_repository.py` | Read-only WAL database access and query optimization |
-| CSV fallback | `inflation_dashboard/adapters/csv_price_repository.py` | Optional bounded reads from externally mounted raw CSV |
-| Database tooling | `scripts/build_database.py`, `scripts/data_files.py` | Build the serving database from the committed `data/` tree; split/join files over 85 MB |
+```text
+inflation_dashboard/
+  domain/prices.py                 price/date normalization, HISTORY_COLUMNS
+  application/use_cases.py         history, averages, movers, coverage calculations (pandas)
+  application/chart_specs.py       column contracts for each response table
+  application/epeykatfg_monthly.py reads the EpeyKatfg monthly inflation CSV
+  adapters/sqlite_price_repository.py  the only database access (read-only SQLite)
+  api/falcon_app.py                create_app(): routes, middleware, error handlers
+  api/resources.py                 one resource class per endpoint
+  api/filters.py                   filter parsing, history loading, in-process caches
+  api/serialization.py             {data, meta, errors} envelope, JSON-safe conversion
+scripts/
+  run_falcon_server.py             launcher (Granian / Gunicorn / Waitress)
+  build_database.py                builds data/prices.db from data/
+  data_files.py                    split/join/check files over the 85 MB limit
+  verify_falcon_api.py             in-process API smoke and boundary checks
+  test_sqlite_adapter.py, test_new_endpoints.py, benchmark_*.py   manual tooling
+tests/                             pytest suite
+frontend/src/
+  app.html, app.css, app.d.ts      page shell, global styles, ambient types
+  routes/+layout.ts                ssr = false (pure client-side SPA)
+  routes/+layout.svelte            root layout: imports app.css, applies the colour theme
+  routes/+page.svelte              dashboard shell: inventory load, sidebar, five view tabs
+  lib/api/client.ts                fetchApi(): the only HTTP client
+  lib/stores/filters.svelte.ts     global filter state (Svelte 5 runes)
+  lib/types/api.ts                 TypeScript mirror of the API contract
+  lib/themes.svelte.ts             Auto/Light/Dark theme state
+  lib/components/                  Header, Sidebar, Chart, DataTable, selects, alerts
+  lib/views/                       ProductExplorer, RetailerAverages, PriceMovers, CoverageOverview, EpeyKatfgMonthly
+  lib/utils/                       ECharts options/theme, formatting, fuzzy search, AsyncResource loader
+  lib/index.ts                     $lib alias entry (empty)
+```
 
-## Runtime flow
+## Layer boundaries
 
-1. The data repository publishes raw CSV, partitioned JSON and generated inflation artifacts.
-2. The web repository builds or receives a versioned SQLite snapshot.
-3. Falcon opens the database read-only with WAL, mmap and bounded cache settings.
-4. API resources route through application use cases and JSON-safe serialization.
-5. The Svelte SPA consumes the stable HTTP envelope and renders five dashboard views.
+- `domain/`, `application/` and `adapters/` do not import Falcon, Streamlit, Plotly or frontend code.
+- `api/` owns HTTP concerns. It must not import `sqlite3`, Redis, SQLAlchemy or other database/cache clients; database access goes through `adapters/sqlite_price_repository.py`. The in-process caches in `api/filters.py` are stdlib-only.
+- `HealthResource` must not touch inventory or history loading, so `/api/health` stays cheap.
+- `frontend/` talks to the server only through the HTTP API, via `frontend/src/lib/api/client.ts`. It never reads data files.
+- `scripts/verify_falcon_api.py` enforces the import rules above.
 
-## Module boundaries
+## Request flow
 
-- Domain, application and adapter modules do not import Falcon or frontend frameworks.
-- API resources do not access `sqlite3` directly.
-- The browser client does not import Python modules or scan data files.
-- Raw CSV fallback is optional and bounded; SQLite is the production serving path.
-- External artifact paths are configured through environment variables, never hard-coded sibling repository paths.
+1. The SPA calls `fetchApi()`, which builds `<base>/api/...`. With an empty `VITE_API_BASE_URL` (the default) the URL is relative, so the browser calls its own origin; the Vite dev proxy or a production reverse proxy forwards `/api` to Falcon. See [CONFIGURATION.md](CONFIGURATION.md).
+2. Falcon (WSGI only) runs `TimingMiddleware` and `CORSMiddleware`, then the resource for the route.
+3. The resource first checks the pre-serialized response cache (`api/filters.py`, 5-minute TTL, gzip variant and strong ETag per entry). A hit is served as 200 or 304.
+4. On a miss, filter endpoints parse and validate the common filters (cached per query signature), then load the matching history frame from SQLite (cached per filter signature) via `sqlite_price_repository.load_price_history_from_db`.
+5. Application use cases compute the response tables in pandas; `api/serialization.py` converts them to JSON-native values inside the envelope; the bytes are cached and sent.
+6. `/api/products/search` and `/api/product` query the `product_prices` view through the adapter directly. `/api/epeykatfg/monthly-inflation` reads the monthly inflation CSV.
+7. Errors: filter validation returns 400 `invalid_filter`; a missing or empty database returns 503 `database_unavailable`; unknown routes, wrong methods and unhandled exceptions are rendered as envelopes by the error handlers in `create_app`. There is no CSV fallback: the SQLite database is the only data path.
+
+## Conventions
+
+### API
+
+- Every response, including errors, uses `{data, meta, errors}`; error objects are `{code, message}`.
+- Serialized values are JSON-native: no pandas/numpy scalars, `NaN` or `NaT`.
+- Resources stay thin and delegate to application use cases; database access belongs in adapters.
+- `frontend/src/lib/types/api.ts` and [FALCON_API_CONTRACT.md](FALCON_API_CONTRACT.md) change together with any endpoint change.
+
+### Frontend
+
+- Svelte 5 runes are the state model.
+- The SPA is static and client-only (`ssr = false`, `adapter-static` with an `index.html` fallback).
+- All server data access goes through `frontend/src/lib/api/client.ts`.
+
+### Database
+
+- `data/prices.db` is generated by `scripts/build_database.py` and never committed.
+- API request connections are read-only.
+- Schema and index changes update `scripts/build_database.py`, `tests/test_build_database.py` and [DATABASE.md](DATABASE.md) together.
+- Scraper and inflation-calculation source code stays in the data repository; only its output is committed under `data/`.
+
+### Documentation
+
+- Current docs live directly under `docs/`, one owning file per topic (see the [index](README.md)).
+- Dated research is under `docs/research/` and the dated `FALCON-*` reports; only their links are maintained.
+- Monorepo and Streamlit history is under `docs/archive/` and is labeled historical.
+
+## Operational notes
+
+- **Database availability:** the API starts without a database, but data endpoints return 503 until `data/prices.db` is built. Deployment should build and check the database before taking traffic.
+- **Rebuilds:** `build_database.py` writes `<db>.building` and swaps it in with `os.replace`; restart the API after a rebuild because workers keep per-thread connections and 5-minute caches.
+- **SQLite concurrency:** read-only connections, WAL mode, one reusable reader per worker thread, bounded worker/thread counts.
+- **Payload size:** unfiltered history can be tens of MB. Keep the bounded defaults (`max_files`), gzip/ETag and response caching.
+- **Cross-repository data:** retailer labels, product identity rules, date formats and inflation columns must stay compatible with the data repository's output.
+- **Security:** CORS defaults to `*`; restrict `FALCON_CORS_ORIGINS` in production. Keep secrets out of Git. The API exposes no write path.
 
 ## Deployment topology
 
-Recommended production deployment:
-
 ```text
 nginx/Caddy
-  ├── /                 → static Svelte build
-  └── /api/*            → Falcon/Granian (WSGI)
-                              └── read-only data/prices.db
+  ├── /         → static Svelte build (frontend/build, index.html fallback)
+  └── /api/*    → Falcon on Granian/Gunicorn (WSGI)
+                    └── read-only data/prices.db
 ```
 
-The API and frontend may also be deployed as separate services. Set `VITE_API_BASE_URL` at build time or configure CORS for a cross-origin frontend.
+The API and SPA can also run on separate origins: set `VITE_API_BASE_URL` at build time and allow the SPA origin in `FALCON_CORS_ORIGINS`. A reverse-proxy example is in [GETTING-STARTED.md](GETTING-STARTED.md).
+
+## Known issues
+
+Code defects that are documented rather than fixed:
+
+| Issue | Location | Impact |
+|---|---|---|
+| Nothing loads a `.env` file (no dotenv). `.env.example` only lists variables; they must be exported in the shell or service environment. | `.env.example:1`; variables are read with `os.environ` in `inflation_dashboard/adapters/sqlite_price_repository.py:36` and `inflation_dashboard/application/epeykatfg_monthly.py:20` | Copying `.env.example` to `.env` has no effect on the API. (Vite does load `frontend/.env` for `VITE_*` variables.) |
+| The client type `InventoryMeta.warnings` has no counterpart in server output: `/api/inventory` never sends `meta.warnings`. | `frontend/src/lib/types/api.ts:76`, read at `frontend/src/routes/+page.svelte:43` | The sidebar's inventory warnings list is always empty. |
