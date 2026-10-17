@@ -25,6 +25,7 @@ htmlcov/
 *.db-wal
 *.db-shm
 *.db.building*
+*.db.staging*
 /logs/
 
 # Node / Svelte

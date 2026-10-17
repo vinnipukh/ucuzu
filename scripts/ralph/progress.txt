@@ -17,3 +17,11 @@ Spec: tasks/prd-documentation-overhaul.md
   - Tests do not need `data/prices.db`; `verify_falcon_api.py` has an explicit no-inventory branch. Keep it working without a DB so CI can keep running it (relevant to US-022).
   - YAML validated locally with pyyaml; workflow not run on GitHub.
 ---
+
+## 2026-10-17 - US-025
+- Added `*.db.staging*` to `.gitignore` next to `*.db.building*`, outside the data_files.py managed block.
+- Files: .gitignore
+- **Learnings for future iterations:**
+  - `build_database.py` builds into `<db>.building` and ATTACHes a scratch `<db>.staging` (journal off). Both are now ignored.
+  - `data_files.py check` still passes, so the managed block parser is unaffected.
+---
