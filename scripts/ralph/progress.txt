@@ -133,3 +133,13 @@ Spec: tasks/prd-documentation-overhaul.md
   - `scripts/build_database.py --db-path` also defaults to `PRICES_DB_PATH`.
   - FALCON_TIMING_LOG logs at INFO, but nothing configures Python logging, so the lines show only if the server process does.
 ---
+
+## 2026-10-17 - US-011
+- Rewrote `docs/DATABASE.md` from `scripts/build_database.py`: 8-step build lifecycle (join, cleanup of stale building/staging files, `<db>.building` + attached `<db>.staging`, raw ingest, JSON fallback, last-row-wins observations, indexes/views/ANALYZE, WAL, `os.replace` swap after removing stale `-wal`/`-shm`); date patterns; label table (non-TÜİK join, TÜİK-only keeps underscores, nested groups, Housing leaf, others underscores->spaces); complete NAME/PRICE alias lists plus the domain's canonical columns; all six skip reasons; JSON fallback rules (only uncovered retailers; only name/category/prices read; stems + `Health_Diagnostic_Surgical_Services` alias; EpeyKatfg/Technology/HomeGoods from JSON); 4 indexes + automatic unique indexes; runtime: launcher RW once for WAL, request connections `mode=ro` + pragmas; 503 `database_unavailable` when missing/empty.
+- Label examples were checked by calling `raw_retailer_label`/`retailer_from_stem` directly.
+- Validation commands moved out (linked to TESTING.md); build command lives in GETTING-STARTED.
+- Files: docs/DATABASE.md
+- **Learnings for future iterations:**
+  - `sources.file_path` is relative to `data/` for raw CSVs (`raw/...`) and `<file>.json#date` for JSON.
+  - The live DB: EpeyKatfg 1084 JSON dates, Technology 121, HomeGoods 122.
+---
