@@ -123,3 +123,13 @@ Spec: tasks/prd-documentation-overhaul.md
   - Vite loads `frontend/.env` itself, so A8 only applies to the root `.env.example` (API side).
   - `/api/products/search` and `/api/product` bypass use cases and query the `product_prices` view directly; `load_*_from_db` aggregate helpers in the adapter are only used by scripts.
 ---
+
+## 2026-10-17 - US-010
+- Rewrote `docs/CONFIGURATION.md`: "no .env is loaded" (A8, linked to Known issues), `.env.example` CORS value vs code default `*`, Vite reads `frontend/.env`, relative paths resolve against CWD; tables with name/default/read-by file:line/effect for PRICES_DB_PATH, EPEYKATFG_MONTHLY_CSV, FALCON_CORS_ORIGINS, FALCON_TIMING_LOG (1/true/yes/on), SQLITE_BUSY_TIMEOUT/CACHE_SIZE/MMAP_SIZE, HOST, PORT, WEB_CONCURRENCY, SERVER_THREADS, SERVER_BACKLOG, VITE_API_BASE_URL (empty = same-origin /api); full flag table from `--help` with `--sqlite-db` > `PRICES_DB_PATH` > `data/prices.db`.
+- Removed INFLATION_DATA_ROOT, `--no-sqlite-readonly` and the removed SQLITE_* exports.
+- Files: docs/CONFIGURATION.md
+- **Learnings for future iterations:**
+  - CONFIGURATION.md and ARCHITECTURE.md Known issues cite file:line. The docstring stories (US-014/015/016/017) shift lines: re-grep and update those references in the same commit.
+  - `scripts/build_database.py --db-path` also defaults to `PRICES_DB_PATH`.
+  - FALCON_TIMING_LOG logs at INFO, but nothing configures Python logging, so the lines show only if the server process does.
+---
