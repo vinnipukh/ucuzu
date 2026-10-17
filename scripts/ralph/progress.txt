@@ -95,3 +95,13 @@ Spec: tasks/prd-documentation-overhaul.md
   - The user keeps their own API on :8000 and Vite on :5173 running; don't kill them. Use other ports for test servers.
   - The Vite proxy only exists in `npm run dev`; `npm run preview`/static hosting need a reverse proxy or `VITE_API_BASE_URL` (document in US-003/US-013).
 ---
+
+## 2026-10-17 - US-001
+- Moved `docs/SEPARATION.md` -> `docs/archive/SEPARATION.md` with the "Historical: ..." banner. The only inbound link was `docs/README.md`.
+- Rewrote `docs/README.md`: markdown links to every doc, the three research notes, `benchmarks/`, `db_benchmark_results.json` and the archive (SEPARATION, monorepo/, planning/, static report), each with a one-line description from the Target structure table. "Database research" replaced by the real research topics.
+- Checked every relative link with a throwaway shell loop (not committed).
+- Files: docs/README.md, docs/archive/SEPARATION.md
+- **Learnings for future iterations:**
+  - When CONVENTIONS.md / CONCERNS.md become pointers (US-005), update their entries in `docs/README.md`.
+  - Link check one-liner: `grep -o "](\([^)]*\))" FILE | sed 's/](\(.*\))/\1/' | while read l; do [ -e "$l" ] || echo MISSING $l; done` (run from the file's directory; strip `#anchors` first if present).
+---

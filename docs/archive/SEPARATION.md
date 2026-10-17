@@ -1,5 +1,7 @@
 # Separation Record
 
+> **Historical:** describes the 2026 extraction from the monorepo; not current setup guidance.
+
 This repository was extracted from the former `inflationstudymirror` monorepo on 2026-09-24.
 
 ## Source ownership
