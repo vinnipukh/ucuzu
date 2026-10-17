@@ -215,7 +215,13 @@ def print_banner(
     print(sep, flush=True)
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """Return the launcher's argument parser.
+
+    Defaults are read from the environment when the parser is built, so
+    ``PRICES_DB_PATH``, ``HOST``, ``PORT`` etc. apply whenever the matching
+    flag is omitted.
+    """
     default_workers = max(1, min(os.cpu_count() or 4, 8))
 
     parser = argparse.ArgumentParser(
@@ -263,8 +269,11 @@ def main() -> int:
     )
     parser.add_argument(
         "--sqlite-db",
-        default=str(DEFAULT_SQLITE_DB),
-        help=f"Path to SQLite database file (default: {DEFAULT_SQLITE_DB}).",
+        default=os.environ.get("PRICES_DB_PATH") or str(DEFAULT_SQLITE_DB),
+        help=(
+            "Path to SQLite database file. Precedence: --sqlite-db > PRICES_DB_PATH "
+            f"> {DEFAULT_SQLITE_DB}. Relative paths resolve against the current directory."
+        ),
     )
     parser.add_argument(
         "--no-sqlite-readonly",
@@ -282,8 +291,11 @@ def main() -> int:
         action="store_true",
         help="Print server command without executing.",
     )
+    return parser
 
-    args = parser.parse_args()
+
+def main() -> int:
+    args = build_parser().parse_args()
 
     # Engine selection and fallback
     chosen_engine = args.engine

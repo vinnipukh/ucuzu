@@ -25,3 +25,13 @@ Spec: tasks/prd-documentation-overhaul.md
   - `build_database.py` builds into `<db>.building` and ATTACHes a scratch `<db>.staging` (journal off). Both are now ignored.
   - `data_files.py check` still passes, so the managed block parser is unaffected.
 ---
+
+## 2026-10-17 - US-021
+- `scripts/run_falcon_server.py`: parser extracted into `build_parser()`; `--sqlite-db` defaults to `PRICES_DB_PATH`, then `data/prices.db`. Precedence and CWD-relative resolution stated in `--help`.
+- Added `tests/test_run_falcon_server.py` (env default, flag override, repo fallback).
+- Files: scripts/run_falcon_server.py, tests/test_run_falcon_server.py
+- **Learnings for future iterations:**
+  - Tests import scripts by inserting `scripts/` on `sys.path` (see tests/test_build_database.py); `build_parser().parse_args([])` makes launcher defaults testable.
+  - The launcher still exports `PRICES_DB_PATH` (resolved) for the worker processes; it now equals the env value when no flag is given.
+  - `--dry-run` prints the banner and server command without exec, handy for checking flags.
+---
