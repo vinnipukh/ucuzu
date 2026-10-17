@@ -6,7 +6,7 @@ Repo grounded in `/mnt/e/Projects/inflationstudymirror` (Falcon 4.3.1 WSGI, orjs
 pre-serialized byte TTL cache, read-only SQLite, Granian/Gunicorn launcher, Python 3.14.7).
 Method: official Falcon 4.3.1 docs + GitHub falconry/falcon issues/PRs + installed 4.3.1 source
 (verified directly in the repo venv) + local micro-benchmarks in the repo venv + Tier-2/3 benchmarks.
-Companion notes (already in repo): `docs/research-notes-profiling-db-caching-falcon.md` covers DB/profiling/caching/compression measurements.
+Companion notes (already in repo): `docs/research/research-notes-profiling-db-caching-falcon.md` covers DB/profiling/caching/compression measurements.
 
 ## Executive summary
 
@@ -259,7 +259,7 @@ Companion notes (already in repo): `docs/research-notes-profiling-db-caching-fal
    alongside raw bytes in the same TTL entry; select by `req.get_header('Accept-Encoding')`; set
    `Content-Encoding` + `Vary: Accept-Encoding`; compress once per entry (sibling notes: 77 MB → ~2 MB,
    ~0.12 s/27 MB CPU) rather than per request. If a reverse proxy fronts the API, do it there instead.
-   Skip for tiny responses (<1 KB) and `/api/health`. [^31] [^32] (sibling repo notes `docs/research-notes-profiling-db-caching-falcon.md` measured 77 MB → ~2 MB, ~0.12 s/27 MB CPU)
+   Skip for tiny responses (<1 KB) and `/api/health`. [^31] [^32] (sibling repo notes `docs/research/research-notes-profiling-db-caching-falcon.md` measured 77 MB → ~2 MB, ~0.12 s/27 MB CPU)
 3. **P2 — Remove the redundant `resp.media = envelope_dict`** on cache-data paths (keep it in the
    `except` fallback). `data` wins in `render_body()`; the media set is dead state and makes the cached
    path depend on `_media` semantics. Low risk, small diff across `resources.py`. [^13] [^local]

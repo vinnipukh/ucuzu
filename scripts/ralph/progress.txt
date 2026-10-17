@@ -105,3 +105,11 @@ Spec: tasks/prd-documentation-overhaul.md
   - When CONVENTIONS.md / CONCERNS.md become pointers (US-005), update their entries in `docs/README.md`.
   - Link check one-liner: `grep -o "](\([^)]*\))" FILE | sed 's/](\(.*\))/\1/' | while read l; do [ -e "$l" ] || echo MISSING $l; done` (run from the file's directory; strip `#anchors` first if present).
 ---
+
+## 2026-10-17 - US-002
+- Path-only fixes: optimization report table now points at `docs/research/research-notes-*.md`; `scripts/precompute_artifacts.py` marked "(not present in this repository)"; deployment research and benchmarks case studies point at `docs/archive/monorepo/TECH-STACK-SEARCH.md`; framework notes (2 places) point at `docs/research/research-notes-profiling-db-caching-falcon.md`.
+- These references are code spans, not markdown links; no real relative markdown links in those files are broken.
+- Files: docs/FALCON-API-OPTIMIZATION-REPORT-2026-09-03.md, docs/FALCON-DEPLOYMENT-TUNING-RESEARCH.md, docs/research/falcon-benchmarks-case-studies.md, docs/research/research-notes-falcon-framework-optimization.md
+- **Learnings for future iterations:**
+  - Dated reports/research: change paths only (FR-4).
+---

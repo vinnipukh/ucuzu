@@ -96,7 +96,7 @@ Engine-correctness findings (verified on this repo): waitress engine (`waitress 
 6. **OS-level tuning (systemd/VM host, WSL note)**: `net.core.somaxconn` ≥ 2048 (kernel caps granian/gunicorn backlog otherwise), `net.ipv4.tcp_max_syn_backlog` 65535, widen `ip_local_port_range`, `tcp_tw_reuse=1`, `LimitNOFILE=65535` on the unit; mount `/tmp` check for gunicorn heartbeat tmpfs only if gunicorn is used. [^7][^9]
 7. **Worker sizing on the 16-core target**: granian `--workers 8 --blocking-threads 4..8` (cache-miss path is CPU-bound pandas; keep-alive byte-serving is the cheap path); stress-test with >64 concurrent clients for headroom. Revisit only if 3.14t (free-threaded CPython) is adopted — Falcon already reports near-linear thread scaling there. [^4][^5][^12][^27]
 8. **CDN/caching headers**: emit `Cache-Control: max-age=<300s>` + ETag on the idempotent GET endpoints to match the 300s in-process TTL cache, so a CDN can offload repeat requests; this is the cheapest throughput win after the engine. [^17][^18][^27]
-9. **Document it**: extend `docs/TECH-STACK-SEARCH.md` / deployment docs with this server-selection rationale and the verified engine fixes (per AGENTS.md convention).
+9. **Document it**: extend `docs/archive/monorepo/TECH-STACK-SEARCH.md` / deployment docs with this server-selection rationale and the verified engine fixes (per AGENTS.md convention).
 
 ## Sources
 

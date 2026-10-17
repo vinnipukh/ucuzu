@@ -6,10 +6,10 @@
 
 | Notes file | Coverage |
 |---|---|
-| `docs/research-notes-falcon-framework-optimization.md` | Framework internals, ETag/304, middleware, routing, media, WSGI vs ASGI |
+| `docs/research/research-notes-falcon-framework-optimization.md` | Framework internals, ETag/304, middleware, routing, media, WSGI vs ASGI |
 | `docs/FALCON-DEPLOYMENT-TUNING-RESEARCH.md` | Server selection, worker/thread sizing, launch bugs, OS/proxy tuning |
 | `docs/research/falcon-benchmarks-case-studies.md` | TechEmpower data, independent benchmarks, production users, scaling pitfalls |
-| `docs/research-notes-profiling-db-caching-falcon.md` | Measured hot paths, SQLite tuning, serialization, caching, precompute strategy |
+| `docs/research/research-notes-profiling-db-caching-falcon.md` | Measured hot paths, SQLite tuning, serialization, caching, precompute strategy |
 
 ---
 
@@ -99,7 +99,7 @@
 5. **Declare real server deps**: add `granian` + `gunicorn` to `pyproject.toml`/`uv.lock`; keep `waitress` only as dev fallback. Fix or remove the waitress engine (pass module with `app = create_app()`, or drop it) and fix the uvicorn engine (`--interface wsgi`) or remove — granian + gunicorn-gthread are the supported paths.
 
 ### P2 — Cold loads, memory safety, observability (week+)
-6. **Precompute per snapshot**: `scripts/precompute_artifacts.py` builds pickle artifacts (zero new deps; parquet needs pyarrow) of the default/all-history filtered frames + retailer averages + movers + coverage after `prices.db` rebuilds; resources load them once per worker. Removes the 2.4–15 s first-load per filter. **Do not** route through the unused SQL aggregate functions (measured slower).
+6. **Precompute per snapshot**: `scripts/precompute_artifacts.py` (not present in this repository) builds pickle artifacts (zero new deps; parquet needs pyarrow) of the default/all-history filtered frames + retailer averages + movers + coverage after `prices.db` rebuilds; resources load them once per worker. Removes the 2.4–15 s first-load per filter. **Do not** route through the unused SQL aggregate functions (measured slower).
 7. **Boot-time warmup**: one query per hot path at worker start (or `preload`/fork-COW if supported) to kill first-request spikes.
 8. **Cap `_response_cache` memory**: store bytes only on hit path (drop the duplicated `envelope_dict`), add a total-byte cap.
 9. **TimingMiddleware** (perf_counter in `process_request` → `req.context`, log delta + route + cache_hit in `process_response`) — plain logs, no deps; plus `py-spy`/`snakeviz` for one-shot profiles and a wrk/oha smoke script across {granian, gthread, waitress} × endpoints, modeled on rahm's methodology.
