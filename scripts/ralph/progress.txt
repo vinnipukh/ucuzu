@@ -35,3 +35,12 @@ Spec: tasks/prd-documentation-overhaul.md
   - The launcher still exports `PRICES_DB_PATH` (resolved) for the worker processes; it now equals the env value when no flag is given.
   - `--dry-run` prints the banner and server command without exec, handy for checking flags.
 ---
+
+## 2026-10-17 - US-023
+- Removed `--no-sqlite-readonly` and the never-read exports `SQLITE_DB_PATH`, `SQLITE_READ_ONLY`, `SQLITE_JOURNAL_MODE`, `SQLITE_SYNCHRONOUS`, `SQLITE_URI` from `scripts/run_falcon_server.py`. Kept `SQLITE_BUSY_TIMEOUT`/`SQLITE_CACHE_SIZE`/`SQLITE_MMAP_SIZE` (read by `sqlite_price_repository.pragma_values`).
+- Verified: `--help` and `--dry-run` work; server started on :8765 (granian) and `/api/health` returned the envelope.
+- Files: scripts/run_falcon_server.py
+- **Learnings for future iterations:**
+  - On Windows, granian workers are spawned `multiprocessing` children; stopping the launcher PID leaves the worker listening. Kill by port owner and then any child (`Get-NetTCPConnection -LocalPort N`).
+  - Docs still mention the removed names; CONFIGURATION.md is fixed in US-010.
+---

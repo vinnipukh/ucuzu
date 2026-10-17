@@ -41,13 +41,14 @@ def check_installed(module_name: str) -> bool:
     return importlib.util.find_spec(module_name) is not None
 
 
-def tune_sqlite_for_concurrency(db_path: Path, read_only: bool = True) -> dict[str, Any]:
+def tune_sqlite_for_concurrency(db_path: Path) -> dict[str, Any]:
     """
     Verify and configure SQLite database for high-concurrency read-only access.
 
-    Enables Write-Ahead Logging (WAL) mode, normal synchronous durability,
-    sets busy timeout, memory-mapped I/O, and exports environment variables
-    so all server workers operate in optimized read-only mode without lock contention.
+    Opens the database read-write once to enable Write-Ahead Logging (WAL) if
+    needed, then exports ``PRICES_DB_PATH`` and the pragma overrides the adapter
+    reads (``SQLITE_BUSY_TIMEOUT``, ``SQLITE_CACHE_SIZE``, ``SQLITE_MMAP_SIZE``)
+    so worker processes inherit them. Request connections are always read-only.
     """
     values = pragma_values()
     info: dict[str, Any] = {
@@ -56,7 +57,6 @@ def tune_sqlite_for_concurrency(db_path: Path, read_only: bool = True) -> dict[s
         "wal_enabled": False,
         "mmap_size_mb": values["mmap_size"] // (1024 * 1024),
         "busy_timeout_ms": values["busy_timeout"],
-        "read_only": read_only,
     }
 
     if db_path.is_file():
@@ -83,15 +83,9 @@ def tune_sqlite_for_concurrency(db_path: Path, read_only: bool = True) -> dict[s
 
     # Set process environment variables for worker inheritance
     os.environ["PRICES_DB_PATH"] = str(db_path)
-    # Retain the launcher-specific alias for operational tooling that reads it.
-    os.environ["SQLITE_DB_PATH"] = str(db_path)
-    os.environ["SQLITE_READ_ONLY"] = "1" if read_only else "0"
-    os.environ["SQLITE_JOURNAL_MODE"] = "WAL"
-    os.environ["SQLITE_SYNCHRONOUS"] = "NORMAL"
     os.environ["SQLITE_BUSY_TIMEOUT"] = str(values["busy_timeout"])
     os.environ["SQLITE_MMAP_SIZE"] = str(values["mmap_size"])
     os.environ["SQLITE_CACHE_SIZE"] = str(values["cache_size"])
-    os.environ["SQLITE_URI"] = f"file:{db_path.resolve()}?mode=ro"
 
     return info
 
@@ -276,11 +270,6 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--no-sqlite-readonly",
-        action="store_true",
-        help="Disable SQLite WAL read-only tuning.",
-    )
-    parser.add_argument(
         "--log-level",
         choices=["critical", "error", "warning", "warn", "info", "debug"],
         default="info",
@@ -312,10 +301,7 @@ def main() -> int:
 
     # SQLite read-only concurrency configuration
     sqlite_path = Path(args.sqlite_db).resolve()
-    sqlite_info = tune_sqlite_for_concurrency(
-        sqlite_path,
-        read_only=not args.no_sqlite_readonly,
-    )
+    sqlite_info = tune_sqlite_for_concurrency(sqlite_path)
 
     # Set CORS environment variable
     os.environ["FALCON_CORS_ORIGINS"] = args.cors_origins
