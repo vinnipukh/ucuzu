@@ -195,3 +195,11 @@ Spec: tasks/prd-documentation-overhaul.md
 - **Learnings for future iterations:**
   - AGENTS.md still says "SQLite and CSV adapters" in its boundary table; fix in US-019.
 ---
+
+## 2026-10-17 - US-006
+- Rewrote `docs/DEVELOPMENT.md` as checklists: API endpoint change (resource/route, contract incl. §6 api.ts copy, api.ts, API.md table, verify_falcon_api.py, tests), schema/data layout change (build_database.py, tests/test_build_database.py, DATABASE.md, DATA_CONTRACT.md, adapter views), data update (data_files check/split, 85 MB, never commit db/.env, ~500 MB push batches, rebuild + skip counts), frontend change (npm run check no warnings, build, USER_GUIDE.md, frontend/README.md), configuration change, known issues pointer.
+- Removed the "consumes external artifacts ... do not add raw retailer datasets" claim (replaced: data committed under data/, env vars only override default paths) and "async repositories". No setup commands; links to GETTING-STARTED.
+- Files: docs/DEVELOPMENT.md
+- **Learnings for future iterations:**
+  - DEVELOPMENT.md links `ARCHITECTURE.md#known-issues`; keep that heading name.
+---
