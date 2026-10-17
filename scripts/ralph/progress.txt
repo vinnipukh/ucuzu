@@ -178,3 +178,12 @@ Spec: tasks/prd-documentation-overhaul.md
 - **Learnings for future iterations:**
   - DEVELOPMENT.md (US-006) must list the API.md endpoint table in the API-change checklist.
 ---
+
+## 2026-10-17 - US-003
+- Rewrote `docs/GETTING-STARTED.md`: prerequisites (Python >=3.14, uv, Node 24 LTS recommended / >=22.12 minimum, npm, ~9 GB disk), data committed under `data/` (no separate repo download), a 7-line command summary in the required order (uv sync --extra dev, data_files join, build_database, pytest, verify, run API, `cd frontend && npm install && npm run dev`), step explanations, API connection model (empty VITE_API_BASE_URL = same-origin; dev proxy; preview/static have no proxy; reverse proxy or VITE_API_BASE_URL + FALCON_CORS_ORIGINS), nginx example, before-committing checks, troubleshooting (503 -> build_database.py).
+- Removed setup command blocks from DEVELOPMENT.md, TESTING.md (uv sync, verify, npm check/build) and frontend/README.md (quick start, production build, checks) and linked to GETTING-STARTED.
+- Command results: uv sync OK; data_files join OK; build_database --help OK (full build skipped: user's API holds the DB open); pytest 115 passed; verify PASS with and without DB; launcher --dry-run OK; npm install OK; dev server already running (user's), proxied /api OK earlier. Measured data size: raw 3.8 GB, prices_json 129 MB, inflation 1.9 GB, .git 754 MB.
+- Files: docs/GETTING-STARTED.md, docs/DEVELOPMENT.md, docs/TESTING.md, frontend/README.md
+- **Learnings for future iterations:**
+  - The 7-line "Command summary" block in GETTING-STARTED is what AGENTS.md must copy byte-for-byte (US-019); README quickstart (US-004) must use lines from it.
+---

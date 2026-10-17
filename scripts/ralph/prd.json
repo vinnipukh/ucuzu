@@ -313,8 +313,8 @@
         "Typecheck passes"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Command check results: uv sync --extra dev OK (27 pkgs, no changes); data_files.py join OK (exit 0, originals already intact); build_database.py --help OK (full build not re-run: it would replace the user's 1.4 GB DB while their API on :8000 has it open); pytest 115 passed; verify_falcon_api.py PASS with DB and with PRICES_DB_PATH missing; run_falcon_server.py --engine granian --port 8000 --dry-run OK (live start verified in US-023 on :8765); npm install OK; npm run dev not started (user's dev server already on :5173, proxied /api 200 in US-027); vite 8.2.2 on node 26.7.0. nginx example not run."
     },
     {
       "id": "US-004",

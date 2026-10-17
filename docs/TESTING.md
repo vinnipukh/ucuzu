@@ -2,30 +2,17 @@
 
 ## Unit tests
 
-```bash
-uv sync --extra dev
-uv run pytest
-```
+Install and run commands are in [GETTING-STARTED.md](GETTING-STARTED.md) (`uv sync --extra dev`, then `uv run pytest`).
 
 Pytest suite under `tests/` for the pure domain and application logic (`domain/prices.py`, `application/use_cases.py`). Uses small in-memory DataFrames; no database or API server required. Runs in well under a second.
 
 ## Backend
 
-```bash
-uv run python scripts/verify_falcon_api.py
-```
-
-Checks route/source contracts, stable envelopes, JSON-native serialization, import boundaries and bounded endpoint behavior.
+`scripts/verify_falcon_api.py` (command in [GETTING-STARTED.md](GETTING-STARTED.md)) checks route/source contracts, stable envelopes, JSON-native serialization, import boundaries and bounded endpoint behavior.
 
 ## Frontend
 
-```bash
-cd frontend
-npm run check
-npm run build
-```
-
-`npm run check` must complete without errors or warnings. `npm run build` creates the static SPA in `frontend/build/`.
+`npm run check` and `npm run build` in `frontend/` (commands in [GETTING-STARTED.md](GETTING-STARTED.md#before-committing)). `npm run check` must complete without errors or warnings. `npm run build` creates the static SPA in `frontend/build/`.
 
 ## Database
 

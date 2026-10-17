@@ -15,25 +15,7 @@
 
 ## Local commands
 
-```bash
-# API
-uv run python scripts/run_falcon_server.py --engine granian --port 8000
-
-# API checks
-uv run python scripts/verify_falcon_api.py
-
-# Database
-uv run python scripts/build_database.py
-uv run python scripts/data_files.py check
-uv run python scripts/test_sqlite_adapter.py
-
-# Frontend
-cd frontend
-npm run dev
-npm run check
-npm run build
-npm run preview
-```
+Install, build, run and verify commands are in [GETTING-STARTED.md](GETTING-STARTED.md).
 
 ## API changes
 

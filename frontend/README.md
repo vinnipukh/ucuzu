@@ -7,32 +7,9 @@ Svelte 5 / SvelteKit production client for the standalone Inflation Study Dashbo
 - **API contract:** `../docs/FALCON_API_CONTRACT.md`
 - **Design system:** Minimal Swiss-style tokens in `src/app.css`
 
-## Quick start
+## Setup
 
-From the web repository root:
-
-```bash
-uv run python scripts/run_falcon_server.py --engine granian --port 8000
-```
-
-Then:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open `http://localhost:5173`. Vite proxies `/api` to `http://localhost:8000`.
-
-## Production build
-
-```bash
-npm run build
-npm run preview
-```
-
-The static output is written to `frontend/build/`.
+Install, run and build commands, and how the SPA reaches the API in development and production, are in [docs/GETTING-STARTED.md](../docs/GETTING-STARTED.md). `npm run build` writes the static site to `frontend/build/`.
 
 ## API URL
 
@@ -75,9 +52,4 @@ src/
 
 ## Checks
 
-```bash
-npm run check
-npm run build
-```
-
-Keep API changes synchronized with both `src/lib/types/api.ts` and `../docs/FALCON_API_CONTRACT.md`.
+`npm run check` must pass with no errors or warnings (see [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md)). Keep API changes synchronized with both `src/lib/types/api.ts` and `../docs/FALCON_API_CONTRACT.md`.
