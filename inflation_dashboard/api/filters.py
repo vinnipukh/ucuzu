@@ -379,8 +379,8 @@ def _parse_common_filters_uncached(req: Any) -> ParsedFilters:
     if min_date and max_date:
         default_start = max(min_date, (pd.Timestamp(max_date) - pd.Timedelta(days=60)).date())
 
-    start_date = _parse_date_param(req, "start_date", default_start)
-    end_date = _parse_date_param(req, "end_date", max_date)
+    start_date = parse_date_param(req, "start_date", default_start)
+    end_date = parse_date_param(req, "end_date", max_date)
     if start_date and end_date and start_date > end_date:
         raise ApiFilterError(
             "invalid_filter",
@@ -465,7 +465,8 @@ def load_filtered_history(parsed_filters: ParsedFilters) -> tuple[pd.DataFrame, 
     return history.copy(), skipped.copy(), meta
 
 
-def _parse_date_param(req: Any, name: str, default: date | None) -> date | None:
+def parse_date_param(req: Any, name: str, default: date | None) -> date | None:
+    """Parse an ISO ``YYYY-MM-DD`` query parameter; absent or empty returns ``default``, else 400 ``Invalid date``."""
     raw_value = req.get_param(name, default=None)
     if raw_value in {None, ""}:
         return default

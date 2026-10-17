@@ -1,6 +1,6 @@
 """Falcon WSGI application factory.
 
-``create_app()`` registers the nine ``/api/*`` routes, the timing and CORS
+``create_app()`` registers the ten ``/api/*`` routes, the timing and CORS
 middleware, the orjson media handlers and the error handlers that render every
 error (404/405, unhandled 500, 503 database unavailable) in the
 ``{data, meta, errors}`` envelope.
@@ -136,6 +136,7 @@ def create_app() -> falcon.App:
     app.add_route("/api/retailer-averages", resources.RetailerAveragesResource())
     app.add_route("/api/movers", resources.MoversResource())
     app.add_route("/api/coverage", resources.CoverageResource())
+    app.add_route("/api/products", resources.ProductListResource())
     app.add_route("/api/products/search", resources.ProductSearchResource())
     app.add_route("/api/epeykatfg/monthly-inflation", resources.EpeyKatfgMonthlyResource())
     # compile=True on the final route forces the router decision tree to be

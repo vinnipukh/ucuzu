@@ -20,7 +20,7 @@ Install, run and build commands are in [docs/GETTING-STARTED.md](../docs/GETTING
 
 ## Views
 
-1. **Product explorer** — latest/cheapest metrics, full-history monthly average chart (`/api/product`), optional daily chart and raw history (`/api/history`).
+1. **Product explorer** — retailer/product pickers (`/api/products`), latest/cheapest metrics, full-history monthly average chart (`/api/product`), optional daily chart and raw history (`/api/history`).
 2. **Retailer averages** — average/median trends across loaded retailers.
 3. **Price movers** — largest drops from peak and gains since first observation.
 4. **Coverage overview** — products, observations, categories over time.

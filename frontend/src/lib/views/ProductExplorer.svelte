@@ -9,10 +9,11 @@
   import { AsyncResource } from '$lib/utils/async.svelte';
   import { formatCurrency, formatPercent, formatDate } from '$lib/utils/format';
   import { productPriceOption, monthlyAverageOption, type MonthlyAveragePoint } from '$lib/utils/chartOptions.svelte';
-  import type { GeneralHistoryData, ProductHistoryData, HistoryMeta, ProductDetailData } from '$lib/types/api';
+  import type { ProductHistoryData, HistoryMeta, ProductDetailData, ProductListGroup, ProductListMeta } from '$lib/types/api';
   import { filters, buildQueryMap } from '$lib/stores/filters.svelte';
 
-  const optionsResource = new AsyncResource<GeneralHistoryData, HistoryMeta>();
+  // Product names per retailer for the pickers (/api/products), not the full history.
+  const optionsResource = new AsyncResource<ProductListGroup[], ProductListMeta>();
   const productResource = new AsyncResource<ProductHistoryData, HistoryMeta>();
   // Monthly averages use the fast SQLite-backed /api/product when available.
   const monthlyDetailResource = new AsyncResource<ProductDetailData, Record<string, unknown>>();
@@ -25,8 +26,8 @@
   let showDailyChart = $state(false);
 
   const returnedRetailers = $derived.by<string[]>(() => {
-    const history = optionsResource.value?.history ?? [];
-    return [...new Set(history.map((record) => record.retailer))].sort();
+    const groups = optionsResource.value ?? [];
+    return groups.map((group) => group.retailer).sort();
   });
 
   const retailerChoices = $derived.by<string[]>(() => {
@@ -38,11 +39,8 @@
   });
 
   const productChoices = $derived.by<string[]>(() => {
-    const history = optionsResource.value?.history ?? [];
-    const names = history
-      .filter((record) => record.retailer === selectedRetailer)
-      .map((record) => record.product_name);
-    return [...new Set(names)].sort();
+    const group = optionsResource.value?.find((entry) => entry.retailer === selectedRetailer);
+    return group ? [...group.products].sort() : [];
   });
 
   const summary = $derived(productResource.value?.summary ?? null);
@@ -94,11 +92,15 @@
 
   const queryKey = $derived(JSON.stringify(buildQueryMap()));
 
-  // Load the bounded history option list whenever global filters change.
+  // Reload the product option list whenever the retailers or dates change.
   $effect(() => {
     void queryKey;
-    const query = buildQueryMap();
-    optionsResource.run(() => fetchApi<GeneralHistoryData, HistoryMeta>('/api/history', query));
+    const query = {
+      retailer: [...filters.selectedRetailers],
+      start_date: filters.startDate ?? '',
+      end_date: filters.endDate ?? ''
+    };
+    optionsResource.run(() => fetchApi<ProductListGroup[], ProductListMeta>('/api/products', query));
   });
 
   // Keep selections valid as the option list changes.
@@ -116,8 +118,10 @@
   // Load the focused product series (respects the date-range filter).
   $effect(() => {
     if (!selectedRetailer || !selectedProduct) return;
+    // Only the product's retailer: the server loads that retailer's history, not the whole selection.
     const query = {
       ...buildQueryMap(),
+      retailer: [selectedRetailer],
       product_name: selectedProduct,
       product_retailer: selectedRetailer
     };
@@ -172,7 +176,7 @@
   {#if optionsResource.error}
     <ApiAlert message={optionsResource.error} errorMeta={optionsResource.errorMeta} />
   {:else if optionsResource.loading && !optionsResource.value}
-    <Spinner label="Loading product options from /api/history…" />
+    <Spinner label="Loading product options from /api/products…" />
   {:else if optionsResource.value}
     <div class="controls">
       <SearchableSelect
@@ -188,7 +192,7 @@
         options={productChoices}
         value={selectedProduct}
         placeholder="Type a few letters; misspellings are okay"
-        help="Product options come from bounded /api/history results for the current filters."
+        help="Products seen at this retailer in the selected date range."
         onSelect={(value) => (selectedProduct = value)}
       />
     </div>

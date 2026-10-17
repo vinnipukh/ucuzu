@@ -32,7 +32,7 @@ Choose a view with the **Explore** tabs (arrow keys, Home and End also move betw
 
 ### 1. Product price explorer
 
-Pick a **Retailer** and a **Product** (both searchable; the lists come from the loaded history). Shows metric cards for latest price, cheapest price, cheapest date and change since first observation; a **Monthly average price** chart over the product's complete history (independent of the date window); and a **Daily price history** section with a **Show daily chart** toggle (off by default) and the raw observation table for the selected date window. Categories recorded as `Uncategorized` are shown as "—".
+Pick a **Retailer** and a **Product** (both searchable; the lists show the products seen at the loaded retailers in the date window). Shows metric cards for latest price, cheapest price, cheapest date and change since first observation; a **Monthly average price** chart over the product's complete history (independent of the date window); and a **Daily price history** section with a **Show daily chart** toggle (off by default) and the raw observation table for the selected date window. Categories recorded as `Uncategorized` are shown as "—".
 
 ### 2. Retailer average price chart
 

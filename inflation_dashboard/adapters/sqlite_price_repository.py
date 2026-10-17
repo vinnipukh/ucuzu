@@ -792,6 +792,52 @@ def load_coverage_from_db(
         close_connection(conn)
 
 
+def list_product_names(
+    retailers: Sequence[str],
+    start_date: Any = None,
+    end_date: Any = None,
+) -> list[dict[str, Any]]:
+    """List distinct product names per retailer, for product pickers.
+
+    Only products observed inside the date window are included (their
+    first/last observation dates overlap it); either bound may be ``None``.
+
+    Returns:
+        ``[{"retailer": name, "products": [product_name, ...]}, ...]`` sorted by
+        retailer and product name; retailers without matching products are omitted.
+    """
+    selected = [r for r in retailers if r]
+    if not selected:
+        return []
+
+    start_str = _format_date(start_date)
+    end_str = _format_date(end_date)
+
+    conn = get_reusable_connection()
+    try:
+        placeholders = ",".join(["?"] * len(selected))
+        rows = conn.execute(
+            f"""
+            SELECT r.name, p.product_name
+            FROM products AS p
+            JOIN retailers AS r ON r.retailer_key = p.retailer_key
+            WHERE r.name IN ({placeholders})
+              AND (? IS NULL OR p.last_date >= ?)
+              AND (? IS NULL OR p.first_date <= ?)
+            GROUP BY r.name, p.product_name
+            ORDER BY r.name, p.product_name;
+            """,
+            (*selected, start_str, start_str, end_str, end_str),
+        ).fetchall()
+    finally:
+        close_connection(conn)
+
+    grouped: dict[str, list[str]] = {}
+    for retailer, product_name in rows:
+        grouped.setdefault(retailer, []).append(product_name)
+    return [{"retailer": retailer, "products": names} for retailer, names in grouped.items()]
+
+
 _SEARCH_CACHE_TTL_SECONDS = 300
 _search_cache: dict[tuple, tuple[float, list[dict[str, Any]]]] = {}
 

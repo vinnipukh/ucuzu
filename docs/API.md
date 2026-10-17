@@ -18,6 +18,7 @@ All routes are `GET`. "Common filters" are `retailer` (repeatable), `start_date`
 | GET | `/api/retailer-averages` | Average or median price per retailer per date | common filters, `aggregation` (`Average`/`Median`) |
 | GET | `/api/movers` | Biggest drops from peak and biggest gains | common filters, `scope_retailer`, `limit` (5–30) |
 | GET | `/api/coverage` | Observation counts over time and per category | common filters, `category_limit` |
+| GET | `/api/products` | Product names per retailer for pickers (used by the Product explorer) | `retailer` (repeatable, required), `start_date`, `end_date` |
 | GET | `/api/products/search` | Product autocomplete (not used by the SPA) | `q`, `retailer`, `category`, `limit` (1–100) |
 | GET | `/api/product` | One product's summary and full price history | `product_id` or `product_name`, `retailer` |
 | GET | `/api/epeykatfg/monthly-inflation` | EpeyKatfg monthly inflation rows from the CSV artifact | — |

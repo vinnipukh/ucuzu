@@ -27,6 +27,7 @@ from inflation_dashboard.api.filters import (
     load_filtered_history,
     make_etag,
     parse_common_filters,
+    parse_date_param,
     put_cached_response,
     require_database,
 )
@@ -348,6 +349,56 @@ class CoverageResource:
                 meta={**meta, "category_limit": category_limit, "skipped_file_count": len(skipped)},
             )
             _send_response(resp, req, "coverage", req.query_string, envelope_dict)
+        except ApiFilterError as exc:
+            _set_filter_error(resp, exc)
+
+
+class ProductListResource:
+    """``GET /api/products``: distinct product names per retailer, for product pickers."""
+
+    def on_get(self, req: Any, resp: Any) -> None:
+        """``retailer`` (repeatable, required) and optional ``start_date``/``end_date``.
+
+        Every retailer must be in the inventory. Only products observed inside the
+        date window are listed. ``data`` is ``[{retailer, products: [name, ...]}]``
+        sorted by retailer and name; ``meta`` has ``retailers``, ``start_date``,
+        ``end_date`` and ``product_count``. Much smaller than ``/api/history``.
+        """
+        try:
+            if _serve_cached(resp, req, "products", req.query_string):
+                return
+
+            retailers = [retailer for retailer in (req.get_param_as_list("retailer") or []) if retailer]
+            if not retailers:
+                raise ApiFilterError("invalid_filter", "retailer is required", meta={"filters": {"retailer": []}})
+            available = set(list_inventory_filters(get_inventory()).get("retailers") or [])
+            unknown = sorted(set(retailers) - available)
+            if unknown:
+                raise ApiFilterError(
+                    "invalid_filter",
+                    f"Unknown retailer: {unknown[0]}",
+                    meta={"filters": {"retailer": retailers}},
+                )
+            start_date = parse_date_param(req, "start_date", None)
+            end_date = parse_date_param(req, "end_date", None)
+            if start_date and end_date and start_date > end_date:
+                raise ApiFilterError(
+                    "invalid_filter",
+                    "Invalid date range",
+                    meta={"filters": {"start_date": start_date.isoformat(), "end_date": end_date.isoformat()}},
+                )
+
+            groups = sqlite_price_repository.list_product_names(retailers, start_date, end_date)
+            envelope_dict = envelope(
+                groups,
+                meta={
+                    "retailers": retailers,
+                    "start_date": start_date.isoformat() if start_date else None,
+                    "end_date": end_date.isoformat() if end_date else None,
+                    "product_count": sum(len(group["products"]) for group in groups),
+                },
+            )
+            _send_response(resp, req, "products", req.query_string, envelope_dict)
         except ApiFilterError as exc:
             _set_filter_error(resp, exc)
 

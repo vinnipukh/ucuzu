@@ -256,6 +256,25 @@ export interface CoverageMeta extends CommonFilterMeta {
 /** Full `GET /api/coverage` response. */
 export type CoverageResponse = ApiResponse<CoverageData, CoverageMeta>;
 
+// ── Product list ──────────────────────────────────────────────────────────────
+
+/** One retailer's product names in `GET /api/products` (`data` is an array of these). */
+export interface ProductListGroup {
+  retailer: string;
+  products: string[];
+}
+
+/** `meta` of `GET /api/products`. */
+export interface ProductListMeta {
+  retailers: string[];
+  start_date: string | null;
+  end_date: string | null;
+  product_count: number;
+}
+
+/** Full `GET /api/products` response. */
+export type ProductListResponse = ApiResponse<ProductListGroup[], ProductListMeta>;
+
 // ── 7. Product Detail (SQLite-backed) ───────────────────────────────────────
 
 /** `data` of `GET /api/product`: product summary, `price_history` map and `history` array. */

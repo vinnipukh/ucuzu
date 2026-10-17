@@ -85,7 +85,7 @@ def _assert_import_boundaries() -> None:
 
 
 def _assert_source_contracts() -> None:
-    """Check that all nine routes are registered and the stable response keys appear in resources.py."""
+    """Check that all ten routes are registered and the stable response keys appear in resources.py."""
     app_source = (REPO_ROOT / "inflation_dashboard/api/falcon_app.py").read_text(encoding="utf-8")
     for path in (
         "/api/health",
@@ -94,6 +94,7 @@ def _assert_source_contracts() -> None:
         "/api/retailer-averages",
         "/api/movers",
         "/api/coverage",
+        "/api/products",
         "/api/products/search",
         "/api/epeykatfg/monthly-inflation",
         "/api/product",
@@ -213,6 +214,7 @@ def run_endpoint_smoke() -> None:
         for path in (
             "/api/inventory",
             "/api/history?max_files=1",
+            "/api/products?retailer=Markets%20%2F%20Gurmar",
             "/api/products/search?q=ceket&limit=3",
             "/api/product?product_id=__missing__",
         ):
@@ -250,6 +252,10 @@ def run_endpoint_smoke() -> None:
         "coverage": _get(client, f"/api/coverage?retailer={encoded_retailer}&max_files=1&category_limit=20"),
     }
     _assert_endpoint_shapes(responses)
+
+    products = _get(client, f"/api/products?retailer={encoded_retailer}")
+    assert isinstance(products["data"], list), "product list data must be an array"
+    assert all({"retailer", "products"} <= set(group) for group in products["data"]), "product list group keys missing"
 
     search = _get(client, f"/api/products/search?q=ceket&retailer={encoded_retailer}&limit=3")
     assert isinstance(search["data"], list), "product search data must be an array"

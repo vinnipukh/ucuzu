@@ -305,6 +305,28 @@ Parameters: the common filters, plus `category_limit` (integer ≥ 1, default 20
 
 `skipped_files` is a list of `{file, reason}` objects. With the SQLite adapter it is always empty and `skipped_file_count` is 0; files that failed to parse are reported by the database build instead.
 
+### 4.7a `GET /api/products`
+
+Distinct product names per retailer, for product pickers. The SPA's Product explorer uses it instead of downloading the full history (which can exceed the browser's maximum string size for a large category).
+
+Parameters:
+
+- `retailer` (`string`, repeatable, **required**): every value must be an inventory retailer. Missing → 400 `retailer is required`; unknown → 400 `Unknown retailer: <name>`.
+- `start_date`, `end_date` (`YYYY-MM-DD`, optional, no defaults): only products observed inside the window are listed (their first/last observation overlaps it). Unparseable → 400 `Invalid date`; start after end → 400 `Invalid date range`.
+
+`data` is one object per retailer that has matching products, sorted by retailer, with names sorted (SQLite binary order). Cached and compressed like the other endpoints (§5); 503 without a database.
+
+```json
+{
+  "data": [
+    {"retailer": "Markets / Gurmar", "products": ["1000 Cc Cam Kavanoz", "…"]},
+    {"retailer": "Markets / Onur", "products": ["…"]}
+  ],
+  "meta": {"retailers": ["Markets / Gurmar", "Markets / Onur"], "start_date": "2026-08-18", "end_date": "2026-10-17", "product_count": 102643},
+  "errors": []
+}
+```
+
 ### 4.7 `GET /api/products/search`
 
 Product autocomplete over the `product_prices` view. Not used by the SPA.
@@ -416,7 +438,7 @@ The client types are not a complete or exact model of the server. Known differen
 
 | Client type | Server behaviour |
 |---|---|
-| *(none)* `ProductSearchResult`, `ProductSearchMeta`, `ProductHistoryRecord` | No client types exist for `/api/products/search` because the SPA never calls it. The response shape is in §4.7. |
+| *(none)* `ProductSearchResult`, `ProductSearchMeta`, `ProductHistoryRecord` | No client types exist for `/api/products/search` because the SPA never calls it. The response shape is in §4.7. (`/api/products`, §4.7a, does have client types.) |
 | `InventoryMeta.warnings` | Never sent: `/api/inventory` meta has only `file_count` and `inventory_file_count`. Listed under [Known issues](ARCHITECTURE.md#known-issues). |
 | `ProductDetailMeta` fields `string \| null` | On a 200 response `product_id` and `retailer` are always strings; `null` only appears in the 404 error meta, which has a different shape. |
 | `ApiError.meta?` | Never sent: error objects are `{code, message}`; context is on the envelope `meta`. |
@@ -684,6 +706,25 @@ export interface CoverageMeta extends CommonFilterMeta {
 
 /** Full `GET /api/coverage` response. */
 export type CoverageResponse = ApiResponse<CoverageData, CoverageMeta>;
+
+// ── Product list ──────────────────────────────────────────────────────────────
+
+/** One retailer's product names in `GET /api/products` (`data` is an array of these). */
+export interface ProductListGroup {
+  retailer: string;
+  products: string[];
+}
+
+/** `meta` of `GET /api/products`. */
+export interface ProductListMeta {
+  retailers: string[];
+  start_date: string | null;
+  end_date: string | null;
+  product_count: number;
+}
+
+/** Full `GET /api/products` response. */
+export type ProductListResponse = ApiResponse<ProductListGroup[], ProductListMeta>;
 
 // ── 7. Product Detail (SQLite-backed) ───────────────────────────────────────
 

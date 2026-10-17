@@ -12,7 +12,7 @@ No database, server or network needed; the suite runs in a few seconds.
 | `tests/test_use_cases.py` | `inflation_dashboard/application/use_cases.py`: history, averages, movers, coverage calculations |
 | `tests/test_build_database.py` | `scripts/build_database.py` (file-name dates, retailer labels, header aliases, small end-to-end builds) and `scripts/data_files.py` split/join |
 | `tests/test_run_falcon_server.py` | Launcher database path precedence: `--sqlite-db` > `PRICES_DB_PATH` > `data/prices.db` |
-| `tests/test_api.py` | Falcon `TestClient`: 503 `database_unavailable` (missing or empty database) on data endpoints and `/api/health` reporting it; 404 `not_found` and 405 `method_not_allowed` envelopes; 500 `server_error` with a fixed message and no exception text; CORS header on error responses |
+| `tests/test_api.py` | Falcon `TestClient`: 503 `database_unavailable` (missing or empty database) on data endpoints and `/api/health` reporting it; 404 `not_found` and 405 `method_not_allowed` envelopes; 500 `server_error` with a fixed message and no exception text; CORS header on error responses; `/api/products` grouping, date window and 400s against a tiny database built with `build_database.build` |
 
 `tests/conftest.py` provides small in-memory history fixtures.
 
@@ -21,7 +21,7 @@ No database, server or network needed; the suite runs in a few seconds.
 Runs in-process with Falcon's `TestClient` (no port). It checks:
 
 - import boundaries: no Streamlit/Plotly in `api/`, no `sqlite3`/Redis/ORMs in `api/`, no Falcon in `domain/`, `application/`, `adapters/`; `/api/health` does not load inventory or history;
-- that all nine routes are registered and the response-key tokens exist in `resources.py`;
+- that all ten routes are registered and the response-key tokens exist in `resources.py`;
 - endpoint smoke tests, depending on the database:
   - **with a built database:** every data endpoint returns a JSON-native envelope with the expected keys, plus product search, monthly inflation, an unknown product name in `/api/history` (200 with an empty summary) and an unknown retailer (400 `invalid_filter`);
   - **without a database:** inventory, history, product search and product detail return 503 `database_unavailable`, and the monthly inflation endpoint still works.
