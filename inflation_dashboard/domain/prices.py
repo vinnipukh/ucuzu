@@ -1,3 +1,11 @@
+"""Price and product normalization shared by the database build and the API.
+
+Defines the canonical column vocabularies scrapers use (``PRICE_COLUMNS``,
+``ID_COLUMNS``, ``NAME_COLUMNS``, ``CATEGORY_COLUMNS``), the history row shape
+(``HISTORY_COLUMNS``) and the functions that turn one scraped CSV frame into
+normalized history rows. Framework-free: no Falcon or database imports.
+"""
+
 from __future__ import annotations
 
 import re
@@ -23,6 +31,11 @@ HISTORY_COLUMNS = ["date", "retailer", "product_id", "product_name", "category",
 
 
 def parse_date_from_name(name: str) -> pd.Timestamp | pd.NaT:
+    """Return the ``YYYY-MM-DD`` (or ``YYYY_MM_DD``) date embedded in a file name.
+
+    Returns ``NaT`` when there is no such date or it is invalid. The database build
+    uses its own, broader ``parse_file_date``; this helper is only used by tests.
+    """
     match = DATE_PATTERN.search(name)
     if not match:
         return pd.NaT
@@ -30,6 +43,14 @@ def parse_date_from_name(name: str) -> pd.Timestamp | pd.NaT:
 
 
 def coerce_price(value: object) -> float | None:
+    """Parse one scraped price string into a float, or ``None`` if it is empty or junk.
+
+    Strips currency markers (``₺``, ``TL``, ``TRY``), quotes and spaces, then
+    resolves Turkish/English separators: with both ``,`` and ``.`` the last one is
+    the decimal mark; a lone ``,`` followed by 1-2 digits is decimal, otherwise
+    thousands; a lone ``.`` followed by exactly 3 digits is a thousands separator.
+    Scalar reference for :func:`coerce_price_series`.
+    """
     if value is None or pd.isna(value):
         return None
 
@@ -124,6 +145,11 @@ def coerce_price_series(series: pd.Series) -> pd.Series:
 
 
 def first_non_empty_column(frame: pd.DataFrame, columns: list[str]) -> pd.Series:
+    """Coalesce the first non-blank value per row across ``columns``, in priority order.
+
+    Missing columns are skipped; values are stripped and empty strings count as
+    missing. Returns an all-``NA`` string series when none of the columns exist.
+    """
     present = [column for column in columns if column in frame.columns]
     if not present:
         return pd.Series(pd.NA, index=frame.index, dtype="string")
@@ -143,6 +169,15 @@ def build_product_frame(
     date_value: pd.Timestamp,
     source_file: str,
 ) -> pd.DataFrame:
+    """Normalize one scraped CSV frame into ``HISTORY_COLUMNS`` rows.
+
+    ``HousesRent /`` frames with a ``District`` column use district + rooms as the
+    product, and ``Cosmetics / Watson`` frames with ``brand`` use sku/brand;
+    everything else takes the id, name and category from the canonical column
+    lists (name falls back to id and vice versa; category to ``Uncategorized``).
+    Prices go through :func:`coerce_price_series`. Rows without an id, name or
+    price are dropped.
+    """
     # Retailer-specific layouts apply only when their columns are present; newer
     # scrapes of the same retailers use the generic name/price layout.
     if retailer.startswith("HousesRent /") and "District" in frame.columns:

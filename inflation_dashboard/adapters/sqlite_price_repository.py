@@ -243,6 +243,7 @@ def discover_sqlite_inventory() -> pd.DataFrame:
 
 
 def _format_date(val: Any) -> str | None:
+    """Return a date-like value as ``YYYY-MM-DD`` text for SQL bounds, or ``None``."""
     if val is None or pd.isna(val):
         return None
     if isinstance(val, (date, pd.Timestamp)):

@@ -226,3 +226,12 @@ Spec: tasks/prd-documentation-overhaul.md
   - Don't put `get_inventory`/`load_filtered_history` in HealthResource docstrings: verify_falcon_api.py greps that class body for those tokens.
   - After adding docstrings, re-grep `docs/*.md` for `<file>.py:<line>` refs (CONFIGURATION.md, ARCHITECTURE.md Known issues).
 ---
+
+## 2026-10-17 - US-015
+- Module docstrings + docstrings on all public functions in `domain/prices.py` (parse_date_from_name, coerce_price, first_non_empty_column, build_product_frame; coerce_price_series already had one), `application/chart_specs.py` (module + 4 spec functions), `application/use_cases.py` (module + 8 functions). Adapter: only `_format_date` lacked one (added); module docstrings already existed for sqlite_price_repository, epeykatfg_monthly and all `__init__`s. (The PRD's csv_price_repository items are moot: deleted in US-022.)
+- Docstrings record current facts: `parse_date_from_name`/`coerce_price` are now used only by tests; the `*_chart_spec` functions are Streamlit leftovers unused by API and SPA.
+- AST check: docstring-only. pytest 115 passed. Doc line refs to the adapter unchanged.
+- Files: inflation_dashboard/domain/prices.py, inflation_dashboard/application/chart_specs.py, inflation_dashboard/application/use_cases.py, inflation_dashboard/adapters/sqlite_price_repository.py
+- **Learnings for future iterations:**
+  - For multi-line signatures, anchor on the closing `) -> T:` lines (with the last parameter) rather than the `def` line.
+---

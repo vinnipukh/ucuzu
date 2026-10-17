@@ -1,9 +1,20 @@
+"""Dashboard calculations over a loaded history frame (``HISTORY_COLUMNS`` rows).
+
+Pure pandas functions used by the API resources; they know nothing about HTTP
+or SQLite.
+"""
+
 from __future__ import annotations
 
 import pandas as pd
 
 
 def list_inventory_filters(inventory: pd.DataFrame) -> dict[str, object]:
+    """Summarize a file inventory (``retailer``, ``date`` per file) for filter discovery.
+
+    Returns sorted distinct ``retailers``, the ``min_date``/``max_date`` across
+    files and ``file_count``; ``None`` dates and 0 for an empty inventory.
+    """
     if inventory.empty:
         return {"retailers": [], "min_date": None, "max_date": None, "file_count": 0}
 
@@ -16,6 +27,7 @@ def list_inventory_filters(inventory: pd.DataFrame) -> dict[str, object]:
 
 
 def get_product_history(history: pd.DataFrame, retailer: str, product_name: str) -> pd.DataFrame:
+    """Return the rows of one product (exact retailer and name match), sorted by date."""
     product_history = history[
         history["retailer"].eq(retailer) & history["product_name"].eq(product_name)
     ].copy()
@@ -23,6 +35,11 @@ def get_product_history(history: pd.DataFrame, retailer: str, product_name: str)
 
 
 def summarize_product_history(product_history: pd.DataFrame) -> dict[str, object]:
+    """Latest price, cheapest price and its date, and % change since the first row.
+
+    Expects date-sorted rows. Empty input gives ``None`` values and a 0.0 change;
+    a zero first price also gives a 0.0 change.
+    """
     if product_history.empty:
         return {
             "latest_price": None,
@@ -50,6 +67,11 @@ def calculate_retailer_average_trends(
     selected_retailers: list[str],
     aggregation: str,
 ) -> pd.DataFrame:
+    """Mean (default) or median price per (date, retailer) for the selected retailers.
+
+    ``aggregation`` is ``"Median"`` for the median; any other value means mean.
+    Returns ``date, retailer, price`` rows sorted by retailer then date.
+    """
     filtered = history[history["retailer"].isin(selected_retailers)].copy()
     if filtered.empty:
         return pd.DataFrame(columns=["date", "retailer", "price"])
@@ -67,6 +89,14 @@ def calculate_price_movers(
     selected_retailer: str,
     mover_count: int,
 ) -> dict[str, pd.DataFrame]:
+    """Rank products by drop from peak and by gain since their first observation.
+
+    ``selected_retailer`` is a retailer name or ``"All retailers"``. Products need
+    at least two observations. Returns ``biggest_drops`` (most negative
+    ``drop_from_peak_pct`` first), ``biggest_gains`` (largest
+    ``change_since_first_pct`` first), each limited to ``mover_count`` rows, and
+    ``stats`` with every eligible product.
+    """
     movers = history.copy()
     if selected_retailer != "All retailers":
         movers = movers[movers["retailer"] == selected_retailer]
@@ -105,6 +135,9 @@ def calculate_price_movers(
 
 
 def calculate_coverage_summary(history: pd.DataFrame, skipped: pd.DataFrame) -> dict[str, object]:
+    """Retailer, product (distinct ``product_id``) and observation counts, the date
+    range as ``"YYYY-MM-DD → YYYY-MM-DD"`` (``"-"`` when empty) and the skipped-file count.
+    """
     if history.empty:
         return {
             "retailer_count": 0,
@@ -124,6 +157,7 @@ def calculate_coverage_summary(history: pd.DataFrame, skipped: pd.DataFrame) -> 
 
 
 def calculate_coverage_over_time(history: pd.DataFrame) -> pd.DataFrame:
+    """Distinct products per (date, retailer) as ``tracked_products``."""
     if history.empty:
         return pd.DataFrame(columns=["date", "retailer", "tracked_products"])
 
@@ -135,6 +169,7 @@ def calculate_coverage_over_time(history: pd.DataFrame) -> pd.DataFrame:
 
 
 def calculate_category_coverage(history: pd.DataFrame, limit: int = 20) -> pd.DataFrame:
+    """Distinct products per (retailer, category), largest first, top ``limit`` rows."""
     if history.empty:
         return pd.DataFrame(columns=["retailer", "category", "products"])
 

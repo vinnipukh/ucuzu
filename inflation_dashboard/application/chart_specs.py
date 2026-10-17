@@ -1,3 +1,12 @@
+"""Column contracts for the API's response tables, plus legacy chart specs.
+
+The ``*_COLUMNS`` lists fix the field order of each table the resources return
+(``records_from_frame`` selects these columns). The ``*_chart_spec`` functions
+describe charts as plain dicts; they date from the Streamlit UI and are not used
+by the API or the Svelte SPA (whose charts are built in
+``frontend/src/lib/utils/chartOptions.svelte.ts``).
+"""
+
 from __future__ import annotations
 
 PRODUCT_HISTORY_COLUMNS = ["date", "price", "category", "source_file"]
@@ -26,6 +35,7 @@ CATEGORY_COVERAGE_COLUMNS = ["retailer", "category", "products"]
 
 
 def product_price_chart_spec(title: str) -> dict[str, object]:
+    """Line chart of one product's price over time (legacy; unused)."""
     return {
         "type": "line",
         "x": "date",
@@ -39,6 +49,7 @@ def product_price_chart_spec(title: str) -> dict[str, object]:
 
 
 def retailer_average_chart_spec(aggregation: str) -> dict[str, object]:
+    """Line chart of average/median price per retailer (legacy; unused)."""
     return {
         "type": "line",
         "x": "date",
@@ -52,6 +63,7 @@ def retailer_average_chart_spec(aggregation: str) -> dict[str, object]:
 
 
 def coverage_area_chart_spec() -> dict[str, object]:
+    """Area chart of tracked products per retailer over time (legacy; unused)."""
     return {
         "type": "area",
         "x": "date",
@@ -65,6 +77,7 @@ def coverage_area_chart_spec() -> dict[str, object]:
 
 
 def category_coverage_bar_chart_spec() -> dict[str, object]:
+    """Horizontal bar chart of products per category (legacy; unused)."""
     return {
         "type": "bar",
         "x": "products",
