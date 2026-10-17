@@ -12,33 +12,45 @@ from typing import Any
 
 import pandas as pd
 
-from inflation_dashboard.adapters.csv_price_repository import (
-    DEFAULT_MAX_FILES_PER_RETAILER,
-    DEFAULT_RETAILERS,
-    clear_price_cache,
-    discover_csv_inventory,
-    load_price_history,
-)
-try:
-    from inflation_dashboard.adapters import sqlite_price_repository
-except ImportError:
-    sqlite_price_repository = None
-
+from inflation_dashboard.adapters import sqlite_price_repository
 from inflation_dashboard.application.use_cases import list_inventory_filters
 from inflation_dashboard.api.serialization import json_safe_mapping
 
-UNCAPPED_WARNING = "all_history requested; CSV load is uncapped"
+# Retailers selected when a request names none (each must exist in the database).
+DEFAULT_RETAILERS = (
+    "Markets / Gurmar",
+    "ClothingStores / Vakko",
+    "HomeGoods",
+)
+DEFAULT_MAX_FILES_PER_RETAILER = 45
+
+UNCAPPED_WARNING = "all_history requested; history load is uncapped"
+DATABASE_UNAVAILABLE_MESSAGE = "Database not found; run scripts/build_database.py"
 
 
 def is_sqlite_available() -> bool:
-    """Return True if sqlite_price_repository is imported and prices.db exists and is non-empty."""
-    if sqlite_price_repository is None:
-        return False
+    """Return True if the configured prices.db exists and is non-empty."""
     try:
         db_path = sqlite_price_repository.get_db_path()
         return db_path.is_file() and db_path.stat().st_size > 0
-    except Exception:
+    except OSError:
         return False
+
+
+class DatabaseUnavailableError(RuntimeError):
+    """The serving database is missing or empty; rendered as HTTP 503."""
+
+    code = "database_unavailable"
+
+    def __init__(self, message: str = DATABASE_UNAVAILABLE_MESSAGE) -> None:
+        super().__init__(message)
+        self.message = message
+
+
+def require_database() -> None:
+    """Raise DatabaseUnavailableError unless the serving database is available."""
+    if not is_sqlite_available():
+        raise DatabaseUnavailableError()
 
 
 class ApiFilterError(ValueError):
@@ -64,17 +76,12 @@ class ParsedFilters:
 
 @lru_cache(maxsize=1)
 def get_inventory() -> pd.DataFrame:
-    """Return cached CSV or SQLite inventory for API filter discovery.
+    """Return the cached SQLite file inventory for API filter discovery.
 
-    Uses sqlite_price_repository.discover_sqlite_inventory() when prices.db exists,
-    falling back gracefully to csv_price_repository.discover_csv_inventory().
+    Raises DatabaseUnavailableError (not cached) when prices.db is missing or empty.
     """
-    if is_sqlite_available():
-        try:
-            return sqlite_price_repository.discover_sqlite_inventory()
-        except Exception:
-            pass
-    return discover_csv_inventory()
+    require_database()
+    return sqlite_price_repository.discover_sqlite_inventory()
 
 
 def clear_inventory_cache() -> None:
@@ -86,21 +93,16 @@ def clear_inventory_cache() -> None:
 
     get_inventory.cache_clear()
     clear_history_cache()
-    clear_price_cache()
     clear_response_cache()
-    if is_sqlite_available():
-        try:
-            sqlite_price_repository.clear_price_cache()
-        except Exception:
-            pass
+    sqlite_price_repository.clear_price_cache()
 
 
 # --- Server-side request caches --------------------------------------------------
 # A dashboard interaction can fire several data requests with identical/overlapping
 # filters (options, retailer averages, movers, coverage, product detail). Without
-# caching every request re-reads and re-parses the same CSVs from disk (~4.4s for
-# the default 3-retailer x 45-file selection). These stdlib-only TTL caches keep
-# repeat requests in the millisecond range. Stdlib only (verifier boundary).
+# caching every request re-runs the same SQLite history query and rebuilds the
+# same DataFrame. These stdlib-only TTL caches keep repeat requests in the
+# millisecond range. Stdlib only (verifier boundary).
 
 HISTORY_CACHE_TTL_SECONDS = 300
 MAX_HISTORY_CACHE_BYTES = 300 * 1024 * 1024
@@ -402,23 +404,13 @@ def _parse_common_filters_uncached(req: Any) -> ParsedFilters:
 
 
 def _load_history_from_repository(parsed_filters: ParsedFilters) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Route history loading through sqlite_price_repository when available, falling back to CSV."""
-    if is_sqlite_available():
-        try:
-            return sqlite_price_repository.load_price_history_from_db(
-                tuple(parsed_filters.selected_retailers),
-                parsed_filters.start_date,
-                parsed_filters.end_date,
-                parsed_filters.max_files_per_retailer,
-            )
-        except Exception:
-            pass
-    return load_price_history(
+    """Load filtered history from the SQLite serving database."""
+    require_database()
+    return sqlite_price_repository.load_price_history_from_db(
         tuple(parsed_filters.selected_retailers),
         parsed_filters.start_date,
         parsed_filters.end_date,
         parsed_filters.max_files_per_retailer,
-        inventory=parsed_filters.inventory,
     )
 
 

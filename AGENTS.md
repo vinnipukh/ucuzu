@@ -26,7 +26,6 @@ The API must not assume that a sibling monorepo exists; everything it needs is i
 - Push large data commits in batches of about 500 MB so no single push approaches GitHub's 2 GB limit.
 - Never commit `.env`, cookies, credentials or browser profiles.
 - `PRICES_DB_PATH` selects the runtime SQLite database; default: `data/prices.db`.
-- `INFLATION_DATA_ROOT` selects the optional raw CSV fallback root; default: `data/raw`.
 - `EPEYKATFG_MONTHLY_CSV` selects the monthly inflation artifact; default: `data/inflation/EpeyKatfg/monthly_inflation.csv`.
 
 See `docs/DATA_CONTRACT.md` and `docs/DATABASE.md`.

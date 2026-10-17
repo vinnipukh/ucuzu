@@ -44,3 +44,19 @@ Spec: tasks/prd-documentation-overhaul.md
   - On Windows, granian workers are spawned `multiprocessing` children; stopping the launcher PID leaves the worker listening. Kill by port owner and then any child (`Get-NetTCPConnection -LocalPort N`).
   - Docs still mention the removed names; CONFIGURATION.md is fixed in US-010.
 ---
+
+## 2026-10-17 - US-022
+- Deleted `inflation_dashboard/adapters/csv_price_repository.py`. `api/filters.py` now serves inventory/history from `sqlite_price_repository` only; `require_database()` raises `DatabaseUnavailableError` (code `database_unavailable`, message "Database not found; run scripts/build_database.py") when `PRICES_DB_PATH` is missing or 0 bytes.
+- `create_app` registers an error handler rendering that error as a 503 envelope. `/api/products/search` and `/api/product` call `require_database()` and re-raise it past their `except Exception`.
+- `/api/health` stays 200 and now returns `data.database: "available" | "unavailable"`.
+- `DEFAULT_RETAILERS` and `DEFAULT_MAX_FILES_PER_RETAILER` now live in `api/filters.py`. `UNCAPPED_WARNING` text changed to "all_history requested; history load is uncapped".
+- Removed `INFLATION_DATA_ROOT` from `.env.example` and AGENTS.md; removed the unused `load_price_history` alias in the SQLite adapter; launcher banner no longer says "CSV fallback".
+- `verify_falcon_api.py`: dropped the CSV tokens; with no database it now asserts 503 `database_unavailable` on data routes (still runs in CI). Verified with and without `data/prices.db`.
+- Tests: `tests/test_api.py` (503 on missing/empty DB for inventory/history/coverage/search/product, health reports unavailable).
+- pandas kept: used by domain, application, serialization, filters, adapter and build_database.
+- **Learnings for future iterations:**
+  - Falcon 4.3: `app.add_error_handler(ExcClass, handler(req, resp, ex, params))`; most specific class wins, so a later generic `Exception` handler (US-024) won't shadow it.
+  - `get_inventory` is `lru_cache`d, but exceptions are not cached, so a DB that appears later is picked up.
+  - Use `clear_inventory_cache()` in API tests to reset the lru/response/parse caches between tests.
+  - Docs still describe the CSV fallback; they're corrected in US-010/US-012.
+---

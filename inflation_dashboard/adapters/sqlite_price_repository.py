@@ -174,7 +174,7 @@ CACHE_TTL_SECONDS = 300.0
 
 
 def clear_price_cache() -> None:
-    """Clear in-memory caches (parity with csv_price_repository)."""
+    """Clear the in-memory inventory, file-list and product-search caches."""
     global _inventory_cache, _files_cache, _inventory_cache_time, _files_cache_time
     _inventory_cache = None
     _inventory_cache_time = 0.0
@@ -229,7 +229,7 @@ def load_inventory_from_db() -> pd.DataFrame:
 def discover_sqlite_inventory() -> pd.DataFrame:
     """Discover ingested file inventory from SQLite database.
 
-    Drop-in replacement for csv_price_repository.discover_csv_inventory().
+    One row per ingested source file, used by the API for filter discovery.
 
     Returns:
         DataFrame with columns: ['path', 'retailer', 'date', 'size_mb']
@@ -365,9 +365,6 @@ def load_price_history_from_db(
     finally:
         close_connection(conn)
 
-
-# Alias for drop-in parity
-load_price_history = load_price_history_from_db
 
 
 def get_product_price_history(product_id: str, retailer: str | None = None) -> dict[str, Any]:

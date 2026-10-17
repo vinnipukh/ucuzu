@@ -67,7 +67,7 @@ def _assert_import_boundaries() -> None:
     health_match = re.search(r"class HealthResource:.*?(?=\nclass InventoryResource:)", resources_source, re.DOTALL)
     assert health_match, "HealthResource body not found"
     health_body = health_match.group(0)
-    for token in ("get_inventory", "discover_csv_inventory", "load_price_history", "load_filtered_history"):
+    for token in ("get_inventory", "load_filtered_history"):
         assert token not in health_body, f"HealthResource must not reference {token}"
 
     print("PASS boundary checks: imports, stdlib-only cache boundary, lightweight health resource")
@@ -185,6 +185,21 @@ def run_endpoint_smoke() -> None:
     client = _load_client()
     health = _get(client, "/api/health")
     assert health["data"].get("status") == "ok"
+
+    if health["data"].get("database") != "available":
+        for path in (
+            "/api/inventory",
+            "/api/history?max_files=1",
+            "/api/products/search?q=ceket&limit=3",
+            "/api/product?product_id=__missing__",
+        ):
+            unavailable = _get(client, path, expected_status="503 Service Unavailable")
+            assert unavailable["data"] is None, f"{path} 503 data must be null"
+            assert unavailable["errors"][0].get("code") == "database_unavailable", f"{path} 503 code mismatch"
+        monthly = _get(client, "/api/epeykatfg/monthly-inflation")
+        assert isinstance(monthly["data"], list), "monthly inflation data must be an array"
+        print("PASS endpoint smoke: no database; data routes return 503 database_unavailable, monthly artifact served")
+        return
 
     inventory = _get(client, "/api/inventory")
     retailers = [str(value) for value in inventory["data"].get("retailers", []) if value]

@@ -9,6 +9,8 @@ import falcon
 import orjson
 
 from inflation_dashboard.api import resources
+from inflation_dashboard.api.filters import DatabaseUnavailableError
+from inflation_dashboard.api.serialization import error_envelope
 
 _LOGGER = logging.getLogger("inflation_dashboard.api.timing")
 
@@ -66,12 +68,18 @@ def _cors_middleware():
     return falcon.CORSMiddleware(allow_origins=allow_origins, expose_headers=[])
 
 
+def _handle_database_unavailable(req: object, resp: object, ex: DatabaseUnavailableError, params: object) -> None:
+    resp.status = falcon.HTTP_503
+    resp.media = error_envelope(ex.code, ex.message)
+
+
 def create_app() -> falcon.App:
     """Create the Falcon WSGI application and register API resources."""
 
     app = falcon.App(middleware=[TimingMiddleware(), _cors_middleware()])
     app.req_options.media_handlers[falcon.MEDIA_JSON] = _JSON_HANDLER
     app.resp_options.media_handlers[falcon.MEDIA_JSON] = _JSON_HANDLER
+    app.add_error_handler(DatabaseUnavailableError, _handle_database_unavailable)
     app.add_route("/api/health", resources.HealthResource())
     app.add_route("/api/inventory", resources.InventoryResource())
     app.add_route("/api/history", resources.HistoryResource())

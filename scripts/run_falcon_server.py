@@ -203,7 +203,7 @@ def print_banner(
     if sqlite_info["exists"]:
         print(f"   SQLite Database     : {sqlite_info['db_path']} (WAL={sqlite_info['wal_enabled']}, RO=Active)")
     else:
-        print(f"   SQLite Database     : {sqlite_info['db_path']} (Not found, CSV fallback)")
+        print(f"   SQLite Database     : {sqlite_info['db_path']} (Not found: data endpoints return 503; run scripts/build_database.py)")
     print(sep)
     print("   Press Ctrl+C to terminate gracefully.")
     print(sep, flush=True)

@@ -5,15 +5,19 @@ from typing import Any
 import falcon
 import orjson
 
+from inflation_dashboard.adapters import sqlite_price_repository
 from inflation_dashboard.api.filters import (
     RESPONSE_CACHE_TTL_SECONDS,
     ApiFilterError,
+    DatabaseUnavailableError,
     get_cached_response,
     get_inventory,
+    is_sqlite_available,
     load_filtered_history,
     make_etag,
     parse_common_filters,
     put_cached_response,
+    require_database,
 )
 from inflation_dashboard.api.serialization import envelope, error_envelope, json_safe_mapping, records_from_frame
 from inflation_dashboard.application.chart_specs import (
@@ -37,11 +41,6 @@ from inflation_dashboard.application.use_cases import (
     summarize_product_history,
 )
 from inflation_dashboard.domain.prices import HISTORY_COLUMNS
-
-try:
-    from inflation_dashboard.adapters import sqlite_price_repository
-except ImportError:
-    sqlite_price_repository = None
 
 
 def _accepts_gzip(req: Any) -> bool:
@@ -148,7 +147,8 @@ def _send_response(resp: Any, req: Any, endpoint: str, query_string: str, envelo
 class HealthResource:
     def on_get(self, req: Any, resp: Any) -> None:
         resp.status = falcon.HTTP_200
-        resp.media = envelope({"status": "ok"}, meta={"service": "inflation-dashboard-api"})
+        database = "available" if is_sqlite_available() else "unavailable"
+        resp.media = envelope({"status": "ok", "database": database}, meta={"service": "inflation-dashboard-api"})
 
 
 class InventoryResource:
@@ -303,18 +303,18 @@ class ProductSearchResource:
             retailer = req.get_param("retailer", default=None)
             category = req.get_param("category", default=None)
             limit = _parse_bounded_int(req, "limit", default=20, minimum=1, maximum=100)
+            require_database()
 
             results: list[dict[str, object]] = []
-            if sqlite_price_repository is not None:
-                try:
-                    results = sqlite_price_repository.search_products(
-                        query=query,
-                        retailer=retailer,
-                        category=category,
-                        limit=limit,
-                    )
-                except Exception:
-                    results = []
+            try:
+                results = sqlite_price_repository.search_products(
+                    query=query,
+                    retailer=retailer,
+                    category=category,
+                    limit=limit,
+                )
+            except Exception:
+                results = []
 
             meta = {
                 "query": query,
@@ -327,6 +327,8 @@ class ProductSearchResource:
             _send_response(resp, req, "products-search", req.query_string, envelope_dict)
         except ApiFilterError as exc:
             _set_filter_error(resp, exc)
+        except DatabaseUnavailableError:
+            raise
         except Exception as exc:
             resp.status = falcon.HTTP_500
             resp.media = error_envelope("server_error", str(exc))
@@ -352,15 +354,15 @@ class ProductDetailResource:
                     meta={"filters": {"product_id": product_id, "product_name": product_name}},
                 )
 
+            require_database()
             detail: dict[str, object] | None = None
-            if sqlite_price_repository is not None:
-                try:
-                    detail = sqlite_price_repository.get_product_price_history(
-                        product_id=lookup_key,
-                        retailer=retailer,
-                    )
-                except Exception:
-                    detail = None
+            try:
+                detail = sqlite_price_repository.get_product_price_history(
+                    product_id=lookup_key,
+                    retailer=retailer,
+                )
+            except Exception:
+                detail = None
 
             if not detail:
                 resp.status = falcon.HTTP_404
@@ -380,6 +382,8 @@ class ProductDetailResource:
             _send_response(resp, req, "product-detail", req.query_string, envelope_dict)
         except ApiFilterError as exc:
             _set_filter_error(resp, exc)
+        except DatabaseUnavailableError:
+            raise
         except Exception as exc:
             resp.status = falcon.HTTP_500
             resp.media = error_envelope("server_error", str(exc))
