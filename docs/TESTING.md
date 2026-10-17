@@ -1,5 +1,14 @@
 # Testing and Verification
 
+## Unit tests
+
+```bash
+uv sync --extra dev
+uv run pytest
+```
+
+Pytest suite under `tests/` for the pure domain and application logic (`domain/prices.py`, `application/use_cases.py`). Uses small in-memory DataFrames; no database, API server or Redis required. Runs in well under a second.
+
 ## Backend
 
 ```bash
