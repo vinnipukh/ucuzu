@@ -19,8 +19,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from inflation_dashboard.api.filters import DEFAULT_RETAILERS
 from inflation_dashboard.adapters.sqlite_price_repository import (
-    DEFAULT_RETAILERS,
     discover_sqlite_inventory,
     get_db_connection,
     get_product_price_history,

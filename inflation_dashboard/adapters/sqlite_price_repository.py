@@ -30,28 +30,6 @@ from inflation_dashboard.domain.prices import HISTORY_COLUMNS
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB_PATH = PROJECT_ROOT / "data" / "prices.db"
 
-SUPPORTED_RETAILERS = {
-    "ClothingStores / Vakko",
-    "Markets / Gurmar",
-    "HomeGoods",
-    "Technology",
-    "Cosmetics / Watson",
-    "ConstructionSuppliesMarkets / TasciYapiMarket",
-    "ConstructionSuppliesMarkets / yapimaks",
-    "HousesRent / Kayseri",
-    "HousesRent / Sivas",
-    "HousesRent / Tokat",
-    "HousesRent / Emlakjet",
-    "Health / Diagnostic&Surgical Services",
-}
-
-DEFAULT_RETAILERS = (
-    "Markets / Gurmar",
-    "ClothingStores / Vakko",
-    "HomeGoods",
-)
-DEFAULT_MAX_FILES_PER_RETAILER = 45
-
 
 def get_db_path() -> Path:
     """Return configured or default SQLite database path."""

@@ -60,3 +60,14 @@ Spec: tasks/prd-documentation-overhaul.md
   - Use `clear_inventory_cache()` in API tests to reset the lru/response/parse caches between tests.
   - Docs still describe the CSV fallback; they're corrected in US-010/US-012.
 ---
+
+## 2026-10-17 - US-026
+- Removed the unused `SUPPORTED_RETAILERS`, `DEFAULT_RETAILERS` and `DEFAULT_MAX_FILES_PER_RETAILER` copies from `sqlite_price_repository.py` (grep confirmed only `scripts/test_sqlite_adapter.py` imported `DEFAULT_RETAILERS`; it now imports from `api/filters.py`).
+- `DEFAULT_RETAILERS` is defined once, in `inflation_dashboard/api/filters.py`. `SUPPORTED_RETAILERS` is gone (unused after US-022).
+- Checked `SELECT name FROM retailers`: Markets / Gurmar, ClothingStores / Vakko, HomeGoods all exist.
+- `scripts/test_sqlite_adapter.py`, `verify_falcon_api.py`, pytest, npm check all pass.
+- Files: inflation_dashboard/adapters/sqlite_price_repository.py, scripts/test_sqlite_adapter.py
+- **Learnings for future iterations:**
+  - The serving DB has 200+ retailers named "<Group> / <Store>" (some top-level only, e.g. `HomeGoods`, `Technology`, `EpeyKatfg`).
+  - `scripts/test_sqlite_adapter.py` needs a built `data/prices.db` and takes ~1 min.
+---
