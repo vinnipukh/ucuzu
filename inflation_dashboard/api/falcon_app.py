@@ -1,3 +1,11 @@
+"""Falcon WSGI application factory.
+
+``create_app()`` registers the nine ``/api/*`` routes, the timing and CORS
+middleware, the orjson media handlers and the error handlers that render every
+error (404/405, unhandled 500, 503 database unavailable) in the
+``{data, meta, errors}`` envelope.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -34,10 +42,12 @@ class TimingMiddleware:
         self.enabled = os.getenv("FALCON_TIMING_LOG", "").strip().lower() in {"1", "true", "yes", "on"}
 
     def process_request(self, req: object, resp: object) -> None:
+        """Record the request start time when timing logs are enabled."""
         if self.enabled:
             req.context["_started_at"] = time.perf_counter()
 
     def process_response(self, req: object, resp: object, resource: object, req_succeeded: bool | None = None) -> None:
+        """Log one INFO line (method, path, status, duration, cache hit) when enabled."""
         if not self.enabled:
             return
         started_at = req.context.get("_started_at")
@@ -64,6 +74,12 @@ _JSON_HANDLER = falcon.media.JSONHandler(dumps=orjson.dumps, loads=orjson.loads)
 # (scripts/run_falcon_server.py) exposes this as --cors-origins /
 # FALCON_CORS_ORIGINS; default is open access ("*").
 def _cors_middleware():
+    """Build Falcon's CORSMiddleware from ``FALCON_CORS_ORIGINS``.
+
+    The variable is a comma-separated origin list; ``*`` (the default) allows any
+    origin. Preflight ``OPTIONS`` requests are answered by the middleware; no
+    response headers are exposed.
+    """
     raw_origins = os.getenv("FALCON_CORS_ORIGINS", "*")
     origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
     # Falcon requires the "*" wildcard as a plain string, not inside a list.
@@ -73,11 +89,17 @@ def _cors_middleware():
 
 
 def _handle_database_unavailable(req: object, resp: object, ex: DatabaseUnavailableError, params: object) -> None:
+    """Render DatabaseUnavailableError as a 503 ``database_unavailable`` envelope."""
     resp.status = falcon.HTTP_503
     resp.media = error_envelope(ex.code, ex.message)
 
 
 def _handle_http_error(req: object, resp: object, ex: falcon.HTTPError, params: object) -> None:
+    """Render a Falcon HTTPError (unknown route, wrong method, ...) as an envelope.
+
+    404 -> ``not_found``, 405 -> ``method_not_allowed``, any other status ->
+    ``http_error``. Headers Falcon set on the error (such as ``Allow``) are kept.
+    """
     code = _HTTP_ERROR_CODES.get(ex.status_code, "http_error")
     resp.status = ex.status
     for name, value in (ex.headers or {}).items():
@@ -86,6 +108,12 @@ def _handle_http_error(req: object, resp: object, ex: falcon.HTTPError, params: 
 
 
 def _handle_unexpected_error(req: object, resp: object, ex: Exception, params: object) -> None:
+    """Log an unhandled exception and return a 500 ``server_error`` envelope.
+
+    The traceback goes to the ``inflation_dashboard.api`` logger; the response
+    message is always ``SERVER_ERROR_MESSAGE``, so exception text never reaches
+    the client.
+    """
     _ERROR_LOGGER.exception("Unhandled error on %s %s", req.method, req.path)
     resp.status = falcon.HTTP_500
     resp.media = error_envelope("server_error", SERVER_ERROR_MESSAGE)

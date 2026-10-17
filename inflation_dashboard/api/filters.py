@@ -1,3 +1,16 @@
+"""Request filter parsing, history loading and the in-process caches.
+
+- Validation: ``parse_common_filters`` turns the ``retailer``, ``start_date``,
+  ``end_date``, ``max_files`` and ``all_history`` query parameters into
+  ``ParsedFilters``, raising ``ApiFilterError`` (HTTP 400) on bad input.
+- Data: ``get_inventory`` and ``load_filtered_history`` read the SQLite serving
+  database through ``sqlite_price_repository``; ``require_database`` raises
+  ``DatabaseUnavailableError`` (HTTP 503) when it is missing or empty.
+- Caches (stdlib only, per worker process, 5-minute TTL): parsed filters,
+  loaded history frames, and pre-serialized response bytes with a gzip variant
+  and strong ETag.
+"""
+
 from __future__ import annotations
 
 from collections import OrderedDict
@@ -65,6 +78,11 @@ class ApiFilterError(ValueError):
 
 @dataclass(frozen=True)
 class ParsedFilters:
+    """Validated common filters plus the response ``meta`` they produce.
+
+    ``max_files_per_retailer`` is the effective cap (0 means uncapped and is forced
+    by ``all_history``); ``inventory`` is the file inventory used for validation.
+    """
     selected_retailers: list[str]
     start_date: date | None
     end_date: date | None
@@ -284,6 +302,7 @@ def put_cached_response(endpoint: str, query_string: str, raw_bytes: bytes) -> N
 
 
 def clear_response_cache() -> None:
+    """Drop every cached response body for all endpoints."""
     with _response_cache_lock:
         _response_cache.clear()
 
@@ -298,6 +317,11 @@ def clear_history_cache() -> None:
 
 
 def parse_bool_param(req: Any, name: str, default: bool = False) -> bool:
+    """Parse boolean query parameter ``name``.
+
+    Accepts ``1/true/t/yes/y/on`` and ``0/false/f/no/n/off`` (case-insensitive);
+    absent or empty returns ``default``; anything else raises 400 ``Invalid <name>``.
+    """
     raw_value = req.get_param(name, default=None)
     if raw_value is None or raw_value == "":
         return default

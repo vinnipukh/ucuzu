@@ -215,3 +215,14 @@ Spec: tasks/prd-documentation-overhaul.md
   - Header connection status is only refreshed on load, Apply and retry, not on failed data requests.
   - ProductExplorer has a leftover "CSV-only fallback" that re-fetches /api/history when /api/product fails; worth describing in its @component block (US-018).
 ---
+
+## 2026-10-17 - US-014
+- Module docstrings for falcon_app.py, resources.py, filters.py, serialization.py. Docstrings on TimingMiddleware.process_request/process_response, `_cors_middleware`, the three error handlers, all 9 resource classes and every `on_get` (route, params, response, quirks such as duplicate `retailer_averages`, `mover_count` alias, swallowed search errors, product_name ignored when product_id given), `_set_filter_error`, `_single_selected_retailer`, `_parse_bounded_int`, `ParsedFilters`, `parse_bool_param`, `clear_response_cache`. Three existing class docstrings reworded to name their route.
+- Verified docstring-only with an AST comparison against HEAD (docstrings stripped; comments aren't in the AST). pytest 115 passed; verify_falcon_api PASS.
+- Updated the shifted `falcon_app.py:<line>` refs in docs/CONFIGURATION.md (83, 42).
+- Files: inflation_dashboard/api/*.py, docs/CONFIGURATION.md
+- **Learnings for future iterations:**
+  - Docstring-only check: scratchpad `astcheck.py` (compares `ast.dump` of HEAD vs working tree with docstrings stripped). Rewrite it if the scratchpad is gone.
+  - Don't put `get_inventory`/`load_filtered_history` in HealthResource docstrings: verify_falcon_api.py greps that class body for those tokens.
+  - After adding docstrings, re-grep `docs/*.md` for `<file>.py:<line>` refs (CONFIGURATION.md, ARCHITECTURE.md Known issues).
+---

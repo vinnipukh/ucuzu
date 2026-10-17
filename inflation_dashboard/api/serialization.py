@@ -1,3 +1,10 @@
+"""JSON-safe conversion and the ``{data, meta, errors}`` response envelope.
+
+pandas/numpy scalars, timestamps and NaN/NaT are converted to JSON-native values
+(``None`` for missing) so orjson can encode every response.
+``records_from_frame`` converts DataFrames column by column for speed.
+"""
+
 from __future__ import annotations
 
 import datetime as dt
