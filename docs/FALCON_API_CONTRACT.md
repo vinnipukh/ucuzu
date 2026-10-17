@@ -11,7 +11,7 @@
 ## 1. Architectural Principles & Transport Protocol
 
 ### 1.1 Transport & Media Format
-- **Protocol:** HTTP/1.1 through the WSGI or ASGI deployment interface
+- **Protocol:** HTTP/1.1 through the WSGI deployment interface (Granian, Gunicorn or Waitress)
 - **Base URL:** Deployment-specific. The Svelte build uses `VITE_API_BASE_URL`; same-origin deployments may leave it empty and proxy `/api`.
 - **Default Content-Type:** `application/json` (UTF-8 encoded)
 - **Serialization Engine:** Fast native JSON via `orjson` on the Falcon server, with strict standard JSON compatibility (all `NaN`, `Infinity`, `NaT`, and non-compliant floating point representations are sanitized to `null` before transmission).

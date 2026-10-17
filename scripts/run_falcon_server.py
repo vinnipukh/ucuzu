@@ -117,21 +117,9 @@ def build_command(
     threads: int,
     backlog: int,
     log_level: str,
-    interface: str = "wsgi",
 ) -> list[str]:
     """Construct command arguments for the specified WSGI server engine."""
-    if interface == "asgi":
-        # High-scale ASGI entry point (falcon.asgi.App; scaling refactor).
-        # Granian and uvicorn both speak ASGI natively.
-        app_target = "inflation_dashboard.api.asgi_app:create_asgi_app"
-    else:
-        app_target = "inflation_dashboard.api.falcon_app:create_app"
-
-    if interface == "asgi" and engine in ("gunicorn", "waitress"):
-        raise ValueError(
-            f"Engine '{engine}' is WSGI-only; use --interface asgi with "
-            "--engine uvicorn or --engine granian."
-        )
+    app_target = "inflation_dashboard.api.falcon_app:create_app"
 
     if engine == "granian":
         cmd = [
@@ -139,7 +127,7 @@ def build_command(
             "-m",
             "granian",
             "--interface",
-            interface,
+            "wsgi",
             "--host",
             host,
             "--port",
@@ -189,27 +177,6 @@ def build_command(
             str(backlog),
             app_target,
         ]
-    elif engine == "uvicorn":
-        # Uvicorn is an ASGI server; a WSGI app must be run through its native
-        # (deprecated but functional) --interface wsgi path, or wrapped with
-        # a2wsgi. Without the interface flag, Falcon's WSGI app is driven as
-        # ASGI and every request 500s.
-        uvicorn_interface = "asgi3" if interface == "asgi" else interface
-        cmd = [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "--interface",
-            uvicorn_interface,
-            "--host",
-            host,
-            "--port",
-            str(port),
-            "--workers",
-            str(workers),
-            "--factory",
-            app_target,
-        ]
     else:
         raise ValueError(f"Unsupported engine: {engine}")
 
@@ -225,7 +192,6 @@ def print_banner(
     backlog: int,
     cors_origins: str,
     sqlite_info: dict[str, Any],
-    interface: str = "wsgi",
 ) -> None:
     """Print high-performance server startup banner."""
     total_slots = workers * threads if engine in ("granian", "gunicorn") else threads
@@ -234,7 +200,6 @@ def print_banner(
     print("   Falcon API Production Concurrency Server Launcher")
     print(sep)
     print(f"   Server Engine       : {engine.upper()}")
-    print(f"   App Interface       : {interface.upper()}")
     print(f"   Listen Address      : http://{host}:{port}")
     print(f"   Worker Processes    : {workers}")
     print(f"   Threads per Worker  : {threads}")
@@ -257,14 +222,8 @@ def main() -> int:
         description="Launch Falcon API with production-grade multi-worker concurrency."
     )
     parser.add_argument(
-        "--interface",
-        choices=["wsgi", "asgi"],
-        default=os.getenv("FALCON_INTERFACE", "wsgi"),
-        help="App interface: wsgi (falcon_app.create_app) or asgi (asgi_app.create_asgi_app).",
-    )
-    parser.add_argument(
         "--engine",
-        choices=["granian", "gunicorn", "waitress", "uvicorn"],
+        choices=["granian", "gunicorn", "waitress"],
         default="granian",
         help="WSGI server engine to use (default: granian).",
     )
@@ -361,7 +320,6 @@ def main() -> int:
         threads=args.threads,
         backlog=args.backlog,
         log_level=args.log_level,
-        interface=args.interface,
     )
 
     if args.dry_run:
@@ -374,7 +332,6 @@ def main() -> int:
             backlog=args.backlog,
             cors_origins=args.cors_origins,
             sqlite_info=sqlite_info,
-            interface=args.interface,
         )
         print("Dry run command:", " ".join(cmd))
         return 0

@@ -21,8 +21,6 @@ uv run python scripts/run_falcon_server.py --engine granian --port 8000
 
 # API checks
 uv run python scripts/verify_falcon_api.py
-uv run python scripts/verify_asgi_api.py
-uv run python scripts/verify_redis_store.py
 
 # Database
 uv run python scripts/build_database.py

@@ -68,7 +68,7 @@ Open `http://localhost:5173`. Vite proxies `/api` to `http://localhost:8000` dur
 
 ## API
 
-Nine routes are registered in both WSGI and ASGI applications:
+Nine routes are registered in the WSGI application:
 
 | Route | Purpose |
 |---|---|
@@ -104,7 +104,7 @@ inflation_dashboard/
   domain/                 normalization and shared data contracts
   application/            dashboard use cases
   adapters/               SQLite, CSV and async repositories
-  api/                    Falcon WSGI/ASGI resources and middleware
+  api/                    Falcon WSGI resources
 scripts/                  server, database, verification and benchmarks
 data/                     committed scraper data (prices.db is built, not committed)
 tests/                    pytest unit tests
@@ -120,8 +120,6 @@ uv run pytest
 
 # Backend/API
 uv run python scripts/verify_falcon_api.py
-uv run python scripts/verify_asgi_api.py
-uv run python scripts/verify_redis_store.py
 
 # Frontend
 cd frontend

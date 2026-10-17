@@ -9,7 +9,7 @@ flowchart LR
     DataRepo[Data repository\nraw CSV + prices_json + inflation artifacts]
     Builder[SQLite builder]
     DB[(data/prices.db)]
-    API[Falcon WSGI/ASGI API]
+    API[Falcon WSGI API]
     SPA[SvelteKit static SPA]
 
     DataRepo -->|external path or deployment artifact| Builder
@@ -30,7 +30,6 @@ flowchart LR
 | Domain layer | `inflation_dashboard/domain/` | Price/date normalization and shared data contracts |
 | SQLite adapter | `inflation_dashboard/adapters/sqlite_price_repository.py` | Read-only WAL database access and query optimization |
 | CSV fallback | `inflation_dashboard/adapters/csv_price_repository.py` | Optional bounded reads from externally mounted raw CSV |
-| Async repository | `inflation_dashboard/adapters/async_price_repository.py` | SQLAlchemy/aiosqlite access for the ASGI stack |
 | Database tooling | `scripts/build_database.py`, `scripts/data_files.py` | Build the serving database from the committed `data/` tree; split/join files over 85 MB |
 
 ## Runtime flow
@@ -56,7 +55,7 @@ Recommended production deployment:
 ```text
 nginx/Caddy
   ├── /                 → static Svelte build
-  └── /api/*            → Falcon/Granian or Falcon/Uvicorn
+  └── /api/*            → Falcon/Granian (WSGI)
                               └── read-only data/prices.db
 ```
 

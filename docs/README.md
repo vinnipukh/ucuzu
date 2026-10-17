@@ -25,7 +25,6 @@
 
 ## Research and history
 
-- [ASGI Scaling Refactor](ASGI-SCALING-REFACTOR.md)
 - [Falcon API Optimization Report](FALCON-API-OPTIMIZATION-REPORT-2026-09-03.md)
 - [Falcon Deployment Research](FALCON-DEPLOYMENT-TUNING-RESEARCH.md)
 - `research/` — dated framework, database and benchmark research.

@@ -9,7 +9,7 @@ This document defines the boundary between the `inflationstudymirror` data repos
 | Raw retailer CSVs | Scraper workflows in `InflationItems/Datas/` | `scripts/build_database.py`; optional CSV fallback |
 | Partitioned JSON histories | Scraper/ETL code in `InflationItems/prices_json/` | `scripts/build_database.py` (retailers without raw CSVs) |
 | Generated inflation CSVs | Calculators in `Inflations/Datas/` | API artifact endpoints |
-| SQLite serving database | Web repository build/deployment job | Falcon WSGI/ASGI API |
+| SQLite serving database | Web repository build/deployment job | Falcon WSGI API |
 
 The SQLite file is a serving artifact, not the data repository's source of truth.
 

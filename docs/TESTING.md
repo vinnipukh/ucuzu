@@ -7,7 +7,7 @@ uv sync --extra dev
 uv run pytest
 ```
 
-Pytest suite under `tests/` for the pure domain and application logic (`domain/prices.py`, `application/use_cases.py`). Uses small in-memory DataFrames; no database, API server or Redis required. Runs in well under a second.
+Pytest suite under `tests/` for the pure domain and application logic (`domain/prices.py`, `application/use_cases.py`). Uses small in-memory DataFrames; no database or API server required. Runs in well under a second.
 
 ## Backend
 
@@ -16,13 +16,6 @@ uv run python scripts/verify_falcon_api.py
 ```
 
 Checks route/source contracts, stable envelopes, JSON-native serialization, import boundaries and bounded endpoint behavior.
-
-```bash
-uv run python scripts/verify_asgi_api.py
-uv run python scripts/verify_redis_store.py
-```
-
-These cover the ASGI middleware stack and Redis/in-memory fallback behavior.
 
 ## Frontend
 
