@@ -5,7 +5,7 @@ Previous run (docs overhaul): scripts/ralph/archive/2026-10-18-docs-overhaul/
 
 ## Codebase Patterns
 - Checks: `uv run pytest` (repo root) and `cd frontend && npm run check`. Both are fast (<10 s).
-- Simulate CI (no database) with `PRICES_DB_PATH=/nonexistent/x.db uv run ...`.
+- Simulate a no-database setup with `PRICES_DB_PATH=/nonexistent/x.db uv run ...`.
 - `.gitattributes` normalizes *.md/*.py/*.json/*.yml to LF on commit; Windows Python `open(p, "w")` writes CRLF, so pass `newline="\n"` when scripting edits.
 - Git Bash heredocs can fail on long or quote-heavy content; write large content with the Write tool.
 - GitHub heading anchors: lowercase, spaces -> `-`, and `:`, backticks, `/`, `.` are dropped (e.g. "Large files: `scripts/data_files.py`" -> `#large-files-scriptsdata_filespy`).

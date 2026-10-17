@@ -30,17 +30,13 @@ Runs in-process with Falcon's `TestClient` (no port). It checks:
 
 In `frontend/`: `npm run check` (svelte-check) must finish with **0 errors and 0 warnings**; `npm run build` must produce `frontend/build/`. There are no frontend unit tests.
 
-## Continuous integration
+## No continuous integration
 
-`.github/workflows/ci.yml` runs on pushes to `main` and on pull requests, on Ubuntu with Python 3.14 and Node 24:
+The repository has no CI: nothing runs on push or pull request. Run the checks locally before pushing:
 
-1. `uv sync --extra dev --frozen`
-2. `uv run python -m compileall -q inflation_dashboard scripts`
-3. `uv run pytest`
-4. `uv run python scripts/verify_falcon_api.py` — CI does not build the database (it takes minutes and about 1.4 GB), so this runs the **no-database** checks only.
-5. `npm ci`, `npm run check`, `npm run build` in `frontend/`
-
-The full-database checks of `verify_falcon_api.py` and the scripts below must be run locally.
+1. `uv run pytest`
+2. `uv run python scripts/verify_falcon_api.py` (with a built database; with `PRICES_DB_PATH` pointing at a missing file it runs the no-database checks)
+3. `npm run check` and `npm run build` in `frontend/`
 
 ## Database scripts (need a built database)
 

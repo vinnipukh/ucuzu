@@ -24,7 +24,8 @@ Every entry must be checked against the commit (`git show <hash>`) before it is 
 
 | Commit | Change | Owning doc |
 |---|---|---|
-| `907efe4` US-020 | CI runs `uv run pytest`; Node pinned to 24; nonexistent `verify_redis_store.py` step removed; `verify_falcon_api.py` runs without a DB. `frontend/package.json` `engines.node >=22.12`; `frontend/.nvmrc` = 24 | `TESTING.md` § Continuous integration |
+| `907efe4` US-020 | CI fixed (pytest, Node 24, nonexistent `verify_redis_store.py` step removed); `frontend/package.json` `engines.node >=22.12`; `frontend/.nvmrc` = 24. `verify_falcon_api.py` runs without a DB | `GETTING-STARTED.md` § Prerequisites |
+| (CI removal commit) | GitHub Actions removed: `.github/workflows/ci.yml` deleted; checks run locally only | `TESTING.md` § No continuous integration |
 | `637841c` US-025 | `.gitignore` ignores `*.db.staging*` | `DATABASE.md` § Purpose |
 | `82609c3` US-021 | Launcher `--sqlite-db` defaults to `PRICES_DB_PATH`, then `data/prices.db` (previously it always overwrote `PRICES_DB_PATH`) | `CONFIGURATION.md` § Launcher flags |
 | `e3401ac` US-023 | Removed `--no-sqlite-readonly` and the never-read exports `SQLITE_DB_PATH`, `SQLITE_READ_ONLY`, `SQLITE_JOURNAL_MODE`, `SQLITE_SYNCHRONOUS`, `SQLITE_URI` | `CONFIGURATION.md` |
@@ -46,7 +47,7 @@ Every entry must be checked against the commit (`git show <hash>`) before it is 
 - [ ] `docs/README.md` gets a `## Change history` section at the end, with a `### 2026-10-17 — docs overhaul and /api/products` subsection.
 - [ ] The subsection has three groups, in this order: **Breaking / behaviour changes**, **Removed**, **Documentation-only**.
 - [ ] Every row of the "Source of truth" table above is covered. Each bullet is one sentence, names the commit hash, and links to the owning doc section (relative markdown link, anchors included).
-- [ ] "Removed" names each removed item exactly: `--no-sqlite-readonly`, `SQLITE_DB_PATH`, `SQLITE_READ_ONLY`, `SQLITE_JOURNAL_MODE`, `SQLITE_SYNCHRONOUS`, `SQLITE_URI`, `INFLATION_DATA_ROOT`, `inflation_dashboard/adapters/csv_price_repository.py`, `SUPPORTED_RETAILERS`, `scripts/verify_redis_store.py` CI step, `docs/SEPARATION.md` (moved), `docs/CONVENTIONS.md`/`docs/CONCERNS.md` content (moved).
+- [ ] "Removed" names each removed item exactly: `--no-sqlite-readonly`, `SQLITE_DB_PATH`, `SQLITE_READ_ONLY`, `SQLITE_JOURNAL_MODE`, `SQLITE_SYNCHRONOUS`, `SQLITE_URI`, `INFLATION_DATA_ROOT`, `inflation_dashboard/adapters/csv_price_repository.py`, `SUPPORTED_RETAILERS`, `.github/workflows/ci.yml` (GitHub Actions CI), `docs/SEPARATION.md` (moved), `docs/CONVENTIONS.md`/`docs/CONCERNS.md` content (moved).
 - [ ] States that US-018 (Svelte `@component` blocks) was deferred and is not part of this change.
 - [ ] Every relative link in the new section resolves (checked by hand).
 - [ ] Typecheck passes (`cd frontend && npm run check`).
