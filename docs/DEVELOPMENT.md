@@ -25,7 +25,8 @@ uv run python scripts/verify_asgi_api.py
 uv run python scripts/verify_redis_store.py
 
 # Database
-uv run python scripts/build_sqlite_from_json.py --json-dir data/prices_json --db-path data/prices.db
+uv run python scripts/build_database.py
+uv run python scripts/data_files.py check
 uv run python scripts/test_sqlite_adapter.py
 
 # Frontend

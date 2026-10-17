@@ -160,6 +160,15 @@ def test_build_product_frame_default_retailer() -> None:
     assert (result["source_file"] == "gurmar.csv").all()
 
 
+def test_build_product_frame_accepts_both_name_header_spellings() -> None:
+    hyphen = pd.DataFrame({"product-name": ["Milk"], "product_price": ["12,50"]})
+    underscore = pd.DataFrame({"product_name": ["Milk"], "price": ["12,50"]})
+    a = build_product_frame(hyphen, "Markets / Gurmar", "product_price", DATE, "a.csv")
+    b = build_product_frame(underscore, "Markets / Gurmar", "price", DATE, "b.csv")
+    assert a[["product_id", "product_name", "price"]].values.tolist() == [["Milk", "Milk", 12.5]]
+    assert b[["product_id", "product_name", "price"]].values.tolist() == [["Milk", "Milk", 12.5]]
+
+
 def test_build_product_frame_drops_rows_without_identity() -> None:
     frame = pd.DataFrame({"product_id": [None, "  "], "name": [None, ""], "price": [1.0, 2.0]})
     result = build_product_frame(frame, "Markets / Gurmar", "price", DATE, "f.csv")

@@ -1,19 +1,28 @@
-# Runtime data mount
+# Data
 
-This directory is intentionally ignored by Git. It is the default local mount for artifacts supplied by the separate data repository.
-
-Expected optional layout:
+This directory is committed. It holds scraper output copied from the `inflationstudymirror` data repository (and its upstream, `urazkagangunes/InflationResearchStudy`). The SQLite database built from it is **not** committed.
 
 ```text
 data/
-  prices.db
-  prices_json/
-  raw/
-  inflation/
-    EpeyKatfg/
-      monthly_inflation.csv
+  raw/            scraped price CSVs, grouped by TÜİK COICOP folder (01_Food/Gurmar/...)
+  prices_json/    partitioned JSON price histories (used only for retailers without raw CSVs)
+  inflation/      generated inflation artifacts (EpeyKatfg/monthly_inflation.csv, ...)
+  prices.db       built locally, ignored by Git
 ```
 
-The recommended production path is to build `prices.db` from the data repository's partitioned JSON and deploy the database as a versioned runtime artifact. Do not commit raw scraper output, cookies or the SQLite binary to this repository.
+Build the database:
+
+```bash
+uv run python scripts/build_database.py
+```
+
+Before committing new data, make sure no file exceeds 85 MB:
+
+```bash
+uv run python scripts/data_files.py check   # fails on oversized files
+uv run python scripts/data_files.py split   # commits them as .partNNN chunks instead
+```
+
+Split originals are listed in the managed block at the end of `.gitignore` and are rebuilt automatically by `build_database.py` (or `scripts/data_files.py join`).
 
 See `docs/DATA_CONTRACT.md` and `docs/DATABASE.md`.

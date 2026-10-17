@@ -11,19 +11,23 @@ This repository owns the web application only:
 | `frontend/` | Svelte 5 / SvelteKit production SPA |
 | `inflation_dashboard/` | Falcon API, domain/application logic, SQLite and CSV adapters |
 | `scripts/` | API server, database build/migration, verification and benchmarks |
-| `data/` | Ignored runtime data mount; no scraper source code belongs here |
+| `data/` | Committed scraper output (`raw/`, `prices_json/`, `inflation/`); no scraper source code belongs here |
 | `docs/` | Web architecture, API contract, database and deployment documentation |
 
-Scrapers, raw datasets, inflation calculators and TÜİK methodology live in the separate `inflationstudymirror` data repository. Do not add them back to this repository.
+Scrapers, inflation calculators and TÜİK methodology live in the separate `inflationstudymirror` data repository (upstream: `urazkagangunes/InflationResearchStudy`). Do not add their source code to this repository. Their *output* is committed under `data/`.
 
-## External data contract
+## Data rules
 
-The API must not assume that a sibling monorepo exists.
+The API must not assume that a sibling monorepo exists; everything it needs is in `data/` or built from it.
 
+- **Commit the data, never the database.** Scraped CSVs (`data/raw/`), JSON partitions (`data/prices_json/`) and inflation artifacts (`data/inflation/`) are committed. `*.db`, `*.db-wal`, `*.db-shm` are ignored everywhere and must never be committed.
+- **Always commit a working database build script.** `scripts/build_database.py` must rebuild `data/prices.db` from the committed `data/` tree with no other inputs. Any change to data layout, file formats, retailer folders or the schema must update this script (and `tests/test_build_database.py`) in the same commit.
+- **No committed file may exceed 85 MB.** Before committing data, run `uv run python scripts/data_files.py check`. Oversized files are either split with `scripts/data_files.py split` (committed as `.partNNN` chunks, original listed in the managed `.gitignore` block and rebuilt by `join`) or added to `.gitignore`.
+- Push large data commits in batches of about 500 MB so no single push approaches GitHub's 2 GB limit.
+- Never commit `.env`, cookies, credentials or browser profiles.
 - `PRICES_DB_PATH` selects the runtime SQLite database; default: `data/prices.db`.
 - `INFLATION_DATA_ROOT` selects the optional raw CSV fallback root; default: `data/raw`.
 - `EPEYKATFG_MONTHLY_CSV` selects the monthly inflation artifact; default: `data/inflation/EpeyKatfg/monthly_inflation.csv`.
-- Never commit `.env`, cookies, credentials, raw scraper output or a SQLite database.
 
 See `docs/DATA_CONTRACT.md` and `docs/DATABASE.md`.
 
@@ -39,7 +43,9 @@ See `docs/DATA_CONTRACT.md` and `docs/DATABASE.md`.
 ## Development
 
 ```bash
-uv sync
+uv sync --extra dev
+uv run python scripts/build_database.py
+uv run pytest
 uv run python scripts/verify_falcon_api.py
 cd frontend && npm install && npm run check && npm run build
 ```
@@ -55,5 +61,6 @@ cd frontend && npm run dev
 
 - Preserve the `{data, meta, errors}` response envelope.
 - Preserve read-only SQLite production behavior unless a migration is explicitly designed.
+- Changes to data or the database build follow the **Data rules** above.
 - Update API, database, configuration and user documentation together with behavior changes.
 - Historical Streamlit/SQLite planning material belongs under `docs/archive/`; do not present it as current setup guidance.

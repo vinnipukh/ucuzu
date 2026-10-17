@@ -16,7 +16,7 @@ PRICE_COLUMNS = [
     "Fiyat",
 ]
 ID_COLUMNS = ["Stok Kodu", "sku", "product_id", "UrunID", "id", "Kategori ID"]
-NAME_COLUMNS = ["product-name", "name", "Product Name", "brand", "District"]
+NAME_COLUMNS = ["product-name", "product_name", "name", "Product Name", "brand", "District"]
 CATEGORY_COLUMNS = ["category", "Category", "Ana Kategori", "Rooms"]
 DATE_PATTERN = re.compile(r"(20\d{2})[-_](\d{2})[-_](\d{2})")
 HISTORY_COLUMNS = ["date", "retailer", "product_id", "product_name", "category", "price", "source_file"]

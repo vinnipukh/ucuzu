@@ -19,13 +19,12 @@ htmlcov/
 *.crt
 *.p12
 
-# Runtime data and databases
-/data/*
-!/data/README.md
-!/data/.gitkeep
+# Databases are never committed; rebuild with `uv run python scripts/build_database.py`.
+# data/ itself (scraper CSVs, JSON, inflation artifacts) is committed.
 *.db
 *.db-wal
 *.db-shm
+*.db.building*
 /logs/
 
 # Node / Svelte
@@ -42,3 +41,7 @@ Thumbs.db
 
 # Local browser/design artifacts
 browser-artifacts/
+
+# >>> split data files (managed by scripts/data_files.py; originals rebuilt by `join`)
+/data/raw/EpeyKatfg/series.csv
+# <<< split data files

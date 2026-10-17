@@ -13,6 +13,25 @@ This document defines the boundary between the `inflationstudymirror` data repos
 
 The SQLite file is a serving artifact, not the data repository's source of truth.
 
+## Committed data
+
+Scraper output is copied into this repository and committed:
+
+| Source path (data repository) | Path here |
+|---|---|
+| `InflationItems/Datas/` | `data/raw/` |
+| `InflationItems/prices_json/` | `data/prices_json/` |
+| `Inflations/Datas/` | `data/inflation/` |
+
+Sources are `vinnipukh/inflationstudymirror` and its upstream `urazkagangunes/InflationResearchStudy`. When both have a file at the same path, the mirror's copy wins (upstream renamed CSV headers such as `product-name,product_price` → `product_name,price`; both spellings are accepted).
+
+Rules:
+
+- `*.db` files are never committed. `scripts/build_database.py` must always rebuild `data/prices.db` from the committed data alone.
+- No committed file may exceed 85 MB. `scripts/data_files.py check` enforces this; `scripts/data_files.py split` commits oversized files as `.partNNN` chunks, and `build_database.py` rejoins them.
+- Large data imports are pushed in batches of about 500 MB.
+- Windows cannot create file names containing `\ : * ? " < > |`; such upstream paths are imported with `\` treated as a folder separator and other characters replaced by `_`.
+
 ## Configuration
 
 | Variable | Meaning | Default |
@@ -58,9 +77,9 @@ If the artifact is absent, the endpoint returns a valid empty response rather th
 ## Recommended publication flow
 
 1. Run and validate the data repository's scrapers and inflation calculators.
-2. Generate a dated release or CI artifact containing `prices_json/` and required inflation CSVs.
-3. Verify checksums and record the source commit.
-4. Build `data/prices.db` in the web repository.
+2. Copy new or changed files into `data/raw`, `data/prices_json` and `data/inflation`, recording the source commits in the commit message.
+3. Run `uv run python scripts/data_files.py check` (split or ignore anything over 85 MB) and commit in batches of about 500 MB.
+4. Build `data/prices.db` with `uv run python scripts/build_database.py`.
 5. Run API verification against the built database.
 6. Deploy the database as a read-only runtime artifact.
-7. Rebuild when a new data release is published; do not mutate the database in API workers.
+7. Rebuild when new data is committed; do not mutate the database in API workers.

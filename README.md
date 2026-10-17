@@ -12,10 +12,10 @@ inflationstudymirror (data repository)
   InflationItems/prices_json/ partitioned price histories
   Inflations/Datas/           generated inflation artifacts
                  │
-                 │ external paths / deployment volume
+                 │ copied and committed under data/ (raw/, prices_json/, inflation/)
                  ▼
 inflationstudymirror-web
-  scripts/build_sqlite_from_json.py
+  scripts/build_database.py
                  │
                  ▼
   data/prices.db → Falcon API → Svelte SPA
@@ -39,28 +39,15 @@ cd frontend && npm install && cd ..
 
 Copy `.env.example` to `.env` when overriding defaults. Never commit `.env`.
 
-## Supply data
+## Build the database
 
-The data repository can be checked out as a sibling and exposed through environment variables. PowerShell example:
+Scraper data is committed under `data/`. Build the serving database from it:
 
-```powershell
-$env:INFLATION_DATA_ROOT = "..\inflationstudymirror\InflationItems\Datas"
-$env:EPEYKATFG_MONTHLY_CSV = "..\inflationstudymirror\Inflations\Datas\EpeyKatfg\monthly_inflation.csv"
-
-uv run python scripts/build_sqlite_from_json.py `
-  --json-dir ..\inflationstudymirror\InflationItems\prices_json `
-  --db-path data\prices.db
+```bash
+uv run python scripts/build_database.py
 ```
 
-Alternatively, build from the raw CSV archive:
-
-```powershell
-uv run python scripts/migrate_csv_to_sqlite.py `
-  --datas-dir ..\inflationstudymirror\InflationItems\Datas `
-  --db-path data\prices.db
-```
-
-The SQLite file is a generated runtime artifact and is not committed. See `docs/DATA_CONTRACT.md` and `docs/DATABASE.md`.
+The SQLite file is a generated runtime artifact and is never committed; the build script always is. Files over 85 MB are committed as `.partNNN` chunks (`scripts/data_files.py`). See `docs/DATA_CONTRACT.md` and `docs/DATABASE.md`.
 
 ## Run
 
@@ -119,7 +106,8 @@ inflation_dashboard/
   adapters/               SQLite, CSV and async repositories
   api/                    Falcon WSGI/ASGI resources and middleware
 scripts/                  server, database, verification and benchmarks
-data/                     ignored runtime mount
+data/                     committed scraper data (prices.db is built, not committed)
+tests/                    pytest unit tests
 docs/                     current web documentation
 docs/archive/             historical monorepo and Streamlit material
 ```
@@ -127,6 +115,9 @@ docs/archive/             historical monorepo and Streamlit material
 ## Verification
 
 ```bash
+# Unit tests
+uv run pytest
+
 # Backend/API
 uv run python scripts/verify_falcon_api.py
 uv run python scripts/verify_asgi_api.py

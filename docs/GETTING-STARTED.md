@@ -19,30 +19,15 @@ cd ..
 
 ## Configure
 
-Copy `.env.example` to `.env` or export variables in your shell. For a sibling data checkout on Windows PowerShell:
-
-```powershell
-$env:INFLATION_DATA_ROOT = "..\inflationstudymirror\InflationItems\Datas"
-$env:EPEYKATFG_MONTHLY_CSV = "..\inflationstudymirror\Inflations\Datas\EpeyKatfg\monthly_inflation.csv"
-```
+Copy `.env.example` to `.env` or export variables in your shell. The defaults already point at the committed `data/` tree, so no configuration is needed for a normal checkout.
 
 ## Build the serving database
 
-From partitioned JSON:
-
-```powershell
-uv run python scripts/build_sqlite_from_json.py `
-  --json-dir ..\inflationstudymirror\InflationItems\prices_json `
-  --db-path data\prices.db
+```bash
+uv run python scripts/build_database.py
 ```
 
-Or from raw CSV:
-
-```powershell
-uv run python scripts/migrate_csv_to_sqlite.py `
-  --datas-dir ..\inflationstudymirror\InflationItems\Datas `
-  --db-path data\prices.db
-```
+This rebuilds `data/prices.db` from the committed scraper data (`data/raw`, `data/prices_json`). The database is never committed. See `docs/DATABASE.md`.
 
 ## Run the API
 
