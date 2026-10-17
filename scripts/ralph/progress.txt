@@ -1,0 +1,19 @@
+# Ralph Progress Log
+Started: 2026-10-17
+Spec: tasks/prd-documentation-overhaul.md
+
+## Codebase Patterns
+- Checks: `uv run pytest` (repo root) and `cd frontend && npm run check`. Both are fast (<10 s).
+- Simulate CI (no database) with `PRICES_DB_PATH=/nonexistent/x.db uv run ...`.
+- `.gitattributes` normalizes *.md/*.py/*.json/*.yml to LF on commit; Windows Python `open(p, "w")` writes CRLF, so pass `newline="\n"` when scripting edits.
+- PyYAML is not a project dependency: validate YAML with `uv run --with pyyaml python -c ...`.
+- After editing `frontend/package.json`, run `npm install --package-lock-only` so `npm ci` stays in sync.
+
+## 2026-10-17 - US-020
+- CI: removed the nonexistent `verify_redis_store.py` step, added `uv run pytest`, pinned Node 24. `verify_falcon_api.py` kept: it passes without a database (empty-deployment path).
+- `frontend/package.json` engines `node >=22.12`; `frontend/.nvmrc` = 24; lockfile synced.
+- Files: .github/workflows/ci.yml, frontend/package.json, frontend/package-lock.json, frontend/.nvmrc
+- **Learnings for future iterations:**
+  - Tests do not need `data/prices.db`; `verify_falcon_api.py` has an explicit no-inventory branch. Keep it working without a DB so CI can keep running it (relevant to US-022).
+  - YAML validated locally with pyyaml; workflow not run on GitHub.
+---
