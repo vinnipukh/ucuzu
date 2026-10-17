@@ -1,3 +1,4 @@
+/** Maximum number of suggestions shown by the searchable selects. */
 export const MAX_AUTOCOMPLETE_OPTIONS = 80;
 
 /**

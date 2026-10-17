@@ -129,4 +129,4 @@ Code defects that are documented rather than fixed:
 | Issue | Location | Impact |
 |---|---|---|
 | Nothing loads a `.env` file (no dotenv). `.env.example` only lists variables; they must be exported in the shell or service environment. | `.env.example:1`; variables are read with `os.environ` in `inflation_dashboard/adapters/sqlite_price_repository.py:36` and `inflation_dashboard/application/epeykatfg_monthly.py:20` | Copying `.env.example` to `.env` has no effect on the API. (Vite does load `frontend/.env` for `VITE_*` variables.) |
-| The client type `InventoryMeta.warnings` has no counterpart in server output: `/api/inventory` never sends `meta.warnings`. | `frontend/src/lib/types/api.ts:76`, read at `frontend/src/routes/+page.svelte:43` | The sidebar's inventory warnings list is always empty. |
+| The client type `InventoryMeta.warnings` has no counterpart in server output: `/api/inventory` never sends `meta.warnings`. | `frontend/src/lib/types/api.ts:91`, read at `frontend/src/routes/+page.svelte:43` | The sidebar's inventory warnings list is always empty. |

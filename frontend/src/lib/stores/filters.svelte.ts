@@ -12,6 +12,7 @@ export const DEFAULT_API_BASE_URL: string = ENV_BASE?.trim() ? ENV_BASE.trim().r
 
 // Retailers load one category at a time (per owner request): the first visit opens on
 // Markets, later visits on the last category used. All files in the date range are loaded.
+/** Category loaded on a first visit (before any choice is remembered). */
 export const DEFAULT_CATEGORY = 'Markets';
 const CATEGORY_STORAGE_KEY = 'inflation-dashboard:category';
 const DEFAULT_ALL_HISTORY = true;
@@ -63,6 +64,7 @@ export const filters = $state({
   inventoryReady: false
 });
 
+/** Clear inventory-derived state and restore defaults (used when inventory loading fails). */
 export function resetFilters(): void {
   filters.retailerOptions.length = 0;
   filters.categoryOptions.length = 0;
@@ -78,6 +80,10 @@ export function resetFilters(): void {
   filters.inventoryReady = false;
 }
 
+/**
+ * Populate options from `/api/inventory`, select the initial category
+ * (remembered, else `DEFAULT_CATEGORY`, else the first) and set the last 60 days as the date range.
+ */
 export function initInventory(retailers: string[], minDate: string | null, maxDate: string | null): void {
   filters.retailerOptions.length = 0;
   filters.retailerOptions.push(...retailers);
@@ -131,7 +137,7 @@ export function setSelectedRetailers(next: string[]): void {
   }
 }
 
-/** Build the common filter params reactively from the current state. */
+/** Build the common filter params reactively from the current state. Currently unused: views call `buildQueryMap`. */
 export function buildCommonParams(): CommonFilterParams {
   return {
     retailer: [...filters.selectedRetailers],

@@ -4,11 +4,13 @@ export function formatCurrency(value: number | null | undefined): string {
   return `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** Format a percentage with two decimals (tr-TR), or `-` when missing. */
 export function formatPercent(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return '-';
   return `${Number(value).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 }
 
+/** Format an integer with tr-TR thousands separators, or `-` when missing. */
 export function formatInt(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return '-';
   return Number(value).toLocaleString('tr-TR');
@@ -29,6 +31,7 @@ export function parseDate(value: string | null | undefined): Date | null {
   return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
 }
 
+/** Format a Date (UTC) as `YYYY-MM-DD` for `<input type="date">`. */
 export function toInputDate(date: Date): string {
   const y = date.getUTCFullYear();
   const m = String(date.getUTCMonth() + 1).padStart(2, '0');

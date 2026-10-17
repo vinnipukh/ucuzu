@@ -1,5 +1,6 @@
 import { effectiveTheme } from '$lib/themes.svelte';
 
+/** Colours for ECharts options in the current light or dark theme. */
 export interface ChartTheme {
   dark: boolean;
   text: string;

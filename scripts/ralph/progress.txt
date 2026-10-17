@@ -244,3 +244,13 @@ Spec: tasks/prd-documentation-overhaul.md
 - **Learnings for future iterations:**
   - scratchpad `docast.py` inserts docstrings by AST (handles multi-line signatures, "Class.method" names).
 ---
+
+## 2026-10-17 - US-017
+- TSDoc on every exported interface/type in `frontend/src/lib/types/api.ts`, each naming its endpoint; client/server differences noted inline (`InventoryMeta.warnings` never sent, `ApiError.meta` never sent, `HealthData` lacks `database`, `/api/product` history dates, `ProductDetailMeta` never null on 200). The three existing envelope docs reworded.
+- TSDoc on every export in themes.svelte.ts, chartOptions.svelte.ts, format.ts, search.ts, chartTheme.svelte.ts, filters.svelte.ts (notes `buildCommonParams` is unused) and client.ts (`ApiErrorResponse`).
+- Diff is comment-only (every added/removed line starts with `/**`, `*`, `*/` or `//`). `npm run check` 0/0; `npm run build` OK with only the pre-existing chunk-size warning.
+- Re-copied api.ts into FALCON_API_CONTRACT.md §6.2 (diff-identical); ARCHITECTURE.md known-issue ref `api.ts:76` -> `api.ts:91`.
+- Files: frontend/src/lib/**/*.ts, docs/FALCON_API_CONTRACT.md, docs/ARCHITECTURE.md
+- **Learnings for future iterations:**
+  - `npm run build` always prints a chunk-size warning (ECharts bundle); it is not new.
+---

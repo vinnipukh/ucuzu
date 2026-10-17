@@ -6,6 +6,11 @@ import { filters, DEFAULT_API_BASE_URL } from '$lib/stores/filters.svelte';
  */
 export const API_BASE_URL: string = DEFAULT_API_BASE_URL;
 
+/**
+ * Error thrown by `fetchApi` for every failure. `status` is 0 for network errors;
+ * `code` is the server's error code, or the client-only `network_error` / `bad_response`,
+ * or `http_error` when a non-2xx response has no `errors`; `meta` is the envelope's `meta`.
+ */
 export class ApiErrorResponse extends Error {
   constructor(
     public status: number,

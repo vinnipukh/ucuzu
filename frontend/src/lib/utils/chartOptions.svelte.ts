@@ -12,6 +12,7 @@ function dateLabel(value: string): string {
   return value.slice(0, 10);
 }
 
+/** Line chart of one product's daily prices (Product explorer). */
 export function productPriceOption(points: ProductHistoryPoint[], title: string): EChartsCoreOption {
   const t = getChartTheme();
   return {
@@ -56,6 +57,7 @@ export function productPriceOption(points: ProductHistoryPoint[], title: string)
   };
 }
 
+/** One line per retailer of average/median price over time (Retailer averages). */
 export function retailerAverageOption(records: RetailerAverageRecord[], title: string): EChartsCoreOption {
   const t = getChartTheme();
   const byRetailer = new Map<string, { dates: string[]; prices: (number | null)[] }>();
@@ -106,6 +108,7 @@ export function retailerAverageOption(records: RetailerAverageRecord[], title: s
   };
 }
 
+/** Area chart of tracked products per retailer over time (Coverage overview). */
 export function coverageAreaOption(records: CoverageOverTimeRecord[], title: string): EChartsCoreOption {
   const t = getChartTheme();
   const byRetailer = new Map<string, Map<string, number>>();
@@ -159,6 +162,7 @@ export function coverageAreaOption(records: CoverageOverTimeRecord[], title: str
   };
 }
 
+/** Horizontal bars of products per category (Coverage overview). */
 export function categoryBarOption(records: CategoryCoverageRecord[], title: string): EChartsCoreOption {
   const t = getChartTheme();
   // Aggregate product totals per category for a stable axis order.
@@ -212,6 +216,7 @@ export function categoryBarOption(records: CategoryCoverageRecord[], title: stri
   };
 }
 
+/** One month's average price, computed client-side in the Product explorer. */
 export interface MonthlyAveragePoint {
   month: string; // YYYY-MM
   avg: number;
@@ -258,6 +263,7 @@ export function monthlyAverageOption(points: MonthlyAveragePoint[], title: strin
   };
 }
 
+/** Lines of Carli average, Dutot basic index and TÜİK-weighted monthly inflation (EpeyKatfg monthly). */
 export function monthlyInflationOption(
   records: MonthlyInflationRecord[],
   title: string
