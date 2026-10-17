@@ -170,3 +170,11 @@ Spec: tasks/prd-documentation-overhaul.md
 - **Learnings for future iterations:**
   - US-017 adds TSDoc to `api.ts`: re-copy it into contract §6.2 in the same commit (`diff <(sed -n '/^```typescript$/,/^```$/p' docs/FALCON_API_CONTRACT.md | sed '1d;$d') frontend/src/lib/types/api.ts`).
 ---
+
+## 2026-10-17 - US-007
+- `docs/API.md` reduced to: one envelope paragraph, a 9-row endpoint table (method, path, purpose, key params), an "authoritative contract" link, and performance notes. Per-endpoint sections removed (the product-detail example already lives in the contract since US-008).
+- Product search is described as `LIKE '%q%'` substring match over `product_prices` (no index usable, adapter cache 5 min), not a covering-index seek. Dropped the unverifiable "0.09–0.23 ms" figure. No pagination/timestamp claims for `meta`.
+- Files: docs/API.md
+- **Learnings for future iterations:**
+  - DEVELOPMENT.md (US-006) must list the API.md endpoint table in the API-change checklist.
+---

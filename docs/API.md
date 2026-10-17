@@ -1,305 +1,32 @@
-# API Reference
+# API Summary
 
-This document provides the complete specification for the Falcon REST API implemented under `inflation_dashboard/api/`.
+Short overview of the Falcon REST API in `inflation_dashboard/api/`. **[FALCON_API_CONTRACT.md](FALCON_API_CONTRACT.md) is authoritative** for parameters, validation, response shapes, error codes and caching; this page only summarizes it.
 
-The API is backed by the generated SQLite time-series database (`data/prices.db` by default, configurable with `PRICES_DB_PATH`); a missing database makes data endpoints return 503 `database_unavailable`. It serves the Svelte production frontend in `frontend/`.
+## Envelope
 
-> **Canonical spec:** [`FALCON_API_CONTRACT.md`](FALCON_API_CONTRACT.md) is the regression-verified, authoritative contract (envelope shapes, TypeScript types, validation rules). This document is a quick reference summary and may lag the canonical spec.
+Every response, success or error, is a JSON object `{"data": …, "meta": {…}, "errors": […]}`. `data` holds the payload and is `null` on errors. `meta` reflects the applied filters, row and file counts, and `warnings` on success, or the rejected parameters on error. `errors` is empty on success and holds one `{code, message}` object on failure (400 `invalid_filter`, 404 `not_found`, 405 `method_not_allowed`, 500 `server_error`, 503 `database_unavailable`).
 
----
+## Endpoints
 
-## Architecture & Response Envelope
+All routes are `GET`. "Common filters" are `retailer` (repeatable), `start_date`, `end_date`, `max_files` and `all_history`.
 
-All API endpoints return a standardized JSON envelope serialized with `orjson`:
-
-```json
-{
-  "data": {},
-  "meta": {},
-  "errors": []
-}
-```
-
-* **`data`**: The payload (object, array, or null).
-* **`meta`**: Metadata (pagination limits, warnings, query execution hints, timestamps).
-* **`errors`**: Array of error objects `[{"code": "...", "message": "..."}]` on HTTP 4xx/5xx failures (empty list on success).
-
----
-
-## CORS Configuration
-
-The API registers `falcon.CORSMiddleware` in `inflation_dashboard/api/falcon_app.py`
-(added 2026-09-03; the docs previously claimed it but it was not wired in).
-Allowed origins are configured via `FALCON_CORS_ORIGINS` (consumed by the app
-factory directly, and exposed as `--cors-origins` on `scripts/run_falcon_server.py`):
-
-```bash
-# Allow specific frontend origins (e.g. SvelteKit dev/preview)
-export FALCON_CORS_ORIGINS="http://localhost:5173,http://localhost:4173"
-
-# Default allows all origins ("*")
-```
-
----
-
-## Endpoints Overview
-
-| Method | Route | Purpose | Warm Latency |
+| Method | Path | Purpose | Key parameters |
 |---|---|---|---|
-| `GET` | `/api/health` | Lightweight service health check | **~0.1 ms** |
-| `GET` | `/api/inventory` | Discovered retailers, date boundaries, and file counts | **~0.1 ms** |
-| `GET` | `/api/history` | Filtered historical price observations | **~0.3 ms** |
-| `GET` | `/api/retailer-averages` | Average / median price trend series by retailer | **~0.1 ms** |
-| `GET` | `/api/movers` | Top price gainers and droppers across time | **~0.1 ms** |
-| `GET` | `/api/coverage` | Data density and category distribution over time | **~0.2 ms** |
-| `GET` | `/api/products/search` | Fast keyword & category autocomplete for Svelte | **~0.1 ms** |
-| `GET` | `/api/product` | Single product detail with full price history series | **~0.1 ms** |
-| `GET` | `/api/epeykatfg/monthly-inflation` | Generated EpeyKatfg monthly inflation series | artifact read |
+| GET | `/api/health` | Liveness probe; reports whether the database file is available | — |
+| GET | `/api/inventory` | Retailer list and overall date range | — |
+| GET | `/api/history` | Filtered observations, or one product's series with a summary | common filters, `product_name`, `product_retailer` |
+| GET | `/api/retailer-averages` | Average or median price per retailer per date | common filters, `aggregation` (`Average`/`Median`) |
+| GET | `/api/movers` | Biggest drops from peak and biggest gains | common filters, `scope_retailer`, `limit` (5–30) |
+| GET | `/api/coverage` | Observation counts over time and per category | common filters, `category_limit` |
+| GET | `/api/products/search` | Product autocomplete (not used by the SPA) | `q`, `retailer`, `category`, `limit` (1–100) |
+| GET | `/api/product` | One product's summary and full price history | `product_id` or `product_name`, `retailer` |
+| GET | `/api/epeykatfg/monthly-inflation` | EpeyKatfg monthly inflation rows from the CSV artifact | — |
 
----
+## Performance notes
 
-## Detailed Endpoint Specifications
-
-### 1. `GET /api/health`
-Lightweight health and readiness check. Does not touch the database.
-
-* **Query Parameters**: None
-* **Response `data`**:
-  ```json
-  {
-    "status": "ok"
-  }
-  ```
-* **Response `meta`**:
-  ```json
-  {
-    "service": "inflation-dashboard-api"
-  }
-  ```
-
----
-
-### 2. `GET /api/inventory`
-Returns available retailers, minimum and maximum observation dates, and file counts.
-
-* **Query Parameters**: None
-* **Response `data`**:
-  ```json
-  {
-    "retailers": [
-      "ClothingStores / Vakko",
-      "Markets / Gurmar",
-      "Technology",
-      "HomeGoods",
-      "Cosmetics / Watson",
-      "ConstructionSuppliesMarkets / yapimaks",
-      "ConstructionSuppliesMarkets / TasciYapiMarket",
-      "HousesRent / Kayseri",
-      "HousesRent / Sivas",
-      "HousesRent / Tokat",
-      "HousesRent / Emlakjet",
-      "Health / Diagnostic&Surgical Services"
-    ],
-    "min_date": "2026-02-21",
-    "max_date": "2026-09-02",
-    "file_count": 982
-  }
-  ```
-
----
-
-### 3. `GET /api/products/search`
-High-speed product autocomplete endpoint backed by the `product_prices` table (covering-index seek, <2 ms).
-Designed for Svelte search bars.
-
-* **Query Parameters**:
-  * `q` or `query` *(string, optional)*: Search string (matches `product_name` or `product_id`).
-  * `retailer` *(string, optional)*: Restrict search to a specific retailer.
-  * `category` *(string, optional)*: Restrict search to a specific category.
-  * `limit` *(int, default: 20, clamped 1–100)*: Maximum number of returned matches.
-* **Response `meta`**: `{"query": ..., "retailer": ..., "category": ..., "limit": ..., "count": N}`.
-* **Example Request**:
-  ```bash
-  curl "http://localhost:8000/api/products/search?q=ceket&limit=5"
-  ```
-* **Response `data`**: Array of matching product summary objects:
-  ```json
-  [
-    {
-      "product_id": "M405060016-0047",
-      "retailer": "ClothingStores / Vakko",
-      "product_name": "AÇIK MAVİ CEKET",
-      "category": "Kadin",
-      "first_date": "2026-03-06",
-      "last_date": "2026-09-02",
-      "latest_price": 22975.0,
-      "min_price": 22975.0,
-      "max_price": 45950.0,
-      "observations_count": 179
-    }
-  ]
-  ```
-
----
-
-### 4. `GET /api/product`
-Single product detail endpoint returning the complete chronological time-series price history. Implemented by
-`ProductDetailResource` (2026-09, SQLite-backed; ~10 ms cold, sub-0.2 ms cached).
-
-* **Query Parameters**:
-  * `product_id` *(string, required if `product_name` omitted)*: Unique product identifier.
-  * `product_name` *(string, optional)*: Fallback product name.
-  * `retailer` *(string, optional)*: Target retailer (if omitted, resolves across retailers).
-* **Error states**: missing both `product_id`/`product_name` → HTTP 400 `invalid_filter`; product not found →
-  HTTP 404 `not_found`.
-* **Example Request**:
-  ```bash
-  curl "http://localhost:8000/api/product?product_id=M405487839-0027-0104"
-  ```
-* **Response `data`**:
-  ```json
-  {
-    "product_id": "M405487839-0027-0104",
-    "retailer": "ClothingStores / Vakko",
-    "product_name": "BEJ DESENLI MAXI ELBISE",
-    "category": "Kadin",
-    "first_date": "2026-03-06",
-    "last_date": "2026-09-02",
-    "latest_price": 36475.0,
-    "min_price": 36475.0,
-    "max_price": 72950.0,
-    "observations_count": 177,
-    "price_history": {
-      "2026-03-06": 72950.0,
-      "2026-05-14": 54712.5,
-      "2026-08-25": 36475.0,
-      "2026-09-02": 36475.0
-    },
-    "summary": {
-      "latest_price": 36475.0,
-      "cheapest_price": 36475.0,
-      "cheapest_date": "2026-08-25",
-      "change_since_first_pct": -50.0
-    }
-  }
-  ```
-
----
-
-### 5. `GET /api/history`
-Returns filtered historical price observations across retailers.
-
-* **Query Parameters**:
-  * `retailer` *(string, repeatable)*: e.g. `?retailer=Markets / Gurmar&retailer=HomeGoods`. Unknown values → HTTP 400.
-  * `start_date` / `end_date` *(YYYY-MM-DD, optional)*: Filter window (defaults to the latest 60 days).
-  * `max_files` *(int, default: 45)*: Bound history to the newest N files per retailer; `0` = uncapped.
-  * `all_history` *(bool, default: false)*: Load uncapped history (`max_files=0`).
-  * `product_name` *(string, optional)*: Filter to a single product; returns `{history, summary}`.
-  * `product_retailer` *(string, optional)*: Required with `product_name` when multiple retailers are selected.
-
----
-
-### 6. `GET /api/retailer-averages`
-Calculates daily average or median price trends by retailer.
-
-* **Query Parameters**:
-  * `retailer` *(string, repeatable)*
-  * `start_date`, `end_date` *(YYYY-MM-DD, optional)*
-  * `max_files`, `all_history` *(optional)*
-  * `aggregation` *(string, default: "Average")*: `"Average"` or `"Median"` (case-sensitive).
-* **Response `data`**:
-  ```json
-  {
-    "records": [
-      {
-        "date": "2026-08-01",
-        "retailer": "Markets / Gurmar",
-        "price": 142.50
-      }
-    ]
-  }
-  ```
-
----
-
-### 7. `GET /api/movers`
-Identifies the products with the largest price gains and price drops across the selected time period.
-
-* **Query Parameters**:
-  * `retailer`, `start_date`, `end_date`, `max_files`, `all_history` *(optional)*
-  * `scope_retailer` *(string, default: "All retailers")*: restric analysis to one retailer or all.
-  * `limit` *(int, default: 10, min 5, max 30)*: rows per category (alias: `mover_count`).
-* **Response `data`**:
-  ```json
-  {
-    "biggest_drops": [
-      {
-        "retailer": "Markets / Gurmar",
-        "product_name": "Zeytinyağı Riviera 1L",
-        "latest_price": 249.9,
-        "max_price": 349.9,
-        "savings_vs_peak": 100.0,
-        "drop_from_peak_pct": -28.58,
-        "last_seen": "2026-09-02T00:00:00"
-      }
-    ],
-    "biggest_gains": [
-      {
-        "retailer": "Markets / Gurmar",
-        "product_name": "Organik Yumurta 10lu",
-        "first_price": 45.0,
-        "latest_price": 69.9,
-        "change_since_first_pct": 55.33,
-        "first_seen": "2026-03-06T00:00:00",
-        "last_seen": "2026-09-02T00:00:00"
-      }
-    ]
-  }
-  ```
-
----
-
-### 8. `GET /api/coverage`
-Returns data density, observation counts over time, and category distributions.
-
-* **Query Parameters**:
-  * `retailer`, `start_date`, `end_date`, `max_files`, `all_history` *(optional)*
-  * `category_limit` *(int, default: 20, min 1)*: Maximum number of category bars to return.
-* **Response `data`**:
-  ```json
-  {
-    "summary": {
-      "retailer_count": 3,
-      "product_count": 15908,
-      "observation_count": 425115,
-      "date_range": "2026-07-20 → 2026-09-02",
-      "skipped_file_count": 0
-    },
-    "coverage_over_time": [ ... ],
-    "category_coverage": [ ... ]
-  }
-  ```
-
----
-
-### 9. `GET /api/epeykatfg/monthly-inflation`
-Returns the externally generated EpeyKatfg month-over-month inflation artifact.
-
-* **Configuration**: `EPEYKATFG_MONTHLY_CSV` (default `data/inflation/EpeyKatfg/monthly_inflation.csv`).
-* **Query Parameters**: None.
-* **Empty behavior**: returns `data: []` when the artifact is not mounted.
-* **Response `meta`**: row count, CSV columns, source description and weighting notes.
-
----
-
-## Performance & Caching
-
-- **Warm latency**: all endpoints serve in **0.09–0.23 ms** on warm requests (`scripts/benchmark_falcon_api.py`).
-- **Response cache**: `api/filters.py` keeps a thread-safe LRU/TTL cache of pre-serialized `orjson` bytes
-  (via `get_cached_response`/`put_cached_response`); warm requests bypass recalculation and serialization.
-- **Data path**: data endpoints read only from `sqlite_price_repository`.
-- **Boundary**: `inflation_dashboard/api/` never imports `sqlite3`; database access lives only in the adapters layer.
-
-## TypeScript Interfaces for Svelte Frontend
-
-The complete TypeScript contract is located in [`docs/FALCON_API_CONTRACT.md`](FALCON_API_CONTRACT.md).
+- **Response cache:** `api/filters.py` caches the pre-serialized `orjson` bytes of each successful response per endpoint and query string for 5 minutes, with a gzip variant (bodies ≥ 1 KB) and a strong ETag. Warm requests skip recomputation and serialization, and `If-None-Match` gets a 304. `scripts/benchmark_falcon_api.py` measures warm latency.
+- **History cache:** the four filter endpoints share an in-process cache of the loaded history frame per filter signature (5 minutes, bounded by size), so switching between views with the same filters does not re-query SQLite.
+- **Product search:** a substring match (`LIKE '%q%'` on `product_name` or `product_id`) over the `product_prices` view. The leading wildcard means no index can be used, so each uncached search scans the products table; results are cached in the adapter for 5 minutes. The search does not select the view's `price_history` column, so no per-product JSON is built.
+- **Product detail:** looks the product up by `product_id`/`product_name` (both indexed) and reads its history as one range of the `observations` primary key.
+- **Data path:** data endpoints read only from `sqlite_price_repository`, over one reusable read-only connection per worker thread. `inflation_dashboard/api/` never imports `sqlite3`.
+- **Large payloads:** general-mode `/api/history` can be tens of MB with `all_history=true`; keep the default `max_files` bound where possible.
