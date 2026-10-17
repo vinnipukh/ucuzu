@@ -162,3 +162,11 @@ Spec: tasks/prd-documentation-overhaul.md
   - With SQLite, `skipped_files` is always `[]` and the "selected files skipped" warning cannot occur.
   - Product detail `history[].date` is a plain date and `source_file` is `""` (differs from /api/history).
 ---
+
+## 2026-10-17 - US-009
+- Contract §6 now says it mirrors `frontend/src/lib/types/api.ts` as of 2026-10-17 and embeds the file verbatim (diff-checked; `MonthlyInflationRecord` has `pct_increased`/`pct_decreased`/`pct_unchanged`). §6.1 lists client/server differences: no search types (SPA never calls /api/products/search), `InventoryMeta.warnings` never sent, `ProductDetailMeta` `string|null`, plus `ApiError.meta` never sent, `HealthData` lacks `database`, product-detail history dates/source_file, always-sent optional meta fields.
+- Replaced the old client example and Svelte example with §7 describing the real `client.ts` (base from filters store, '' = same origin, query building, `{data, meta}` return, `network_error`/`bad_response`/`http_error` codes, AsyncResource). §8 verification mentions pytest. `api.ts` unchanged.
+- Files: docs/FALCON_API_CONTRACT.md
+- **Learnings for future iterations:**
+  - US-017 adds TSDoc to `api.ts`: re-copy it into contract §6.2 in the same commit (`diff <(sed -n '/^```typescript$/,/^```$/p' docs/FALCON_API_CONTRACT.md | sed '1d;$d') frontend/src/lib/types/api.ts`).
+---

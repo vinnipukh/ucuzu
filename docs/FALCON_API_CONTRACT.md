@@ -406,9 +406,25 @@ Applies to the successful (200) responses of every endpoint except `/api/health`
 
 ---
 
-## 6. TypeScript Interfaces for the Svelte Frontend
+## 6. TypeScript types (`frontend/src/lib/types/api.ts`)
 
-The following TypeScript definitions should be placed in `src/lib/types/api.ts` in the Svelte application:
+This section mirrors `frontend/src/lib/types/api.ts` as of 2026-10-17. The file in the repository is the source; if they differ, update this copy.
+
+### 6.1 Differences between client types and server output
+
+The client types are not a complete or exact model of the server. Known differences:
+
+| Client type | Server behaviour |
+|---|---|
+| *(none)* `ProductSearchResult`, `ProductSearchMeta`, `ProductHistoryRecord` | No client types exist for `/api/products/search` because the SPA never calls it. The response shape is in §4.7. |
+| `InventoryMeta.warnings` | Never sent: `/api/inventory` meta has only `file_count` and `inventory_file_count`. Listed under [Known issues](ARCHITECTURE.md#known-issues). |
+| `ProductDetailMeta` fields `string \| null` | On a 200 response `product_id` and `retailer` are always strings; `null` only appears in the 404 error meta, which has a different shape. |
+| `ApiError.meta?` | Never sent: error objects are `{code, message}`; context is on the envelope `meta`. |
+| `HealthData` | Has no `database` field; the server also sends `database: "available" \| "unavailable"`. |
+| `ProductDetailData.history: ProductHistoryPoint[]` | Product-detail history dates are plain `YYYY-MM-DD` and `source_file` is `""`, unlike `/api/history` product mode. |
+| `CommonFilterMeta.warnings?`, `history_row_count?`, `skipped_file_count?` | Optional in the type, but always sent by the four filter endpoints. |
+
+### 6.2 `api.ts`
 
 ```typescript
 /**
@@ -443,7 +459,7 @@ export interface ApiErrorEnvelope {
 export interface CommonFilterParams {
   retailer?: string | string[];
   start_date?: string; // YYYY-MM-DD
-  end_date?: string;   // YYYY-MM-DD
+  end_date?: string; // YYYY-MM-DD
   max_files?: number;
   all_history?: boolean;
 }
@@ -466,7 +482,7 @@ export interface CommonFilterMeta {
 // ── 1. Health ─────────────────────────────────────────────────────────────────
 
 export interface HealthData {
-  status: "ok" | string;
+  status: 'ok' | string;
 }
 
 export interface HealthMeta {
@@ -486,6 +502,7 @@ export interface InventoryData {
 export interface InventoryMeta {
   file_count: number;
   inventory_file_count: number;
+  warnings?: string[];
 }
 
 export type InventoryResponse = ApiResponse<InventoryData, InventoryMeta>;
@@ -546,7 +563,7 @@ export interface RetailerAveragesData {
 }
 
 export interface RetailerAveragesMeta extends CommonFilterMeta {
-  aggregation: "Average" | "Median";
+  aggregation: 'Average' | 'Median';
 }
 
 export type RetailerAveragesResponse = ApiResponse<RetailerAveragesData, RetailerAveragesMeta>;
@@ -626,11 +643,11 @@ export interface CoverageMeta extends CommonFilterMeta {
 
 export type CoverageResponse = ApiResponse<CoverageData, CoverageMeta>;
 
-// ── Product search, detail and monthly inflation ──────────────────────────────
+// ── 7. Product Detail (SQLite-backed) ───────────────────────────────────────
 
-export interface ProductSearchResult {
-  product_id: string;
-  retailer: string;
+export interface ProductDetailData {
+  product_id: string | null;
+  retailer: string | null;
   product_name: string | null;
   category: string | null;
   first_date: string | null;
@@ -639,55 +656,35 @@ export interface ProductSearchResult {
   min_price: number | null;
   max_price: number | null;
   observations_count: number;
-}
-
-export interface ProductSearchMeta {
-  query: string;
-  retailer: string | null;
-  category: string | null;
-  limit: number;
-  count: number;
-}
-
-export type ProductSearchResponse = ApiResponse<ProductSearchResult[], ProductSearchMeta>;
-
-export interface ProductHistoryRecord {
-  date: string;
-  price: number;
-  category: string | null;
-  source_file: string;
-}
-
-export interface ProductDetailData extends ProductSearchResult {
-  price_history: Record<string, number>;
-  history: ProductHistoryRecord[];
-  summary: {
-    latest_price: number | null;
-    cheapest_price: number | null;
-    cheapest_date: string | null;
-    change_since_first_pct: number;
-  };
+  price_history: Record<string, number>; // {date: price}
+  history: ProductHistoryPoint[];
+  summary: ProductSummary;
 }
 
 export interface ProductDetailMeta {
-  product_id: string;
-  retailer: string;
+  product_id: string | null;
+  retailer: string | null;
   observations_count: number;
 }
 
 export type ProductDetailResponse = ApiResponse<ProductDetailData, ProductDetailMeta>;
 
+// ── EpeyKatfg monthly inflation ──────────────────────────────────────────────
+
 export interface MonthlyInflationRecord {
-  month: string;
+  month: string; // YYYY-MM
   prev_month: string;
   n_matched: number;
   avg_inflation: number | null;
   basic_index: number | null;
   median_inflation_nonzero: number | null;
+  pct_increased: number | null;
+  pct_decreased: number | null;
+  pct_unchanged: number | null;
   tuik_weighted: number | null;
   covered_weight: number | null;
   groups: string;
-  [key: string]: string | number | null;
+  [key: string]: unknown; // per-group columns: n_<code>, avg_<code>, basic_<code>
 }
 
 export interface MonthlyInflationMeta {
@@ -702,150 +699,33 @@ export type MonthlyInflationResponse = ApiResponse<MonthlyInflationRecord[], Mon
 
 ---
 
-## 7. Svelte Frontend Integration Patterns
+## 7. Frontend client (`frontend/src/lib/api/client.ts`)
 
-### 7.1 Recommended API Client Helper (`src/lib/api/client.ts`)
+The SPA makes every request through `fetchApi`; no other module calls `fetch` for API data.
 
-```typescript
-import type { ApiResponse, CommonFilterParams } from '$lib/types/api';
+- **Base URL:** read at request time from `filters.apiBaseUrl` in `frontend/src/lib/stores/filters.svelte.ts`. It starts as `DEFAULT_API_BASE_URL`, which is the build-time `VITE_API_BASE_URL` (trimmed, trailing slashes removed) or `''` when unset. The sidebar's API settings can change it at runtime.
+- **URL building:** `<base><endpoint>?<query>`. With an empty base the URL is relative (`/api/...`), so requests go to the page's own origin. `buildQueryParams` skips `undefined`, `null` and `''`, repeats array values (`retailer=A&retailer=B`) and stringifies booleans.
+- **Return value:** `{data, meta}` from the envelope (`errors` is dropped on success).
+- **Errors:** every failure throws `ApiErrorResponse` (`status`, `code`, `message`, `meta`):
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+| Situation | `status` | `code` | `meta` |
+|---|---|---|---|
+| `fetch` itself fails (server down, CORS, DNS) | `0` | `network_error` (client-only) | — |
+| Body is not valid JSON | HTTP status | `bad_response` (client-only) | — |
+| Non-2xx with an envelope | HTTP status | `errors[0].code` from the server (§2.3) | envelope `meta` |
+| Non-2xx without `errors` | HTTP status | `http_error` | envelope `meta` |
 
-export class ApiErrorResponse extends Error {
-  constructor(
-    public status: number,
-    public code: string,
-    message: string,
-    public meta?: Record<string, unknown>
-  ) {
-    super(message);
-    this.name = 'ApiErrorResponse';
-  }
-}
-
-/**
- * Serializes CommonFilterParams into URLSearchParams handling array fields.
- */
-export function buildQueryParams(params: Record<string, any>): URLSearchParams {
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value === undefined || value === null || value === '') continue;
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        query.append(key, String(item));
-      }
-    } else {
-      query.set(key, String(value));
-    }
-  }
-  return query;
-}
-
-/**
- * Universal type-safe fetcher for Falcon API endpoints.
- */
-export async function fetchApi<T, M = Record<string, unknown>>(
-  endpoint: string,
-  params?: Record<string, any>,
-  fetchFn: typeof fetch = fetch
-): Promise<ApiResponse<T, M>> {
-  const queryString = params ? `?${buildQueryParams(params).toString()}` : '';
-  const url = `${API_BASE_URL}${endpoint}${queryString}`;
-
-  const res = await fetchFn(url, {
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  const payload = await res.json();
-
-  if (!res.ok) {
-    const error = payload.errors?.[0] || {
-      code: 'http_error',
-      message: `Request failed with status ${res.status}`,
-    };
-    throw new ApiErrorResponse(res.status, error.code, error.message, error.meta || payload.meta);
-  }
-
-  return payload as ApiResponse<T, M>;
-}
-```
-
-### 7.2 Svelte 5 Rune State Management Example
-
-```svelte
-<script lang="ts">
-  import { fetchApi } from '$lib/api/client';
-  import type { InventoryData, InventoryMeta, RetailerAverageRecord } from '$lib/types/api';
-
-  let inventory = $state<InventoryData | null>(null);
-  let selectedRetailers = $state<string[]>([]);
-  let averages = $state<RetailerAverageRecord[]>([]);
-  let loading = $state(false);
-  let errorMessage = $state<string | null>(null);
-
-  // Load initial inventory
-  async function loadInventory() {
-    try {
-      loading = true;
-      const res = await fetchApi<InventoryData, InventoryMeta>('/api/inventory');
-      inventory = res.data;
-      selectedRetailers = res.data.retailers.slice(0, 3);
-      await loadAverages();
-    } catch (err: any) {
-      errorMessage = err.message;
-    } finally {
-      loading = false;
-    }
-  }
-
-  // Reload trend averages when filters change
-  async function loadAverages() {
-    try {
-      loading = true;
-      errorMessage = null;
-      const res = await fetchApi<{ records: RetailerAverageRecord[] }>('/api/retailer-averages', {
-        retailer: selectedRetailers,
-        aggregation: 'Average'
-      });
-      averages = res.data.records;
-    } catch (err: any) {
-      errorMessage = err.message;
-    } finally {
-      loading = false;
-    }
-  }
-
-  $effect(() => {
-    loadInventory();
-  });
-</script>
-
-{#if loading}
-  <div class="spinner">Loading inflation statistics...</div>
-{:else if errorMessage}
-  <div class="alert alert-error">{errorMessage}</div>
-{:else}
-  <div class="dashboard-grid">
-    <div class="metric-card">
-      <h3>Monitored Retailers</h3>
-      <p>{selectedRetailers.join(', ')}</p>
-    </div>
-    <div class="metric-card">
-      <h3>Data Points</h3>
-      <p>{averages.length} trend records</p>
-    </div>
-  </div>
-{/if}
-```
+`network_error` and `bad_response` are generated by the client and never sent by the server. Views wrap calls in `AsyncResource` (`frontend/src/lib/utils/async.svelte.ts`), which stores `data`, `meta`, `loading`, `error` and `errorMeta` and ignores responses that a newer request has superseded.
 
 ---
 
-## 8. Verification & Compliance Checklist
+## 8. Verification
 
 All Falcon API endpoints are validated by regression test suites:
-- `python scripts/verify_falcon_api.py` (Falcon API in-process TestClient smoke suite)
+- `uv run python scripts/verify_falcon_api.py` (in-process TestClient smoke suite)
+- `uv run pytest` (`tests/test_api.py` covers the error envelopes and 503 behaviour)
+
+See [TESTING.md](TESTING.md).
 
 ### Verification Requirements:
 1. **Zero Leaked Types:** Payloads must never leak NaN, Infinity, pandas `NaT`/`NA`, or numpy scalars into JSON.
