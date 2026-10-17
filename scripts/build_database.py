@@ -38,7 +38,7 @@ for entry in (REPO_ROOT, Path(__file__).resolve().parent):
 import data_files  # noqa: E402
 from build_sqlite_from_json import INDEX_STATEMENTS, init_db, retailer_from_stem  # noqa: E402
 
-from inflation_dashboard.domain.prices import PRICE_COLUMNS, build_product_frame  # noqa: E402
+from inflation_dashboard.domain.prices import NAME_COLUMNS, PRICE_COLUMNS, build_product_frame  # noqa: E402
 
 DATA_DIR = REPO_ROOT / "data"
 
@@ -52,6 +52,15 @@ GROUP_LABELS = {
 # Folders that are themselves a retailer group (e.g. 05_Furnishings/HomeGoods/Ikea).
 NESTED_GROUPS = {"ConstructionSuppliesMarkets", "HomeGoods", "Cosmetics"}
 TUIK_FOLDER = re.compile(r"^\d{2}_(?P<name>.+)$")
+
+# Header spellings used by individual scrapers, in priority order, keyed by their
+# normalized form (casefolded; spaces, "_", "-" and dotted-İ marks removed). They are
+# renamed to the domain's canonical columns only when no canonical column exists.
+NAME_ALIASES = ("productname", "name", "urunadi", "ürünadı", "urunismi", "isim", "ad", "title")
+PRICE_ALIASES = (
+    "price", "fiyat", "fiyatfloat", "pricetl", "price(tl)", "saleprice", "currentprice",
+    "productcost", "normalprice", "regularprice",
+)
 
 DATE_PATTERNS = (
     (re.compile(r"(?<!\d)(20\d{2})[-_.](\d{2})[-_.](\d{2})(?!\d)"), (1, 2, 3)),
@@ -89,6 +98,26 @@ def raw_retailer_label(relative_dirs: tuple[str, ...]) -> str | None:
     return f"{group} / {store}"
 
 
+def _header_key(column: object) -> str:
+    text = str(column).casefold().replace("̇", "")
+    return re.sub(r"[\s_\-]", "", text)
+
+
+def normalize_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    """Rename scraper-specific name/price headers to the domain's canonical columns."""
+    by_key: dict[str, object] = {}
+    for column in frame.columns:
+        by_key.setdefault(_header_key(column), column)
+    renames = {}
+    for canonical, known, aliases in (("name", NAME_COLUMNS, NAME_ALIASES), ("price", PRICE_COLUMNS, PRICE_ALIASES)):
+        if any(column in frame.columns for column in known):
+            continue
+        source = next((by_key[alias] for alias in aliases if alias in by_key), None)
+        if source is not None:
+            renames[source] = canonical
+    return frame.rename(columns=renames) if renames else frame
+
+
 def _read_csv(path: Path) -> pd.DataFrame:
     with path.open("rb") as handle:
         first_line = handle.readline().decode("utf-8", errors="replace")
@@ -104,11 +133,13 @@ def _read_csv(path: Path) -> pd.DataFrame:
 def _ingest_file(args: tuple[str, str, str, str]) -> tuple[str, list[tuple], str | None]:
     path_str, rel, retailer, date_str = args
     try:
-        frame = _read_csv(Path(path_str))
+        frame = normalize_columns(_read_csv(Path(path_str)))
     except Exception as exc:  # noqa: BLE001 - one bad scrape must not stop the build
         return rel, [], f"unreadable ({type(exc).__name__})"
+    if frame.empty:
+        return rel, [], "empty (header only)"
     price_column = next((column for column in PRICE_COLUMNS if column in frame.columns), None)
-    if frame.empty or price_column is None:
+    if price_column is None:
         return rel, [], "no price column"
     try:
         products = build_product_frame(frame, retailer, price_column, pd.Timestamp(date_str), rel)

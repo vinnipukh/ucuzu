@@ -185,6 +185,18 @@ def test_build_product_frame_houses_rent() -> None:
     assert result["price"].tolist() == [25000.0, 30000.0]
 
 
+def test_build_product_frame_houses_rent_generic_layout() -> None:
+    frame = pd.DataFrame({"product_name": ["Battalgazi / Merkez - 1+1"], "price": [13000.0], "Rooms": ["1+1"]})
+    result = build_product_frame(frame, "HousesRent / Malatya", "price", DATE, "m.csv")
+    assert result[["product_name", "category", "price"]].values.tolist() == [["Battalgazi / Merkez - 1+1", "1+1", 13000.0]]
+
+
+def test_build_product_frame_watsons_generic_layout() -> None:
+    frame = pd.DataFrame({"product-name": ["Rebul Kolonya"], "product-price": ["84,95 ₺"]})
+    result = build_product_frame(frame, "Cosmetics / Watson", "product-price", DATE, "w.csv")
+    assert result[["product_id", "price"]].values.tolist() == [["Rebul Kolonya", 84.95]]
+
+
 def test_build_product_frame_watsons() -> None:
     frame = pd.DataFrame({"brand": ["Nivea", None], "sku": ["S1", "S2"], "price": [10.0, 20.0]})
     result = build_product_frame(frame, "Cosmetics / Watson", "price", DATE, "w.csv")

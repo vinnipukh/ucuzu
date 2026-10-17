@@ -4,6 +4,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "scripts"
@@ -49,6 +50,26 @@ def test_parse_file_date(name: str, expected: str | None) -> None:
 )
 def test_raw_retailer_label(dirs: tuple[str, ...], expected: str | None) -> None:
     assert build_database.raw_retailer_label(dirs) == expected
+
+
+@pytest.mark.parametrize(
+    ("columns", "expected"),
+    [
+        (["İsim", "Fiyat"], ["name", "Fiyat"]),  # "Fiyat" is already a canonical price column
+        (["isim", "fiyat"], ["name", "price"]),
+        (["Tarih", "UrunID", "UrunAdi", "FiyatFloat"], ["Tarih", "UrunID", "name", "price"]),
+        (["ana_kategori", "ad", "fiyat", "normal_fiyat"], ["ana_kategori", "name", "price", "normal_fiyat"]),
+        (["Category", "Name", "Current Price", "Original Price"], ["Category", "name", "price", "Original Price"]),
+        (["product_name", "price (TL)"], ["product_name", "price"]),
+        (["Brand", "productName", "Price"], ["Brand", "name", "Price"]),
+        (["product_id", "name", "regular_price", "sale_price"], ["product_id", "name", "regular_price", "price"]),
+        # Canonical columns already present: nothing is renamed.
+        (["product-name", "product_price", "Ürün Adı"], ["product-name", "product_price", "Ürün Adı"]),
+    ],
+)
+def test_normalize_columns(columns: list[str], expected: list[str]) -> None:
+    frame = build_database.normalize_columns(pd.DataFrame(columns=columns))
+    assert list(frame.columns) == expected
 
 
 def test_build_end_to_end(tmp_path: Path) -> None:

@@ -143,13 +143,15 @@ def build_product_frame(
     date_value: pd.Timestamp,
     source_file: str,
 ) -> pd.DataFrame:
-    if retailer.startswith("HousesRent /"):
+    # Retailer-specific layouts apply only when their columns are present; newer
+    # scrapes of the same retailers use the generic name/price layout.
+    if retailer.startswith("HousesRent /") and "District" in frame.columns:
         district = first_non_empty_column(frame, ["District"])
         rooms = first_non_empty_column(frame, ["Rooms"])
         product_name = district.str.cat(rooms.fillna(""), sep=" - ").str.strip(" -")
         product_id = product_name
         category = rooms.fillna("Uncategorized")
-    elif retailer == "Cosmetics / Watson":
+    elif retailer == "Cosmetics / Watson" and "brand" in frame.columns:
         brand = first_non_empty_column(frame, ["brand"])
         sku = first_non_empty_column(frame, ["sku"])
         product_id = sku.combine_first(brand)

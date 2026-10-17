@@ -15,10 +15,11 @@ uv run python scripts/build_database.py
 1. rejoins files committed as `.partNNN` chunks (`scripts/data_files.py join`);
 2. ingests every CSV under `data/raw` whose file name carries a date (`YYYY-MM-DD`, `DD-MM-YYYY`, `DD.MM.YYYY`, `YYYYMMDD`, with `-`, `_` or `.`), in parallel;
 3. labels retailers from their TÜİK folder: `01_Food/<store>` → `Markets / <store>`, `03_Clothing` → `ClothingStores`, `04_Housing/…/<city>` → `HousesRent / <city>`, `06_Health` → `Health`, and `ConstructionSuppliesMarkets`, `HomeGoods` and `Cosmetics` sub-folders keep their own group name; other groups use the folder name without its number;
-4. loads `data/prices_json` partitions only for retailers that have no raw CSVs;
-5. rebuilds `product_prices`, creates the API indexes, runs `ANALYZE` and atomically replaces the target file.
+4. normalizes scraper-specific headers before parsing: when a file has none of the domain's name/price columns, aliases such as `İsim`/`isim`/`ad`/`UrunAdi`/`title` (name) and `fiyat`/`FiyatFloat`/`price (TL)`/`sale_price`/`Current Price` (price) are mapped onto them (`NAME_ALIASES`/`PRICE_ALIASES` in the script);
+5. loads `data/prices_json` partitions only for retailers that have no raw CSVs;
+6. rebuilds `product_prices`, creates the API indexes, runs `ANALYZE` and atomically replaces the target file.
 
-Options: `--data-dir`, `--db-path` (defaults to `PRICES_DB_PATH` or `data/prices.db`) and `--workers`. Files without a full date in their name, without a recognised price column, or that cannot be decoded are skipped and counted in the build summary. Changes to the data layout must update this script and `tests/test_build_database.py` together.
+Options: `--data-dir`, `--db-path` (defaults to `PRICES_DB_PATH` or `data/prices.db`) and `--workers`. Files without a full date in their name, header-only (failed) scrapes, files without a recognised price column, and files that cannot be decoded are skipped and counted by reason in the build summary. On Windows, stop the API before rebuilding: the open database cannot be replaced while it is in use. Changes to the data layout must update this script and `tests/test_build_database.py` together.
 
 The two lower-level builders below remain available for single-source builds.
 
