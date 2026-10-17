@@ -8,11 +8,17 @@ This is the one command that turns committed scraper output into
 
 Steps:
 1. Rebuild any file that was committed as ``.partNNN`` chunks (scripts/data_files.py).
-2. Ingest every dated CSV under ``data/raw`` (TÜİK-grouped scraper output) into
-   ``price_observations``, labelling retailers the way the API/UI expects
-   (``01_Food/Gurmar`` -> ``Markets / Gurmar``).
+2. Ingest every dated CSV under ``data/raw`` (TÜİK-grouped scraper output),
+   labelling retailers the way the API/UI expects (``01_Food/Gurmar`` -> ``Markets / Gurmar``).
 3. Ingest ``data/prices_json`` partitions only for retailers that have no raw CSVs.
-4. Rebuild ``product_prices``, create the API indexes and atomically replace the target.
+4. Write the normalized schema (see SCHEMA), summarize products and atomically
+   replace the target.
+
+Storage is normalized: each retailer, category, source file and product is stored
+once and ``observations`` holds only integer keys, the date and the price,
+clustered by (product_key, date). Read-only views named ``price_observations``,
+``product_prices`` and ``ingested_files`` expose the historical row shapes the API
+queries.
 """
 from __future__ import annotations
 
@@ -36,7 +42,6 @@ for entry in (REPO_ROOT, Path(__file__).resolve().parent):
         sys.path.insert(0, str(entry))
 
 import data_files  # noqa: E402
-from build_sqlite_from_json import INDEX_STATEMENTS, init_db, retailer_from_stem  # noqa: E402
 
 from inflation_dashboard.domain.prices import NAME_COLUMNS, PRICE_COLUMNS, build_product_frame  # noqa: E402
 
@@ -68,6 +73,87 @@ DATE_PATTERNS = (
     (re.compile(r"(?<!\d)(20\d{2})(\d{2})(\d{2})(?!\d)"), (1, 2, 3)),
 )
 
+UNCATEGORIZED = "Uncategorized"
+
+SCHEMA = """
+CREATE TABLE retailers (
+    retailer_key INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE
+);
+CREATE TABLE categories (
+    category_key INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE
+);
+-- One row per ingested source file (JSON partitions get one synthetic row per date).
+CREATE TABLE sources (
+    source_key INTEGER PRIMARY KEY,
+    file_path TEXT NOT NULL UNIQUE,
+    retailer_key INTEGER NOT NULL REFERENCES retailers,
+    date TEXT,
+    file_size INTEGER NOT NULL,
+    mtime REAL NOT NULL,
+    rows_ingested INTEGER NOT NULL,
+    ingested_at TEXT NOT NULL
+);
+-- One row per (retailer, product); name and category are the latest observed values.
+CREATE TABLE products (
+    product_key INTEGER PRIMARY KEY,
+    retailer_key INTEGER NOT NULL REFERENCES retailers,
+    product_id TEXT NOT NULL,
+    product_name TEXT NOT NULL,
+    category_key INTEGER NOT NULL REFERENCES categories,
+    first_date TEXT,
+    last_date TEXT,
+    latest_price REAL,
+    min_price REAL,
+    max_price REAL,
+    observations_count INTEGER,
+    UNIQUE (retailer_key, product_id)
+);
+-- One row per product per day, clustered so a product's history is one range read.
+CREATE TABLE observations (
+    product_key INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    price REAL NOT NULL,
+    category_key INTEGER NOT NULL,
+    source_key INTEGER NOT NULL,
+    PRIMARY KEY (product_key, date)
+) WITHOUT ROWID;
+"""
+
+INDEXES = """
+CREATE INDEX idx_products_retailer_name ON products(retailer_key, product_name);
+CREATE INDEX idx_products_name ON products(product_name);
+CREATE INDEX idx_products_product_id ON products(product_id);
+CREATE INDEX idx_sources_retailer_date ON sources(retailer_key, date);
+"""
+
+# Read-only views with the historical row shapes queried by the API adapters.
+VIEWS = """
+CREATE VIEW price_observations AS
+SELECT o.date, r.name AS retailer, p.product_id, p.product_name, c.name AS category, o.price,
+       s.file_path AS source_file
+FROM observations AS o
+JOIN products AS p ON p.product_key = o.product_key
+JOIN retailers AS r ON r.retailer_key = p.retailer_key
+JOIN categories AS c ON c.category_key = o.category_key
+JOIN sources AS s ON s.source_key = o.source_key;
+
+CREATE VIEW product_prices AS
+SELECT p.product_id, r.name AS retailer, p.product_name, c.name AS category,
+       p.first_date, p.last_date, p.latest_price, p.min_price, p.max_price, p.observations_count,
+       (SELECT json_group_object(o.date, o.price) FROM observations AS o
+        WHERE o.product_key = p.product_key) AS price_history
+FROM products AS p
+JOIN retailers AS r ON r.retailer_key = p.retailer_key
+JOIN categories AS c ON c.category_key = p.category_key;
+
+CREATE VIEW ingested_files AS
+SELECT s.file_path, r.name AS retailer, s.date, s.file_size, s.mtime, s.rows_ingested, s.ingested_at
+FROM sources AS s
+JOIN retailers AS r ON r.retailer_key = s.retailer_key;
+"""
+
 
 def parse_file_date(name: str) -> str | None:
     """Return the ISO date embedded in a scraper file name, if any."""
@@ -96,6 +182,15 @@ def raw_retailer_label(relative_dirs: tuple[str, ...]) -> str | None:
     # Housing groups regions into sub-folders; the leaf city is the series.
     store = rest[-1] if head == "04_Housing" else rest[0]
     return f"{group} / {store}"
+
+
+def retailer_from_stem(stem: str) -> str:
+    """Convert a prices_json partition stem into the API's retailer label."""
+    retailer = stem.replace("_", " / ")
+    aliases = {
+        "Health / Diagnostic / Surgical / Services": "Health / Diagnostic&Surgical Services",
+    }
+    return aliases.get(retailer, retailer)
 
 
 def _header_key(column: object) -> str:
@@ -131,6 +226,7 @@ def _read_csv(path: Path) -> pd.DataFrame:
 
 
 def _ingest_file(args: tuple[str, str, str, str]) -> tuple[str, list[tuple], str | None]:
+    """Parse one CSV into (product_id, product_name, category, price) rows (worker process)."""
     path_str, rel, retailer, date_str = args
     try:
         frame = normalize_columns(_read_csv(Path(path_str)))
@@ -147,13 +243,10 @@ def _ingest_file(args: tuple[str, str, str, str]) -> tuple[str, list[tuple], str
         return rel, [], f"unparseable ({type(exc).__name__})"
     rows = [
         (
-            date_str,
-            retailer,
             str(row.product_id).strip(),
             str(row.product_name).strip(),
-            str(row.category or "Uncategorized").strip(),
+            str(row.category or UNCATEGORIZED).strip(),
             float(row.price),
-            rel,
         )
         for row in products.itertuples(index=False)
     ]
@@ -173,11 +266,103 @@ def discover_raw_csvs(raw_dir: Path) -> tuple[list[tuple[str, str, str, str]], C
     return jobs, skipped
 
 
-def ingest_raw(conn: sqlite3.Connection, raw_dir: Path, workers: int) -> set[str]:
+class Loader:
+    """Assigns integer keys and streams observations into an append-only staging table.
+
+    Observations are staged in arrival order; ``finish`` keeps the last row per
+    (product, date), matching INSERT OR REPLACE semantics, and writes them
+    clustered by (product_key, date).
+    """
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+        self.retailers: dict[str, int] = {}
+        self.categories: dict[str, int] = {}
+        # (retailer_key, product_id) -> [product_key, latest_date, product_name, category_key]
+        self.products: dict[tuple[int, str], list] = {}
+        self.ingested_at = datetime.now(timezone.utc).isoformat()
+        self.staged_rows = 0
+
+    def _key(self, table: dict[str, int], name: str) -> int:
+        key = table.get(name)
+        if key is None:
+            key = table[name] = len(table) + 1
+        return key
+
+    def add(self, file_path: str, retailer: str, date_str: str, size: int, mtime: float,
+            rows: list[tuple[str, str, str, float]]) -> None:
+        retailer_key = self._key(self.retailers, retailer)
+        cursor = self.conn.execute(
+            "INSERT INTO sources (file_path, retailer_key, date, file_size, mtime, rows_ingested, ingested_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (file_path, retailer_key, date_str, size, mtime, len(rows), self.ingested_at),
+        )
+        source_key = cursor.lastrowid
+        staged = []
+        for product_id, product_name, category, price in rows:
+            category_key = self._key(self.categories, category)
+            entry = self.products.get((retailer_key, product_id))
+            if entry is None:
+                entry = self.products[(retailer_key, product_id)] = [len(self.products) + 1, date_str, product_name, category_key]
+            elif date_str >= entry[1]:
+                entry[1], entry[2], entry[3] = date_str, product_name, category_key
+            staged.append((entry[0], date_str, price, category_key, source_key))
+        self.conn.executemany("INSERT INTO staging.obs VALUES (?, ?, ?, ?, ?)", staged)
+        self.staged_rows += len(staged)
+
+    def finish(self) -> None:
+        conn = self.conn
+        conn.executemany("INSERT INTO retailers VALUES (?, ?)", [(k, n) for n, k in self.retailers.items()])
+        conn.executemany("INSERT INTO categories VALUES (?, ?)", [(k, n) for n, k in self.categories.items()])
+        conn.executemany(
+            "INSERT INTO products (product_key, retailer_key, product_id, product_name, category_key) VALUES (?, ?, ?, ?, ?)",
+            [(e[0], rk, pid, e[2], e[3]) for (rk, pid), e in self.products.items()],
+        )
+        conn.commit()
+        print(f"Writing observations ({self.staged_rows:,} staged rows, last row per product/day wins)...")
+        conn.execute(
+            """
+            INSERT INTO observations (product_key, date, price, category_key, source_key)
+            SELECT product_key, date, price, category_key, source_key
+            FROM (
+                SELECT *, row_number() OVER (PARTITION BY product_key, date ORDER BY rowid DESC) AS rn
+                FROM staging.obs
+            )
+            WHERE rn = 1
+            ORDER BY product_key, date
+            """
+        )
+        conn.commit()
+        print("Summarizing products...")
+        conn.execute(
+            """
+            UPDATE products SET
+                first_date = agg.first_date, last_date = agg.last_date,
+                min_price = agg.min_price, max_price = agg.max_price,
+                observations_count = agg.n
+            FROM (
+                SELECT product_key, min(date) AS first_date, max(date) AS last_date,
+                       min(price) AS min_price, max(price) AS max_price, count(*) AS n
+                FROM observations GROUP BY product_key
+            ) AS agg
+            WHERE products.product_key = agg.product_key
+            """
+        )
+        # SQLite returns the bare column from the row holding max(date).
+        conn.execute(
+            """
+            UPDATE products SET latest_price = latest.price
+            FROM (SELECT product_key, max(date), price FROM observations GROUP BY product_key) AS latest
+            WHERE products.product_key = latest.product_key
+            """
+        )
+        conn.commit()
+
+
+def ingest_raw(loader: Loader, raw_dir: Path, workers: int) -> set[str]:
     jobs, skipped = discover_raw_csvs(raw_dir)
     print(f"Raw CSVs: {len(jobs)} dated files to ingest from {raw_dir}")
     by_rel = {job[1]: job for job in jobs}
-    ingested_at = datetime.now(timezone.utc).isoformat()
     retailers: set[str] = set()
     started = time.perf_counter()
     total_rows = 0
@@ -188,115 +373,89 @@ def ingest_raw(conn: sqlite3.Connection, raw_dir: Path, workers: int) -> set[str
                 continue
             path_str, _, retailer, date_str = by_rel[rel]
             stat = Path(path_str).stat()
-            conn.executemany("INSERT OR REPLACE INTO price_observations VALUES (?, ?, ?, ?, ?, ?, ?)", rows)
-            conn.execute(
-                "INSERT OR REPLACE INTO ingested_files VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (rel, retailer, date_str, stat.st_size, stat.st_mtime, len(rows), ingested_at),
-            )
+            loader.add(rel, retailer, date_str, stat.st_size, stat.st_mtime, rows)
             retailers.add(retailer)
             total_rows += len(rows)
             if done % 500 == 0:
-                conn.commit()
+                loader.conn.commit()
                 print(f"  [{done}/{len(jobs)}] {total_rows:,} rows, {time.perf_counter() - started:.0f}s")
-    conn.commit()
+    loader.conn.commit()
     print(f"Raw CSVs: {total_rows:,} rows from {len(retailers)} retailers in {time.perf_counter() - started:.0f}s")
     for reason, count in sorted(skipped.items()):
         print(f"  skipped {count} files: {reason}")
     return retailers
 
 
-def ingest_json_fallback(conn: sqlite3.Connection, json_dir: Path, covered: set[str]) -> None:
+def ingest_json_fallback(loader: Loader, json_dir: Path, covered: set[str]) -> None:
     if not json_dir.is_dir():
         return
-    ingested_at = datetime.now(timezone.utc).isoformat()
     for json_file in sorted(json_dir.glob("*.json")):
         retailer = retailer_from_stem(json_file.stem)
         if retailer in covered:
             continue
         payload = json.loads(json_file.read_text(encoding="utf-8"))
-        rel = json_file.relative_to(json_dir.parent).as_posix()
-        rows = [
-            (str(day), retailer, str(product_id), product.get("name") or str(product_id),
-             product.get("category") or "Uncategorized", float(price), rel)
-            for product_id, product in payload.items()
-            for day, price in (product.get("prices") or {}).items()
-            if price is not None
-        ]
-        conn.executemany("INSERT OR REPLACE INTO price_observations VALUES (?, ?, ?, ?, ?, ?, ?)", rows)
-        # One synthetic ledger row per date keeps the API's newest-N-files selection meaningful.
+        by_day: dict[str, list[tuple[str, str, str, float]]] = {}
+        for product_id, product in payload.items():
+            name = product.get("name") or str(product_id)
+            category = product.get("category") or UNCATEGORIZED
+            for day, price in (product.get("prices") or {}).items():
+                if price is not None:
+                    by_day.setdefault(str(day), []).append((str(product_id), name, category, float(price)))
+        # One synthetic source row per date keeps the API's newest-N-files selection meaningful.
         stat = json_file.stat()
-        conn.executemany(
-            "INSERT OR REPLACE INTO ingested_files VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [
-                (f"{json_file.name}#{day}", retailer, day, stat.st_size, stat.st_mtime, count, ingested_at)
-                for day, count in sorted(Counter(row[0] for row in rows).items())
-            ],
-        )
-        print(f"JSON fallback: {retailer} ({len(rows):,} rows from {json_file.name})")
-    conn.commit()
-
-
-def rebuild_product_prices(conn: sqlite3.Connection) -> None:
-    conn.executescript(
-        """
-        CREATE INDEX IF NOT EXISTS idx_obs_ret_prod_date_price
-            ON price_observations(retailer, product_id, date, price);
-        DROP TABLE IF EXISTS temp.latest;
-        CREATE TEMP TABLE latest AS
-            SELECT retailer, product_id, product_name, category, price
-            FROM (
-                SELECT *, ROW_NUMBER() OVER (PARTITION BY retailer, product_id ORDER BY date DESC) AS rn
-                FROM price_observations
-            )
-            WHERE rn = 1;
-        DELETE FROM product_prices;
-        INSERT INTO product_prices
-        SELECT o.product_id, o.retailer, l.product_name, l.category,
-               min(o.date), max(o.date), l.price, min(o.price), max(o.price), count(*),
-               json_group_object(o.date, o.price)
-        FROM (SELECT * FROM price_observations ORDER BY retailer, product_id, date) AS o
-        JOIN temp.latest AS l USING (retailer, product_id)
-        GROUP BY o.retailer, o.product_id;
-        DROP TABLE temp.latest;
-        """
-    )
-    conn.commit()
+        for day in sorted(by_day):
+            loader.add(f"{json_file.name}#{day}", retailer, day, stat.st_size, stat.st_mtime, by_day[day])
+        print(f"JSON fallback: {retailer} ({sum(map(len, by_day.values())):,} rows from {json_file.name})")
+    loader.conn.commit()
 
 
 def build(data_dir: Path, db_path: Path, workers: int) -> None:
     started = time.perf_counter()
     data_files.join(data_dir)
     building = db_path.with_name(db_path.name + ".building")
-    for suffix in ("", "-wal", "-shm"):
-        Path(f"{building}{suffix}").unlink(missing_ok=True)
+    staging = db_path.with_name(db_path.name + ".staging")
+    for path in (building, staging):
+        for suffix in ("", "-wal", "-shm", "-journal"):
+            Path(f"{path}{suffix}").unlink(missing_ok=True)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     conn = sqlite3.connect(building)
     try:
-        init_db(conn)
+        conn.execute("PRAGMA journal_mode = OFF")
         conn.execute("PRAGMA synchronous = OFF")
-        covered = ingest_raw(conn, data_dir / "raw", workers)
-        ingest_json_fallback(conn, data_dir / "prices_json", covered)
-        print("Rebuilding product_prices...")
-        rebuild_product_prices(conn)
-        print("Creating API indexes...")
-        for statement in INDEX_STATEMENTS:
-            conn.execute(statement)
+        conn.execute("PRAGMA cache_size = -512000")
+        conn.executescript(SCHEMA)
+        # Staging lives in a separate file so its pages never bloat the served database.
+        conn.execute("ATTACH DATABASE ? AS staging", (str(staging),))
+        conn.execute("PRAGMA staging.journal_mode = OFF")
+        conn.execute("PRAGMA staging.synchronous = OFF")
+        conn.execute(
+            "CREATE TABLE staging.obs (product_key INTEGER, date TEXT, price REAL, category_key INTEGER, source_key INTEGER)"
+        )
+        loader = Loader(conn)
+        covered = ingest_raw(loader, data_dir / "raw", workers)
+        ingest_json_fallback(loader, data_dir / "prices_json", covered)
+        loader.finish()
+        conn.execute("DETACH DATABASE staging")
+        print("Creating indexes and views...")
+        conn.executescript(INDEXES + VIEWS)
         conn.execute("ANALYZE")
         conn.commit()
-        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-        products = conn.execute("SELECT count(*) FROM product_prices").fetchone()[0]
-        observations = conn.execute("SELECT count(*) FROM price_observations").fetchone()[0]
-        retailers = conn.execute("SELECT count(DISTINCT retailer) FROM product_prices").fetchone()[0]
+        products = conn.execute("SELECT count(*) FROM products").fetchone()[0]
+        observations = conn.execute("SELECT count(*) FROM observations").fetchone()[0]
+        retailers = conn.execute("SELECT count(*) FROM retailers").fetchone()[0]
+        # WAL is what the read-only API connections expect.
+        conn.execute("PRAGMA journal_mode = WAL")
     finally:
         conn.close()
+        Path(staging).unlink(missing_ok=True)
 
     for suffix in ("-wal", "-shm"):
         Path(f"{db_path}{suffix}").unlink(missing_ok=True)
     os.replace(building, db_path)
     size_mb = db_path.stat().st_size / 1024 / 1024
     print(
-        f"\nBuilt {db_path} ({size_mb:.0f} MB): {retailers} retailers, {products:,} products, "
+        f"\nBuilt {db_path} ({size_mb:,.0f} MB): {retailers} retailers, {products:,} products, "
         f"{observations:,} observations in {time.perf_counter() - started:.0f}s"
     )
 

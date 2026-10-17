@@ -31,7 +31,7 @@ flowchart LR
 | SQLite adapter | `inflation_dashboard/adapters/sqlite_price_repository.py` | Read-only WAL database access and query optimization |
 | CSV fallback | `inflation_dashboard/adapters/csv_price_repository.py` | Optional bounded reads from externally mounted raw CSV |
 | Async repository | `inflation_dashboard/adapters/async_price_repository.py` | SQLAlchemy/aiosqlite access for the ASGI stack |
-| Database tooling | `scripts/build_sqlite_from_json.py`, `scripts/migrate_csv_to_sqlite.py` | Build the serving database from published data artifacts |
+| Database tooling | `scripts/build_database.py`, `scripts/data_files.py` | Build the serving database from the committed `data/` tree; split/join files over 85 MB |
 
 ## Runtime flow
 

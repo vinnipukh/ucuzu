@@ -17,66 +17,35 @@ uv run python scripts/build_database.py
 3. labels retailers from their TÜİK folder: `01_Food/<store>` → `Markets / <store>`, `03_Clothing` → `ClothingStores`, `04_Housing/…/<city>` → `HousesRent / <city>`, `06_Health` → `Health`, and `ConstructionSuppliesMarkets`, `HomeGoods` and `Cosmetics` sub-folders keep their own group name; other groups use the folder name without its number;
 4. normalizes scraper-specific headers before parsing: when a file has none of the domain's name/price columns, aliases such as `İsim`/`isim`/`ad`/`UrunAdi`/`title` (name) and `fiyat`/`FiyatFloat`/`price (TL)`/`sale_price`/`Current Price` (price) are mapped onto them (`NAME_ALIASES`/`PRICE_ALIASES` in the script);
 5. loads `data/prices_json` partitions only for retailers that have no raw CSVs;
-6. rebuilds `product_prices`, creates the API indexes, runs `ANALYZE` and atomically replaces the target file.
+6. writes the normalized tables below (keeping the last row when a product appears twice on one day), summarizes each product, creates indexes and views, runs `ANALYZE` and atomically replaces the target file.
 
-Options: `--data-dir`, `--db-path` (defaults to `PRICES_DB_PATH` or `data/prices.db`) and `--workers`. Files without a full date in their name, header-only (failed) scrapes, files without a recognised price column, and files that cannot be decoded are skipped and counted by reason in the build summary. On Windows, stop the API before rebuilding: the open database cannot be replaced while it is in use. Changes to the data layout must update this script and `tests/test_build_database.py` together.
+Options: `--data-dir`, `--db-path` (defaults to `PRICES_DB_PATH` or `data/prices.db`) and `--workers`. Files without a full date in their name, header-only (failed) scrapes, files without a recognised price column, and files that cannot be decoded are skipped and counted by reason in the build summary. Observations are staged in a temporary `<db>.staging` file that is deleted afterwards. On Windows, stop the API before rebuilding: the open database cannot be replaced while it is in use. Changes to the data layout must update this script and `tests/test_build_database.py` together.
 
-The two lower-level builders below remain available for single-source builds.
+## Schema
 
-## Tables
+Storage is normalized so repeated text is stored once; the schema is defined in `SCHEMA`, `INDEXES` and `VIEWS` in `scripts/build_database.py`.
 
-### `product_prices`
+### Tables
 
-One materialized row per `(retailer, product_id)`:
+| Table | One row per | Columns |
+|---|---|---|
+| `retailers` | retailer label | `retailer_key`, `name` |
+| `categories` | category name | `category_key`, `name` |
+| `sources` | ingested file (JSON partitions: one synthetic `<partition>.json#YYYY-MM-DD` row per date, preserving `max_files` semantics) | `source_key`, `file_path`, `retailer_key`, `date`, size, mtime, `rows_ingested`, `ingested_at` |
+| `products` | `(retailer, product_id)` | `product_key`, `retailer_key`, `product_id`, latest `product_name` and `category_key`, first/last date, latest/min/max price, observation count |
+| `observations` | product per day | `product_key`, `date`, `price`, `category_key` (as observed that day), `source_key` |
 
-- identity and display fields;
-- first/latest/min/max observation dates and prices;
-- observation count;
-- dense `price_history` JSON used for product detail responses.
+`observations` is a `WITHOUT ROWID` table with primary key `(product_key, date)`, so a product's full history is one contiguous range read. A product's name and category in `products` are the values from its latest observation; renamed products keep a single history.
 
-Primary key: `(retailer, product_id)`.
+### Views (read-only API shapes)
 
-### `price_observations`
+| View | Shape |
+|---|---|
+| `price_observations` | `date, retailer, product_id, product_name, category, price, source_file` |
+| `product_prices` | product summary plus `price_history` JSON (`{"YYYY-MM-DD": price}`), computed only for the rows selected |
+| `ingested_files` | `file_path, retailer, date, file_size, mtime, rows_ingested, ingested_at` |
 
-One normalized row per product/date/retailer observation:
-
-- `date`, `retailer`, `product_id`;
-- `product_name`, `category`, `price`;
-- `source_file` provenance.
-
-Primary key: `(date, retailer, product_id)`.
-
-### `ingested_files`
-
-The build ledger:
-
-- source path, retailer and date;
-- file size and modification time;
-- ingested row count and timestamp.
-
-This table supports inventory/coverage diagnostics and the API's bounded newest-file selection.
-
-For JSON input, the builder creates one ledger row per retailer/date using a stable synthetic source key (`<partition>.json#YYYY-MM-DD`). This preserves the API's historical `max_files` semantics even though the input is a sparse partition rather than one CSV per day.
-
-## Build from partitioned JSON
-
-```bash
-uv run python scripts/build_sqlite_from_json.py \
-  --json-dir data/prices_json \
-  --db-path data/prices.db
-```
-
-The builder creates all three tables, loads product summaries and observations, records each source partition, creates covering indexes and runs `ANALYZE`.
-
-## Build from raw CSV
-
-```bash
-uv run python scripts/migrate_csv_to_sqlite.py \
-  --datas-dir data/raw \
-  --db-path data/prices.db
-```
-
-Use `--force` only when a complete rebuild is intentional.
+API adapters query these views; they must not write to them.
 
 ## Production connection policy
 

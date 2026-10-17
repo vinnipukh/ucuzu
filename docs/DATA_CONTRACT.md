@@ -6,8 +6,8 @@ This document defines the boundary between the `inflationstudymirror` data repos
 
 | Artifact | Producer | Consumer |
 |---|---|---|
-| Raw retailer CSVs | Scraper workflows in `InflationItems/Datas/` | Optional CSV fallback or SQLite migration |
-| Partitioned JSON histories | Scraper/ETL code in `InflationItems/prices_json/` | `scripts/build_sqlite_from_json.py` |
+| Raw retailer CSVs | Scraper workflows in `InflationItems/Datas/` | `scripts/build_database.py`; optional CSV fallback |
+| Partitioned JSON histories | Scraper/ETL code in `InflationItems/prices_json/` | `scripts/build_database.py` (retailers without raw CSVs) |
 | Generated inflation CSVs | Calculators in `Inflations/Datas/` | API artifact endpoints |
 | SQLite serving database | Web repository build/deployment job | Falcon WSGI/ASGI API |
 

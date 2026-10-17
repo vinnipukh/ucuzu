@@ -113,6 +113,32 @@ def test_build_end_to_end(tmp_path: Path) -> None:
     assert not Path(f"{db_path}.building").exists()
 
 
+def test_build_dedupes_days_and_keeps_latest_name(tmp_path: Path) -> None:
+    raw = tmp_path / "raw" / "01_Food" / "Kim"
+    raw.mkdir(parents=True)
+    (raw / "kim_2026-01-01.csv").write_text("product_id,name,price\n7,Old Name,10\n", encoding="utf-8")
+    # A second scrape of the same day: the later file wins, as with INSERT OR REPLACE.
+    (raw / "kim_2026-01-01_rerun.csv").write_text("product_id,name,price\n7,Old Name,11\n", encoding="utf-8")
+    (raw / "kim_2026-01-03.csv").write_text("product_id,name,price\n7,New Name,12\n", encoding="utf-8")
+    db_path = tmp_path / "prices.db"
+
+    build_database.build(tmp_path, db_path, workers=1)
+
+    with sqlite3.connect(db_path) as conn:
+        observations = conn.execute(
+            "SELECT date, product_id, product_name, price FROM price_observations ORDER BY date"
+        ).fetchall()
+        product = conn.execute(
+            "SELECT product_name, first_date, last_date, latest_price, min_price, max_price, observations_count "
+            "FROM product_prices"
+        ).fetchone()
+        without_rowid = conn.execute("SELECT sql FROM sqlite_master WHERE name = 'observations'").fetchone()[0]
+    assert observations == [("2026-01-01", "7", "New Name", 11.0), ("2026-01-03", "7", "New Name", 12.0)]
+    assert product == ("New Name", "2026-01-01", "2026-01-03", 12.0, 11.0, 12.0, 2)
+    assert "WITHOUT ROWID" in without_rowid
+    assert not [p.name for p in tmp_path.iterdir() if ".building" in p.name or ".staging" in p.name]
+
+
 def test_split_and_join_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(data_files, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(data_files, "GITIGNORE", tmp_path / ".gitignore")
