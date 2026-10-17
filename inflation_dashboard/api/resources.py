@@ -9,7 +9,6 @@ from inflation_dashboard.adapters import sqlite_price_repository
 from inflation_dashboard.api.filters import (
     RESPONSE_CACHE_TTL_SECONDS,
     ApiFilterError,
-    DatabaseUnavailableError,
     get_cached_response,
     get_inventory,
     is_sqlite_available,
@@ -327,11 +326,6 @@ class ProductSearchResource:
             _send_response(resp, req, "products-search", req.query_string, envelope_dict)
         except ApiFilterError as exc:
             _set_filter_error(resp, exc)
-        except DatabaseUnavailableError:
-            raise
-        except Exception as exc:
-            resp.status = falcon.HTTP_500
-            resp.media = error_envelope("server_error", str(exc))
 
 
 class ProductDetailResource:
@@ -382,11 +376,6 @@ class ProductDetailResource:
             _send_response(resp, req, "product-detail", req.query_string, envelope_dict)
         except ApiFilterError as exc:
             _set_filter_error(resp, exc)
-        except DatabaseUnavailableError:
-            raise
-        except Exception as exc:
-            resp.status = falcon.HTTP_500
-            resp.media = error_envelope("server_error", str(exc))
 
 
 def _set_filter_error(resp: Any, exc: ApiFilterError) -> None:

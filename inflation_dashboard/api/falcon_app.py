@@ -13,6 +13,10 @@ from inflation_dashboard.api.filters import DatabaseUnavailableError
 from inflation_dashboard.api.serialization import error_envelope
 
 _LOGGER = logging.getLogger("inflation_dashboard.api.timing")
+_ERROR_LOGGER = logging.getLogger("inflation_dashboard.api")
+
+SERVER_ERROR_MESSAGE = "Internal server error"
+_HTTP_ERROR_CODES = {404: "not_found", 405: "method_not_allowed"}
 
 
 class TimingMiddleware:
@@ -73,12 +77,30 @@ def _handle_database_unavailable(req: object, resp: object, ex: DatabaseUnavaila
     resp.media = error_envelope(ex.code, ex.message)
 
 
+def _handle_http_error(req: object, resp: object, ex: falcon.HTTPError, params: object) -> None:
+    code = _HTTP_ERROR_CODES.get(ex.status_code, "http_error")
+    resp.status = ex.status
+    for name, value in (ex.headers or {}).items():
+        resp.set_header(name, value)
+    resp.media = error_envelope(code, ex.description or ex.title)
+
+
+def _handle_unexpected_error(req: object, resp: object, ex: Exception, params: object) -> None:
+    _ERROR_LOGGER.exception("Unhandled error on %s %s", req.method, req.path)
+    resp.status = falcon.HTTP_500
+    resp.media = error_envelope("server_error", SERVER_ERROR_MESSAGE)
+
+
 def create_app() -> falcon.App:
     """Create the Falcon WSGI application and register API resources."""
 
     app = falcon.App(middleware=[TimingMiddleware(), _cors_middleware()])
     app.req_options.media_handlers[falcon.MEDIA_JSON] = _JSON_HANDLER
     app.resp_options.media_handlers[falcon.MEDIA_JSON] = _JSON_HANDLER
+    # Falcon picks the most specific handler, so HTTPError (404/405 from routing)
+    # and DatabaseUnavailableError are not shadowed by the catch-all Exception.
+    app.add_error_handler(Exception, _handle_unexpected_error)
+    app.add_error_handler(falcon.HTTPError, _handle_http_error)
     app.add_error_handler(DatabaseUnavailableError, _handle_database_unavailable)
     app.add_route("/api/health", resources.HealthResource())
     app.add_route("/api/inventory", resources.InventoryResource())

@@ -71,3 +71,14 @@ Spec: tasks/prd-documentation-overhaul.md
   - The serving DB has 200+ retailers named "<Group> / <Store>" (some top-level only, e.g. `HomeGoods`, `Technology`, `EpeyKatfg`).
   - `scripts/test_sqlite_adapter.py` needs a built `data/prices.db` and takes ~1 min.
 ---
+
+## 2026-10-17 - US-024
+- `create_app` registers three error handlers: `Exception` -> 500 `server_error` with fixed message "Internal server error" (traceback logged on logger `inflation_dashboard.api`); `falcon.HTTPError` -> envelope with `not_found` (404), `method_not_allowed` (405, `Allow` header kept) or `http_error` (any other status); `DatabaseUnavailableError` -> 503.
+- Removed the `except Exception: ... str(exc)` catches in `/api/products/search` and `/api/product`; those errors now reach the global handler. The inner "repository error -> empty result / 404" catches are unchanged.
+- Tests in `tests/test_api.py`: unknown route 404, POST 405, forced raise 500 without exception text, CORS header on an error response.
+- Files: inflation_dashboard/api/falcon_app.py, inflation_dashboard/api/resources.py, tests/test_api.py
+- **Learnings for future iterations:**
+  - Error codes now emitted by `inflation_dashboard/api/`: `invalid_filter`, `not_found`, `method_not_allowed`, `http_error`, `server_error`, `database_unavailable` (needed for US-008).
+  - Falcon's CORSMiddleware still adds `Access-Control-Allow-Origin` to responses rendered by error handlers.
+  - Patch a resource method with `monkeypatch.setattr(resources.X, "on_get", ...)` before `create_app()`; routes bind responders at `add_route` time.
+---

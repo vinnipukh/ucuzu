@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from falcon import testing
 
+from inflation_dashboard.api import resources
 from inflation_dashboard.api.falcon_app import create_app
 from inflation_dashboard.api.filters import clear_inventory_cache
 
@@ -59,3 +60,44 @@ def test_health_reports_missing_database(client: testing.TestClient, missing_db:
 
     assert result.status_code == 200
     assert result.json["data"] == {"status": "ok", "database": "unavailable"}
+
+
+def test_unknown_route_returns_not_found_envelope(client: testing.TestClient) -> None:
+    result = client.simulate_get("/api/does-not-exist")
+
+    assert result.status_code == 404
+    assert set(result.json) == {"data", "meta", "errors"}
+    assert result.json["errors"][0]["code"] == "not_found"
+
+
+def test_unsupported_method_returns_method_not_allowed_envelope(client: testing.TestClient) -> None:
+    result = client.simulate_post("/api/health")
+
+    assert result.status_code == 405
+    assert result.json["errors"][0]["code"] == "method_not_allowed"
+    assert "GET" in result.headers["allow"]
+
+
+def test_unhandled_exception_returns_fixed_server_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    def explode(self: object, req: object, resp: object) -> None:
+        raise RuntimeError("secret internal detail")
+
+    monkeypatch.setattr(resources.HealthResource, "on_get", explode)
+    client = testing.TestClient(create_app())
+
+    result = client.simulate_get("/api/health")
+
+    assert result.status_code == 500
+    assert result.json["data"] is None
+    assert result.json["errors"] == [{"code": "server_error", "message": "Internal server error"}]
+    assert "secret internal detail" not in result.text
+
+
+def test_error_responses_carry_cors_headers(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("FALCON_CORS_ORIGINS", raising=False)
+    client = testing.TestClient(create_app())
+
+    result = client.simulate_get("/api/does-not-exist", headers={"Origin": "http://example.test"})
+
+    assert result.status_code == 404
+    assert result.headers.get("access-control-allow-origin") == "*"
