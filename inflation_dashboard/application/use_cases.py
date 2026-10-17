@@ -70,6 +70,8 @@ def calculate_price_movers(
     movers = history.copy()
     if selected_retailer != "All retailers":
         movers = movers[movers["retailer"] == selected_retailer]
+    # first/last below must mean earliest/latest observation, not input row order.
+    movers = movers.sort_values("date", kind="stable")
 
     empty = pd.DataFrame()
     if movers.empty:
