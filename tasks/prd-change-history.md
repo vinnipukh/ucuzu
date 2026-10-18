@@ -25,7 +25,7 @@ Every entry must be checked against the commit (`git show <hash>`) before it is 
 | Commit | Change | Owning doc |
 |---|---|---|
 | `907efe4` US-020 | CI fixed (pytest, Node 24, nonexistent `verify_redis_store.py` step removed); `frontend/package.json` `engines.node >=22.12`; `frontend/.nvmrc` = 24. `verify_falcon_api.py` runs without a DB | `GETTING-STARTED.md` § Prerequisites |
-| (CI removal commit) | GitHub Actions removed: `.github/workflows/ci.yml` deleted; checks run locally only | `TESTING.md` § No continuous integration |
+| `03423c5` (CI removal) | GitHub Actions removed: `.github/workflows/ci.yml` deleted; checks run locally only | `TESTING.md` § No continuous integration |
 | `637841c` US-025 | `.gitignore` ignores `*.db.staging*` | `DATABASE.md` § Purpose |
 | `82609c3` US-021 | Launcher `--sqlite-db` defaults to `PRICES_DB_PATH`, then `data/prices.db` (previously it always overwrote `PRICES_DB_PATH`) | `CONFIGURATION.md` § Launcher flags |
 | `e3401ac` US-023 | Removed `--no-sqlite-readonly` and the never-read exports `SQLITE_DB_PATH`, `SQLITE_READ_ONLY`, `SQLITE_JOURNAL_MODE`, `SQLITE_SYNCHRONOUS`, `SQLITE_URI` | `CONFIGURATION.md` |

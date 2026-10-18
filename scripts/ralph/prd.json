@@ -12,7 +12,7 @@
         "The subsection has three groups in this order: Breaking / behaviour changes, Removed, Documentation-only",
         "Every row of the 'Source of truth' table in tasks/prd-change-history.md is covered; each bullet is one sentence, names its commit hash (checked with `git show <hash>`) and links to the owning doc section with a relative markdown link",
         "Links into FALCON_API_CONTRACT.md use the section numbers after the US-002 renumbering",
-        "'Removed' names exactly: `--no-sqlite-readonly`, `SQLITE_DB_PATH`, `SQLITE_READ_ONLY`, `SQLITE_JOURNAL_MODE`, `SQLITE_SYNCHRONOUS`, `SQLITE_URI`, `INFLATION_DATA_ROOT`, `inflation_dashboard/adapters/csv_price_repository.py`, `SUPPORTED_RETAILERS`, `.github/workflows/ci.yml` (GitHub Actions CI; there is no CI any more), `docs/SEPARATION.md` (moved to docs/archive/), `docs/CONVENTIONS.md`/`docs/CONCERNS.md` content (moved to ARCHITECTURE.md)",
+        "'Removed' names exactly: `--no-sqlite-readonly`, `SQLITE_DB_PATH`, `SQLITE_READ_ONLY`, `SQLITE_JOURNAL_MODE`, `SQLITE_SYNCHRONOUS`, `SQLITE_URI`, `INFLATION_DATA_ROOT`, `inflation_dashboard/adapters/csv_price_repository.py`, `SUPPORTED_RETAILERS`, `.github/workflows/ci.yml` (GitHub Actions CI, removed in 03423c5; there is no CI any more), `docs/SEPARATION.md` (moved to docs/archive/), `docs/CONVENTIONS.md`/`docs/CONCERNS.md` content (moved to ARCHITECTURE.md)",
         "States that US-018 (Svelte @component blocks) was deferred and is not part of this change",
         "Every relative link and anchor in the new section resolves (checked by hand with the link-check one-liner in progress.txt)",
         "Typecheck passes"
