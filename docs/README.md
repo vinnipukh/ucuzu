@@ -5,7 +5,8 @@ Each topic has one owning document; other files link to it instead of repeating 
 ## Start here
 
 - [Project README](../README.md) — pitch, quickstart and links.
-- [Getting Started](GETTING-STARTED.md) — the only place for install, build-database, run and verify commands.
+- [Getting Started](GETTING-STARTED.md) — install, build-database, run and verify commands.
+- [Setup Guide](SETUP.md) — new-machine walkthrough: building the database from CSVs and importing new CSVs from InflationResearchStudy.
 - [Architecture](ARCHITECTURE.md) — source layout, layer boundaries, request flow and known issues.
 - [Agent rules](../AGENTS.md) — hard rules for coding agents: repository boundary, data rules, change policy.
 
@@ -13,7 +14,7 @@ Each topic has one owning document; other files link to it instead of repeating 
 
 - [Falcon API Contract](FALCON_API_CONTRACT.md) — authoritative API reference.
 - [API Summary](API.md) — endpoint table, link to the contract and performance notes.
-- [User Guide](USER_GUIDE.md) — end-user walkthrough of the SPA.
+- [User Guide](USER_GUIDE.md) — end-user walkthrough of the ucuzu shop and the `/analiz` dashboard.
 - [Frontend README](../frontend/README.md) — frontend-only state, environment and source layout.
 
 ## Data and configuration

@@ -85,7 +85,7 @@ def _assert_import_boundaries() -> None:
 
 
 def _assert_source_contracts() -> None:
-    """Check that all ten routes are registered and the stable response keys appear in resources.py."""
+    """Check that all fourteen routes are registered and the stable response keys appear in resources.py."""
     app_source = (REPO_ROOT / "inflation_dashboard/api/falcon_app.py").read_text(encoding="utf-8")
     for path in (
         "/api/health",
@@ -97,6 +97,10 @@ def _assert_source_contracts() -> None:
         "/api/products",
         "/api/products/search",
         "/api/epeykatfg/monthly-inflation",
+        "/api/catalog/groups",
+        "/api/catalog/search",
+        "/api/catalog/item",
+        "/api/catalog/deals",
         "/api/product",
     ):
         assert path in app_source, f"app factory missing route {path}"
@@ -217,6 +221,7 @@ def run_endpoint_smoke() -> None:
             "/api/products?retailer=Markets%20%2F%20Gurmar",
             "/api/products/search?q=ceket&limit=3",
             "/api/product?product_id=__missing__",
+            "/api/catalog/search?q=s%C3%BCt",
         ):
             unavailable = _get(client, path, expected_status="503 Service Unavailable")
             assert unavailable["data"] is None, f"{path} 503 data must be null"
@@ -280,7 +285,23 @@ def run_endpoint_smoke() -> None:
     assert error.get("code") == "invalid_filter", "invalid filter code mismatch"
     assert isinstance(error.get("message"), str) and 0 < len(error["message"]) <= 160, "invalid error message"
 
-    print("PASS endpoint smoke: all data, product, monthly and invalid-filter routes")
+    _assert_catalog(client)
+    print("PASS endpoint smoke: all data, product, catalog, monthly and invalid-filter routes")
+
+
+def _assert_catalog(client: Any) -> None:
+    """Catalog routes: groups, a search, the first hit's item page, deals and a bad sort (400)."""
+    groups = _get(client, "/api/catalog/groups")
+    assert isinstance(groups["data"], list), "catalog groups data must be an array"
+    search = _get(client, "/api/catalog/search?q=s%C3%BCt&limit=3")
+    assert isinstance(search["data"], list) and "total" in search["meta"], "catalog search shape mismatch"
+    if search["data"]:
+        item = _get(client, f"/api/catalog/item?key={quote(search['data'][0]['key'], safe='')}")
+        assert {"offers", "summary"} <= set(item["data"]), "catalog item keys missing"
+    deals = _get(client, "/api/catalog/deals?limit=3")
+    assert isinstance(deals["data"], list), "catalog deals data must be an array"
+    bad = _get(client, "/api/catalog/search?sort=__bad__", expected_status="400 Bad Request")
+    assert bad["errors"][0].get("code") == "invalid_filter", "catalog bad sort code mismatch"
 
 
 def main() -> int:

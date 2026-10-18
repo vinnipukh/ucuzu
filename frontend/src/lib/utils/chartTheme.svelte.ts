@@ -9,7 +9,7 @@ export interface ChartTheme {
   tooltipBg: string;
   tooltipText: string;
   border: string;
-  /** Paper-and-ink categorical palette with a warm accent for emphasis. */
+  /** Categorical palette led by the blue accent. */
   palette: string[];
 }
 
@@ -22,23 +22,23 @@ export function getChartTheme(): ChartTheme {
   return dark
     ? {
         dark,
-        text: '#d6cec1',
-        axisLine: '#6f675c',
-        splitLine: '#37332d',
-        tooltipBg: '#25221e',
-        tooltipText: '#f7f2e8',
-        border: '#5c554b',
-        palette: ['#f5efe3', '#fb923c', '#5eead4', '#c4b5fd', '#cbd5e1', '#fbbf24', '#93c5fd', '#fda4af']
+        text: '#a3adbb',
+        axisLine: '#39414d',
+        splitLine: '#232a33',
+        tooltipBg: '#171c23',
+        tooltipText: '#e8edf3',
+        border: '#2a313b',
+        palette: ['#5b9df0', '#f59e0b', '#4cc38a', '#c084fc', '#f472b6', '#22d3ee', '#a3adbb', '#fb7185']
       }
     : {
         dark,
-        text: '#57534e',
-        axisLine: '#aaa296',
-        splitLine: '#e5ded2',
-        tooltipBg: '#fffdf8',
-        tooltipText: '#26231f',
-        border: '#c9c0b4',
-        palette: ['#1f2937', '#c2410c', '#0f766e', '#7c3aed', '#64748b', '#b45309', '#2563eb', '#9f1239']
+        text: '#5f6b7a',
+        axisLine: '#c4cbd4',
+        splitLine: '#eef1f5',
+        tooltipBg: '#ffffff',
+        tooltipText: '#1d2530',
+        border: '#e1e5eb',
+        palette: ['#1468d6', '#f59e0b', '#0f8a4c', '#7c3aed', '#db2777', '#0891b2', '#5f6b7a', '#c62828']
       };
 }
 
@@ -55,7 +55,7 @@ export function baseChartOption(theme: ChartTheme) {
       textStyle: { color: theme.tooltipText, fontSize: 12 },
       confine: true
     },
-    textStyle: { color: theme.text, fontFamily: "'Fira Sans', system-ui, sans-serif" },
+    textStyle: { color: theme.text, fontFamily: "'Inter', system-ui, sans-serif" },
     axisPointer: { lineStyle: { color: theme.splitLine } },
     valueAxis: {
       axisLabel: { color: theme.text, fontSize: 11 },

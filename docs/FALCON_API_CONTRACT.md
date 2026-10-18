@@ -58,11 +58,12 @@ Error objects have exactly two fields, `code` and `message`. Context goes on the
 | Status | `code` | When | `message` |
 |---|---|---|---|
 | 400 | `invalid_filter` | Any query-parameter validation failure (sections 3–4) | Names the parameter, e.g. `Invalid limit`, `Unknown retailer: X`, `Invalid date range` |
-| 404 | `not_found` | Unknown route, or `/api/product` found no product | `Product not found: <key>` for products; Falcon's description or title for routes |
+| 404 | `not_found` | Unknown route, `/api/product` found no product, or `/api/catalog/item` found no item | `Product not found: <key>` for products; `Item not found: <key>` for catalog items; Falcon's description or title for routes |
 | 405 | `method_not_allowed` | A method other than `GET`/`OPTIONS` on a known route (the `Allow` header lists `GET`) | Falcon's description or title |
 | other 4xx/5xx | `http_error` | Any other `falcon.HTTPError` raised by Falcon | Falcon's description or title |
 | 500 | `server_error` | Any unhandled exception | Always the fixed string `Internal server error`; the traceback is logged server-side (logger `inflation_dashboard.api`), never sent |
 | 503 | `database_unavailable` | The configured database file is missing or 0 bytes (every endpoint except `/api/health` and `/api/epeykatfg/monthly-inflation`) | `Database not found; run scripts/build_database.py` |
+| 503 | `database_outdated` | `/api/catalog/*` only: the database was built before the catalog columns (`products.name_key`, `previous_price`, `price_since`, `is_current`) existed. The other endpoints keep working; rebuild the database. | `Database predates the catalog; run scripts/build_database.py` |
 
 The handlers for 404/405/500/503 are registered in `create_app`. Messages are short and safe to show in the UI.
 
@@ -414,6 +415,180 @@ The EpeyKatfg month-over-month inflation artifact (`EPEYKATFG_MONTHLY_CSV`, defa
 - `meta`: `count` (rows), `columns` (header), `source` and `notes` (fixed description strings).
 - A missing or header-less file returns 200 with `data: []`, `count: 0`, `columns: []`.
 
+### 4.10 `GET /api/catalog/groups`
+
+Groups of the price-comparison catalog and their stores, for the shop's navigation. No parameters.
+
+The four catalog endpoints (§4.10–§4.13) read the `products` table through `inflation_dashboard/adapters/sqlite_catalog_repository.py`:
+
+- A retailer label `Group / Store` is split into its group and store (`Markets / Migros` → `Markets`, `Migros`); a label without ` / ` (`EpeyKatfg`) is its own group and store.
+- The `HousesRent` group (rental listings, `CATALOG_EXCLUDED_GROUPS`) is never part of the catalog.
+- Groups, search and deals count only current offers (`products.is_current = 1`, see [DATABASE.md](DATABASE.md#catalog-columns)).
+- They are cached and compressed like the other endpoints (§5), return 503 `database_unavailable` without a database and 503 `database_outdated` when the database was built before the catalog columns existed (§2.3).
+
+`data` lists groups with at least one current offer, largest `offer_count` first (ties by name); each group's `stores` are sorted the same way and list only stores with current offers. `last_date` is the newest `last_date` of any product of the group or store, current or not. `meta.count` is the number of groups.
+
+```json
+{
+  "data": [
+    {
+      "group": "Cosmetics",
+      "offer_count": 101890,
+      "last_date": "2026-10-17",
+      "stores": [
+        {"store": "BeymenBeauty", "retailer": "Cosmetics / BeymenBeauty", "offer_count": 19311, "last_date": "2026-10-16"},
+        {"store": "Gratis", "retailer": "Cosmetics / Gratis", "offer_count": 13019, "last_date": "2026-10-16"}
+      ]
+    }
+  ],
+  "meta": {"count": 13},
+  "errors": []
+}
+```
+
+### 4.11 `GET /api/catalog/search`
+
+Searches catalog items. An **item** is every product that shares one `products.name_key` (the Turkish-aware normalized product name from `inflation_dashboard/domain/catalog.py`), so one item groups the same product across stores; each product is one store's **offer**.
+
+Parameters:
+
+- `q` (`string`, optional): normalized with the same `name_key` rules and split into terms; every term must occur as a substring of the item's `name_key`. Empty lists every item.
+- `group`, `store` (`string`, optional, exact match; blank is ignored): limit the offers to one group and/or store. Unknown values are not an error; they return `data: []` and `total: 0`.
+- `sort` (default `relevance`): `relevance` ranks by the number of query terms that match whole words, then store count, then shorter names; `price_asc` / `price_desc` by `min_price`; `drop` by `max_drop_percent` (items without a drop last), then store count. Any other value → 400 `Invalid sort`.
+- `limit` (integer 1–60, default 24), `offset` (integer 0–10000, default 0): out of range or not an integer → 400 `Invalid limit` / `Invalid offset` (not clamped).
+
+Only current offers with `latest_price > 0` in the selected group/store count. For each item, `name`, `store` and `category` come from its cheapest offer; `stores` lists up to three stores, cheapest first; `min_price`/`max_price` span the offers; `max_drop_percent` is the largest offer `drop_percent` (§4.12), `null` if none dropped; `last_date` is the newest offer date. `meta.total` counts every matching item, `meta.count` the items on this page.
+
+```json
+{
+  "data": [
+    {
+      "key": "içim yarım yağlı süt 1l",
+      "name": "İçim Yarım Yağlı Süt 1 L",
+      "group": "Markets",
+      "category": "Süt, Kahvaltılık",
+      "store": "Hapeloglu",
+      "stores": ["Hapeloglu", "BizimMarket", "CarrefourSA"],
+      "offer_count": 5,
+      "store_count": 5,
+      "min_price": 55.0,
+      "max_price": 59.75,
+      "max_drop_percent": null,
+      "last_date": "2026-10-17"
+    }
+  ],
+  "meta": {"query": "süt 1l", "group": null, "store": null, "sort": "relevance", "limit": 1, "offset": 0, "count": 1, "total": 322},
+  "errors": []
+}
+```
+
+### 4.12 `GET /api/catalog/item`
+
+One item's offers in every store, each with its full price history.
+
+Parameters:
+
+- `key` (`string`, **required**): a `name_key`, as returned in `key` by §4.11. Missing or blank → 400 `key is required`. A key with no products → 404 `not_found` with message `Item not found: <key>` and `meta` `{key}`.
+
+`offers` holds the products with that `name_key` outside `HousesRent`, **including stale ones** (`is_current: false`): current offers first, then cheapest first, at most 40 (`MAX_ITEM_OFFERS`). Each offer is the `products` row plus:
+
+- `retailer`, `group`, `store`: the retailer label and its split.
+- `previous_price`, `price_since`: the price before the latest change and the first day of the current price (see [DATABASE.md](DATABASE.md#catalog-columns)).
+- `is_current`: a boolean.
+- `drop_percent`: `(previous_price − latest_price) / previous_price × 100`, rounded to 2 decimals, when the latest change was a drop; else `null`.
+- `history`: every observation as `[date, price]` pairs, oldest first.
+
+`name`, `group` and `category` come from the cheapest current offer (the first offer if none is current). In `summary`, `min_price`/`max_price` span the current offers with a price (all offers with a price when none is current); `lowest_ever` is the lowest price in any returned offer's history, with its date and store, ignoring prices below 25 % (`LOWEST_EVER_FLOOR`) of the lowest current price (`null` when nothing qualifies); `store_count` counts distinct retailers among the returned offers. `meta` is `{key, offer_count}`.
+
+```json
+{
+  "data": {
+    "key": "içim yarım yağlı süt 1l",
+    "name": "İçim Yarım Yağlı Süt 1 L",
+    "group": "Markets",
+    "category": "Süt, Kahvaltılık",
+    "offers": [
+      {
+        "retailer": "Markets / Hapeloglu",
+        "group": "Markets",
+        "store": "Hapeloglu",
+        "product_id": "1528",
+        "product_name": "İçim Yarım Yağlı Süt 1 L",
+        "name_key": "içim yarım yağlı süt 1l",
+        "category": "Süt, Kahvaltılık",
+        "latest_price": 55.0,
+        "previous_price": 49.5,
+        "price_since": "2026-10-09",
+        "first_date": "2026-05-31",
+        "last_date": "2026-10-09",
+        "min_price": 49.5,
+        "max_price": 55.0,
+        "observations_count": 14,
+        "is_current": true,
+        "drop_percent": null,
+        "history": [["2026-05-31", 55.0], ["2026-06-01", 55.0], "…", ["2026-10-09", 55.0]]
+      }
+    ],
+    "summary": {
+      "offer_count": 7,
+      "current_offer_count": 5,
+      "store_count": 5,
+      "min_price": 55.0,
+      "max_price": 59.75,
+      "lowest_ever": {"price": 43.9, "date": "2026-03-19", "store": "BizimMarket"},
+      "last_date": "2026-10-17"
+    }
+  },
+  "meta": {"key": "içim yarım yağlı süt 1l", "offer_count": 7},
+  "errors": []
+}
+```
+
+The 25 % floor drops scraper errors: this item's history also holds a `1.0` price, which is not reported.
+
+### 4.13 `GET /api/catalog/deals`
+
+Current offers whose latest price change was a drop, largest drop first (ties: more observations first).
+
+Parameters:
+
+- `group`, `store` (`string`, optional, exact match; blank is ignored): as in §4.11.
+- `min_drop` (integer 1–80, default 5): minimum `drop_percent`.
+- `days` (integer 1–365, default 30): the drop must have happened within this many days of the offer's last observation (`price_since` on or after `last_date` − `days`).
+- `limit` (integer 1–60, default 24).
+
+Out of range or not an integer → 400 `Invalid <name>` (not clamped). Drops above 80 % (`MAX_DEAL_DROP_PERCENT`, also the `min_drop` maximum) are ignored as likely scraper or unit errors.
+
+`data` is a list of offers shaped as in §4.12 **without** `history`. `meta` echoes `group`, `store`, `min_drop`, `days`, `limit` and adds `count`.
+
+```json
+{
+  "data": [
+    {
+      "retailer": "ConstructionSuppliesMarkets / Bauhaus",
+      "group": "ConstructionSuppliesMarkets",
+      "store": "Bauhaus",
+      "product_id": "ECA 3/4 Yaylı Çek Valf",
+      "product_name": "ECA 3/4 Yaylı Çek Valf",
+      "name_key": "eca 3 4 yaylı çek valf",
+      "category": "Uncategorized",
+      "latest_price": 50.0,
+      "previous_price": 250.0,
+      "price_since": "2026-10-12",
+      "first_date": "2026-03-11",
+      "last_date": "2026-10-16",
+      "min_price": 50.0,
+      "max_price": 250.0,
+      "observations_count": 80,
+      "is_current": true,
+      "drop_percent": 80.0
+    }
+  ],
+  "meta": {"group": null, "store": null, "min_drop": 5, "days": 30, "limit": 1, "count": 1},
+  "errors": []
+}
+```
+
 ---
 
 ## 5. Caching and compression
@@ -430,7 +605,7 @@ Applies to the successful (200) responses of every endpoint except `/api/health`
 
 ## 6. TypeScript types (`frontend/src/lib/types/api.ts`)
 
-This section mirrors `frontend/src/lib/types/api.ts` as of 2026-10-17. The file in the repository is the source; if they differ, update this copy.
+This section mirrors `frontend/src/lib/types/api.ts` as of 2026-10-18. The file in the repository is the source; if they differ, update this copy.
 
 ### 6.1 Differences between client types and server output
 
@@ -445,6 +620,8 @@ The client types are not a complete or exact model of the server. Known differen
 | `HealthData` | Has no `database` field; the server also sends `database: "available" \| "unavailable"`. |
 | `ProductDetailData.history: ProductHistoryPoint[]` | Product-detail history dates are plain `YYYY-MM-DD` and `source_file` is `""`, unlike `/api/history` product mode. |
 | `CommonFilterMeta.warnings?`, `history_row_count?`, `skipped_file_count?` | Optional in the type, but always sent by the four filter endpoints. |
+| *(none)* `meta` types for `/api/catalog/groups`, `/api/catalog/item`, `/api/catalog/deals` | Only `/api/catalog/search` has a `meta` type (`CatalogSearchMeta`); the SPA does not read the other catalog `meta` objects. Their shapes are in §4.10, §4.12 and §4.13. |
+| `CatalogOffer.history?` | Sent by `/api/catalog/item` only; `/api/catalog/deals` offers have no `history`. |
 
 ### 6.2 `api.ts`
 
@@ -784,6 +961,98 @@ export interface MonthlyInflationMeta {
 
 /** Full `GET /api/epeykatfg/monthly-inflation` response. */
 export type MonthlyInflationResponse = ApiResponse<MonthlyInflationRecord[], MonthlyInflationMeta>;
+
+// ── Price-comparison catalog ─────────────────────────────────────────────────
+
+/** One store of a catalog group in `GET /api/catalog/groups`. */
+export interface CatalogStore {
+  store: string;
+  retailer: string;
+  offer_count: number;
+  last_date: string | null;
+}
+
+/** One group of `GET /api/catalog/groups` (retailer label prefix, e.g. `Markets`). */
+export interface CatalogGroup {
+  group: string;
+  offer_count: number;
+  last_date: string | null;
+  stores: CatalogStore[];
+}
+
+/** Sort orders accepted by `GET /api/catalog/search`. */
+export type CatalogSort = 'relevance' | 'price_asc' | 'price_desc' | 'drop';
+
+/** One item (all offers sharing a `name_key`) of `GET /api/catalog/search`. */
+export interface CatalogSearchItem {
+  key: string;
+  name: string; // name of the cheapest offer
+  group: string;
+  category: string;
+  store: string; // store of the cheapest offer
+  stores: string[]; // up to three stores, cheapest first
+  offer_count: number;
+  store_count: number;
+  min_price: number;
+  max_price: number;
+  max_drop_percent: number | null;
+  last_date: string | null;
+}
+
+/** `meta` of `GET /api/catalog/search`. */
+export interface CatalogSearchMeta {
+  query: string;
+  group: string | null;
+  store: string | null;
+  sort: CatalogSort;
+  limit: number;
+  offset: number;
+  count: number;
+  total: number;
+}
+
+/** One store's offer, as returned by `GET /api/catalog/item` and `GET /api/catalog/deals`. */
+export interface CatalogOffer {
+  retailer: string;
+  group: string;
+  store: string;
+  product_id: string;
+  product_name: string;
+  name_key: string;
+  category: string;
+  latest_price: number | null;
+  previous_price: number | null;
+  price_since: string | null;
+  first_date: string | null;
+  last_date: string | null;
+  min_price: number | null;
+  max_price: number | null;
+  observations_count: number;
+  is_current: boolean;
+  drop_percent: number | null;
+  history?: [string, number][]; // `GET /api/catalog/item` only
+}
+
+/** `data` of `GET /api/catalog/item`. */
+export interface CatalogItem {
+  key: string;
+  name: string;
+  group: string;
+  category: string;
+  offers: CatalogOffer[];
+  summary: {
+    offer_count: number;
+    current_offer_count: number;
+    store_count: number;
+    min_price: number | null;
+    max_price: number | null;
+    lowest_ever: { price: number; date: string; store: string } | null;
+    last_date: string | null;
+  };
+}
+
+/** Full `GET /api/catalog/search` response. */
+export type CatalogSearchResponse = ApiResponse<CatalogSearchItem[], CatalogSearchMeta>;
 ```
 
 ---

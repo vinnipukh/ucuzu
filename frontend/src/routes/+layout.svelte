@@ -1,5 +1,6 @@
 <script lang="ts">
   import '../app.css';
+  import favicon from '$lib/assets/favicon.svg';
   import { themeState, effectiveTheme } from '$lib/themes.svelte';
 
   let { children } = $props();
@@ -11,7 +12,7 @@
     root.classList.toggle('dark', dark);
     root.style.colorScheme = dark ? 'dark' : 'light';
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', dark ? '#171614' : '#F4F0E8');
+    if (meta) meta.setAttribute('content', dark ? '#171C23' : '#FFFFFF');
   });
 
   // Follow OS-level theme changes when in 'auto' mode.
@@ -33,5 +34,9 @@
     void effectiveTheme();
   });
 </script>
+
+<svelte:head>
+  <link rel="icon" href={favicon} />
+</svelte:head>
 
 {@render children()}

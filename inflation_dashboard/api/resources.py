@@ -17,10 +17,11 @@ from typing import Any
 import falcon
 import orjson
 
-from inflation_dashboard.adapters import sqlite_price_repository
+from inflation_dashboard.adapters import sqlite_catalog_repository, sqlite_price_repository
 from inflation_dashboard.api.filters import (
     RESPONSE_CACHE_TTL_SECONDS,
     ApiFilterError,
+    DatabaseOutdatedError,
     get_cached_response,
     get_inventory,
     is_sqlite_available,
@@ -568,5 +569,110 @@ class EpeyKatfgMonthlyResource:
                 },
             )
             _send_response(resp, req, ENDPOINT, req.query_string, envelope_dict)
+        except ApiFilterError as exc:
+            _set_filter_error(resp, exc)
+
+
+def _catalog_call(func: Any, *args: Any, **kwargs: Any) -> Any:
+    """Run a catalog repository query, mapping an outdated schema to a 503."""
+    require_database()
+    try:
+        return func(*args, **kwargs)
+    except sqlite_catalog_repository.CatalogSchemaError as exc:
+        raise DatabaseOutdatedError(str(exc)) from exc
+
+
+def _optional_param(req: Any, name: str) -> str | None:
+    """Return a stripped query parameter, or ``None`` when absent or blank."""
+    value = (req.get_param(name) or "").strip()
+    return value or None
+
+
+class CatalogGroupsResource:
+    """``GET /api/catalog/groups``: catalog groups and their stores."""
+
+    def on_get(self, req: Any, resp: Any) -> None:
+        """No parameters. ``data``: groups with ``offer_count``, ``last_date`` and ``stores``."""
+        if _serve_cached(resp, req, "catalog-groups", req.query_string):
+            return
+        groups = _catalog_call(sqlite_catalog_repository.list_groups)
+        _send_response(resp, req, "catalog-groups", req.query_string, envelope(groups, meta={"count": len(groups)}))
+
+
+class CatalogSearchResource:
+    """``GET /api/catalog/search``: search catalog items across stores."""
+
+    def on_get(self, req: Any, resp: Any) -> None:
+        """``q``, ``group``, ``store``, ``sort`` (relevance|price_asc|price_desc|drop), ``limit`` 1-60, ``offset``.
+
+        ``data`` is a page of items; ``meta.total`` counts every matching item.
+        An unknown ``sort`` or out-of-range ``limit``/``offset`` is a 400.
+        """
+        try:
+            if _serve_cached(resp, req, "catalog-search", req.query_string):
+                return
+            query = (req.get_param("q") or "").strip()
+            group = _optional_param(req, "group")
+            store = _optional_param(req, "store")
+            sort = req.get_param("sort") or "relevance"
+            if sort not in sqlite_catalog_repository.CATALOG_SORTS:
+                raise ApiFilterError("invalid_filter", "Invalid sort", meta={"filters": {"sort": sort}})
+            limit = _parse_bounded_int(req, "limit", default=24, minimum=1, maximum=60)
+            offset = _parse_bounded_int(req, "offset", default=0, minimum=0, maximum=10_000)
+            items, total = _catalog_call(
+                sqlite_catalog_repository.search_items,
+                query=query, group=group, store=store, sort=sort, limit=limit, offset=offset,
+            )
+            meta = {
+                "query": query, "group": group, "store": store, "sort": sort,
+                "limit": limit, "offset": offset, "count": len(items), "total": total,
+            }
+            _send_response(resp, req, "catalog-search", req.query_string, envelope(items, meta=meta))
+        except ApiFilterError as exc:
+            _set_filter_error(resp, exc)
+
+
+class CatalogItemResource:
+    """``GET /api/catalog/item``: one item's offers across stores with price histories."""
+
+    def on_get(self, req: Any, resp: Any) -> None:
+        """``key`` (a ``name_key``, required). Unknown keys are a 404 ``not_found``."""
+        try:
+            if _serve_cached(resp, req, "catalog-item", req.query_string):
+                return
+            key = _optional_param(req, "key")
+            if not key:
+                raise ApiFilterError("invalid_filter", "key is required", meta={"filters": {"key": key}})
+            item = _catalog_call(sqlite_catalog_repository.get_item, key)
+            if item is None:
+                resp.status = falcon.HTTP_404
+                resp.media = error_envelope("not_found", f"Item not found: {key}", meta={"key": key})
+                return
+            meta = {"key": key, "offer_count": item["summary"]["offer_count"]}
+            _send_response(resp, req, "catalog-item", req.query_string, envelope(item, meta=meta))
+        except ApiFilterError as exc:
+            _set_filter_error(resp, exc)
+
+
+class CatalogDealsResource:
+    """``GET /api/catalog/deals``: current offers with the largest recent price drops."""
+
+    def on_get(self, req: Any, resp: Any) -> None:
+        """``group``, ``store``, ``min_drop`` 1-80 (default 5), ``days`` 1-365 (default 30), ``limit`` 1-60."""
+        try:
+            if _serve_cached(resp, req, "catalog-deals", req.query_string):
+                return
+            group = _optional_param(req, "group")
+            store = _optional_param(req, "store")
+            max_drop = int(sqlite_catalog_repository.MAX_DEAL_DROP_PERCENT)
+            min_drop = _parse_bounded_int(req, "min_drop", default=5, minimum=1, maximum=max_drop)
+            days = _parse_bounded_int(req, "days", default=30, minimum=1, maximum=365)
+            limit = _parse_bounded_int(req, "limit", default=24, minimum=1, maximum=60)
+            deals = _catalog_call(
+                sqlite_catalog_repository.list_deals,
+                group=group, store=store, min_drop=float(min_drop), days=days, limit=limit,
+            )
+            meta = {"group": group, "store": store, "min_drop": min_drop, "days": days, "limit": limit, "count": len(deals)}
+            _send_response(resp, req, "catalog-deals", req.query_string, envelope(deals, meta=meta))
         except ApiFilterError as exc:
             _set_filter_error(resp, exc)

@@ -26,10 +26,12 @@ flowchart LR
 ```text
 inflation_dashboard/
   domain/prices.py                 price/date normalization, HISTORY_COLUMNS
+  domain/catalog.py                catalog rules: name_key (cross-store item match), split_retailer, excluded groups
   application/use_cases.py         history, averages, movers, coverage calculations (pandas)
   application/chart_specs.py       column contracts for each response table
   application/epeykatfg_monthly.py reads the EpeyKatfg monthly inflation CSV
-  adapters/sqlite_price_repository.py  the only database access (read-only SQLite)
+  adapters/sqlite_price_repository.py  read-only SQLite connections and the dashboard queries
+  adapters/sqlite_catalog_repository.py  catalog queries (groups, search, item, deals) for /api/catalog/*
   api/falcon_app.py                create_app(): routes, middleware, error handlers
   api/resources.py                 one resource class per endpoint
   api/filters.py                   filter parsing, history loading, in-process caches
@@ -45,12 +47,17 @@ frontend/src/
   app.html, app.css, app.d.ts      page shell, global styles, ambient types
   routes/+layout.ts                ssr = false (pure client-side SPA)
   routes/+layout.svelte            root layout: imports app.css, applies the colour theme
-  routes/+page.svelte              dashboard shell: inventory load, sidebar, five view tabs
+  routes/(shop)/                   price-comparison shop (layout group, no URL segment): SiteHeader + footer layout,
+                                   / home, /ara search, /urun/[key] item, /firsatlar deals, /alarmlar price alarms
+  routes/analiz/+page.svelte       inflation dashboard at /analiz: inventory load, sidebar, five view tabs
   lib/api/client.ts                fetchApi(): the only HTTP client
   lib/stores/filters.svelte.ts     global filter state (Svelte 5 runes)
+  lib/stores/catalog.svelte.ts     catalog groups, loaded once from /api/catalog/groups
+  lib/stores/alarms.svelte.ts      price alarms in localStorage (`price-alarms`)
+  lib/catalog.ts                   shop helpers: Turkish group labels, item/search links, TL formatting
   lib/types/api.ts                 TypeScript mirror of the API contract
   lib/themes.svelte.ts             Auto/Light/Dark theme state
-  lib/components/                  Header, Sidebar, Chart, DataTable, selects, alerts
+  lib/components/                  Header, Sidebar, Chart, DataTable, selects, alerts; shop: SiteHeader, ProductCard, Icon
   lib/views/                       ProductExplorer, RetailerAverages, PriceMovers, CoverageOverview, EpeyKatfgMonthly
   lib/utils/                       ECharts options/theme, formatting, fuzzy search, AsyncResource loader
   lib/index.ts                     $lib alias entry (empty)
@@ -59,7 +66,7 @@ frontend/src/
 ## Layer boundaries
 
 - `domain/`, `application/` and `adapters/` do not import Falcon, Streamlit, Plotly or frontend code.
-- `api/` owns HTTP concerns. It must not import `sqlite3`, Redis, SQLAlchemy or other database/cache clients; database access goes through `adapters/sqlite_price_repository.py`. The in-process caches in `api/filters.py` are stdlib-only.
+- `api/` owns HTTP concerns. It must not import `sqlite3`, Redis, SQLAlchemy or other database/cache clients; database access goes through `adapters/sqlite_price_repository.py` and `adapters/sqlite_catalog_repository.py`. The in-process caches in `api/filters.py` are stdlib-only.
 - `HealthResource` must not touch inventory or history loading, so `/api/health` stays cheap.
 - `frontend/` talks to the server only through the HTTP API, via `frontend/src/lib/api/client.ts`. It never reads data files.
 - `scripts/verify_falcon_api.py` enforces the import rules above.
@@ -72,7 +79,8 @@ frontend/src/
 4. On a miss, filter endpoints parse and validate the common filters (cached per query signature), then load the matching history frame from SQLite (cached per filter signature) via `sqlite_price_repository.load_price_history_from_db`.
 5. Application use cases compute the response tables in pandas; `api/serialization.py` converts them to JSON-native values inside the envelope; the bytes are cached and sent.
 6. `/api/products` (product names per retailer, used by the Product explorer's pickers) queries the `products` table, and `/api/products/search` and `/api/product` query the `product_prices` view, through the adapter directly. `/api/epeykatfg/monthly-inflation` reads the monthly inflation CSV.
-7. Errors: filter validation returns 400 `invalid_filter`; a missing or empty database returns 503 `database_unavailable`; unknown routes, wrong methods and unhandled exceptions are rendered as envelopes by the error handlers in `create_app`. The SQLite database is the only data path.
+7. `/api/catalog/*` (the shop) calls `adapters/sqlite_catalog_repository.py`, which reads the `products`, `categories`, `retailers` and `observations` tables over the same read-only connections. Items are products that share `products.name_key` (`domain/catalog.py`); only current offers (`is_current`) are listed.
+8. Errors: filter validation returns 400 `invalid_filter`; a missing or empty database returns 503 `database_unavailable`, and a database built before the catalog columns returns 503 `database_outdated` on `/api/catalog/*`; unknown routes, wrong methods and unhandled exceptions are rendered as envelopes by the error handlers in `create_app`. The SQLite database is the only data path.
 
 ## Conventions
 
@@ -87,6 +95,7 @@ frontend/src/
 
 - Svelte 5 runes are the state model.
 - The SPA is static and client-only (`ssr = false`, `adapter-static` with an `index.html` fallback).
+- Shop pages are in Turkish and live in the `(shop)` route group; the inflation dashboard lives at `/analiz`. Browser-only state such as price alarms uses `localStorage`; the API stays read-only.
 - All server data access goes through `frontend/src/lib/api/client.ts`.
 
 ### Database
@@ -129,4 +138,4 @@ Code defects that are documented rather than fixed:
 | Issue | Location | Impact |
 |---|---|---|
 | Nothing loads a `.env` file (no dotenv). `.env.example` only lists variables; they must be exported in the shell or service environment. | `.env.example:1`; variables are read with `os.environ` in `inflation_dashboard/adapters/sqlite_price_repository.py:36` and `inflation_dashboard/application/epeykatfg_monthly.py:20` | Copying `.env.example` to `.env` has no effect on the API. (Vite does load `frontend/.env` for `VITE_*` variables.) |
-| The client type `InventoryMeta.warnings` has no counterpart in server output: `/api/inventory` never sends `meta.warnings`. | `frontend/src/lib/types/api.ts:91`, read at `frontend/src/routes/+page.svelte:43` | The sidebar's inventory warnings list is always empty. |
+| The client type `InventoryMeta.warnings` has no counterpart in server output: `/api/inventory` never sends `meta.warnings`. | `frontend/src/lib/types/api.ts:91`, read at `frontend/src/routes/analiz/+page.svelte:43` | The sidebar's inventory warnings list is always empty. |

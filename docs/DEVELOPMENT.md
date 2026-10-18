@@ -10,7 +10,7 @@ Every change: `uv run pytest` and `npm run check` (in `frontend/`) pass before c
 
 Adding, removing or changing a route, parameter, response field, error code or header:
 
-- [ ] The resource in `inflation_dashboard/api/resources.py` (and the route in `inflation_dashboard/api/falcon_app.py` for a new path). Keep it thin: logic goes in `application/`, database access in `adapters/sqlite_price_repository.py`.
+- [ ] The resource in `inflation_dashboard/api/resources.py` (and the route in `inflation_dashboard/api/falcon_app.py` for a new path). Keep it thin: logic goes in `application/`, database access in `adapters/sqlite_price_repository.py` (catalog routes: `adapters/sqlite_catalog_repository.py`).
 - [ ] Values stay JSON-native and inside the `{data, meta, errors}` envelope.
 - [ ] [FALCON_API_CONTRACT.md](FALCON_API_CONTRACT.md): the endpoint section, the error-code table if codes changed, and §6 (copy of `api.ts`) if types changed.
 - [ ] `frontend/src/lib/types/api.ts`: the TypeScript types the SPA uses.
@@ -34,7 +34,7 @@ Changing tables, indexes, views, retailer labelling, accepted file formats, head
 
 Copying new scraper output into `data/raw`, `data/prices_json` or `data/inflation`:
 
-- [ ] Copy the files and record the source commits of the data repository in the commit message.
+- [ ] Copy the files (new files only; commands in [SETUP.md](SETUP.md#4-take-new-csvs-from-inflationresearchstudy)) and record the source commits of the data repository in the commit message.
 - [ ] `uv run python scripts/data_files.py check`. No committed file may exceed **85 MB**.
 - [ ] For each oversized file, either `uv run python scripts/data_files.py split` (commits 80 MB `.partNNN` chunks and lists the original in the managed `.gitignore` block) or add it to `.gitignore`.
 - [ ] Never commit `*.db`, `*.db-wal`, `*.db-shm`, `.env`, cookies or browser profiles.

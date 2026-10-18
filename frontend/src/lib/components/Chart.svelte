@@ -57,7 +57,7 @@
   $effect(() => {
     if (!chart) return;
     if (loading) {
-      chart.showLoading('default', { text: 'Loading…', color: '#C2410C', textColor: '#6C6258' });
+      chart.showLoading('default', { text: 'Loading…', color: '#1468D6', textColor: '#5F6B7A' });
     } else {
       chart.hideLoading();
     }

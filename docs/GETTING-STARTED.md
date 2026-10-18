@@ -1,6 +1,6 @@
 # Getting Started
 
-This is the only page with install, build, run and verify commands. It takes you from `git clone` to a running API and dashboard.
+This page owns the install, build, run and verify commands. It takes you from `git clone` to a running API, shop and dashboard. [SETUP.md](SETUP.md) is a longer walkthrough of the same steps that also covers importing new CSVs from the upstream data repository.
 
 ## Prerequisites
 
@@ -8,7 +8,7 @@ This is the only page with install, build, run and verify commands. It takes you
 - **[uv](https://docs.astral.sh/uv/)** for Python dependencies and commands.
 - **Node.js 24 LTS** recommended (`frontend/.nvmrc`); **≥ 22.12** is the minimum (`engines` in `frontend/package.json`; Vite 8 needs `^20.19 || >=22.12`, and Node 20 is end-of-life).
 - **npm** (ships with Node.js).
-- About 9 GB of free disk: the scraper data committed under `data/` (`raw/`, `prices_json/`, `inflation/`) takes about 6 GB checked out (plus the Git history), and the built database about 1.4 GB.
+- About 10 GB of free disk: the scraper data committed under `data/` (`raw/`, `prices_json/`, `inflation/`) takes about 6 GB checked out (plus the Git history), and the built database about 1.5 GB.
 
 No other repository or data download is needed: everything the API serves is built from the committed `data/` tree.
 
@@ -50,7 +50,7 @@ Files over 85 MB are committed as `.partNNN` chunks. `join` rebuilds the origina
 uv run python scripts/build_database.py
 ```
 
-Builds `data/prices.db` (about 1.4 GB) from `data/raw` and `data/prices_json`. It takes several minutes and uses all CPU cores but one (`--workers` to change). The database is never committed; rebuild it after pulling new data. Options and pipeline: [DATABASE.md](DATABASE.md). On Windows, stop the API first: an open database cannot be replaced.
+Builds `data/prices.db` (about 1.5 GB) from `data/raw` and `data/prices_json`, including the price-comparison columns the shop needs. It takes several minutes (about 5 on an 8-core machine) and uses all CPU cores but one (`--workers` to change). The database is never committed; rebuild it after pulling new data. Options and pipeline: [DATABASE.md](DATABASE.md). On Windows, stop the API first: an open database cannot be replaced.
 
 ## 4. Run the tests
 
@@ -69,7 +69,7 @@ uv run python scripts/run_falcon_server.py --engine granian --port 8000
 
 Check it from another terminal: `curl http://localhost:8000/api/health` should return `{"data": {"status": "ok", "database": "available"}, …}`. Flags (`--workers`, `--threads`, `--sqlite-db`, …) and environment variables are in [CONFIGURATION.md](CONFIGURATION.md). `uv run python scripts/run_falcon_server.py --help` lists them.
 
-## 6. Run the dashboard
+## 6. Run the frontend
 
 In a second terminal:
 
@@ -77,7 +77,7 @@ In a second terminal:
 cd frontend && npm install && npm run dev
 ```
 
-Open `http://localhost:5173`. Usage is described in [USER_GUIDE.md](USER_GUIDE.md).
+Open `http://localhost:5173` for the ucuzu shop and `http://localhost:5173/analiz` for the dashboard. Usage is described in [USER_GUIDE.md](USER_GUIDE.md).
 
 ## How the dashboard reaches the API
 
@@ -123,7 +123,8 @@ Data changes also need `uv run python scripts/data_files.py check`. The per-chan
 ## Troubleshooting
 
 - **Data endpoints return 503 `database_unavailable`** (`/api/health` shows `"database": "unavailable"`): the database file is missing or empty. Run `uv run python scripts/build_database.py`, or point `PRICES_DB_PATH` / `--sqlite-db` at a built database, then restart the API.
-- **Dashboard shows a network error:** the API is not running on port 8000, or (outside `npm run dev`) nothing routes `/api` to it. See [How the dashboard reaches the API](#how-the-dashboard-reaches-the-api).
+- **Shop pages show 503 `database_outdated`** (the dashboard still works): the database was built before the shop's catalog columns existed. Rebuild it with `uv run python scripts/build_database.py`, then restart the API.
+- **Shop or dashboard shows a network error:** the API is not running on port 8000, or (outside `npm run dev`) nothing routes `/api` to it. See [How the dashboard reaches the API](#how-the-dashboard-reaches-the-api).
 - **Values in `.env` are ignored:** nothing loads `.env`; export the variables instead ([CONFIGURATION.md](CONFIGURATION.md)).
 - **EpeyKatfg monthly view is empty:** `data/inflation/EpeyKatfg/monthly_inflation.csv` (or `EPEYKATFG_MONTHLY_CSV`) is missing.
 - **Build fails to replace the database on Windows:** stop the API (and anything else holding `data/prices.db` open) and rebuild.

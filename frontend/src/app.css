@@ -1,55 +1,59 @@
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap');
 
-/* ── Paper + ink design tokens ────────────────────────────────────────────── */
+/* ── Design tokens: white surfaces, one blue accent ───────────────────────── */
 :root {
   color-scheme: light;
-  --color-primary: #24211d;
-  --color-on-primary: #fffdf8;
-  --color-secondary: #6c6258;
-  --color-accent: #c2410c;
-  --color-accent-soft: #f4e3d7;
-  --color-background: #f4f0e8;
-  --color-foreground: #24211d;
-  --color-card: #fffdf8;
-  --color-card-foreground: #24211d;
-  --color-muted: #ece6dc;
-  --color-muted-foreground: #6c6258;
-  --color-border: #c9c0b4;
-  --color-line: #2c2925;
-  --color-destructive: #b42318;
-  --color-positive: #176b4d;
-  --color-info: #2563eb;
-  --paper-dot: rgb(44 41 37 / 0.055);
-  --shadow-paper: 4px 4px 0 rgb(44 41 37 / 0.09);
-  --shadow-paper-small: 2px 2px 0 rgb(44 41 37 / 0.08);
-  --radius-panel: 24px;
-  --radius-control: 12px;
-  --font-sans: 'Fira Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --color-primary: #1468d6;
+  --color-on-primary: #ffffff;
+  --color-secondary: #5f6b7a;
+  --color-accent: #1468d6;
+  --color-accent-soft: #e8f1fd;
+  --color-background: #f5f7fa;
+  --color-foreground: #1d2530;
+  --color-card: #ffffff;
+  --color-card-foreground: #1d2530;
+  --color-muted: #eef1f5;
+  --color-muted-foreground: #5f6b7a;
+  --color-border: #e1e5eb;
+  --color-line: #d3d9e1;
+  --color-destructive: #c62828;
+  --color-positive: #0f8a4c;
+  --color-positive-soft: #e7f6ee;
+  --color-info: #1468d6;
+  --paper-dot: transparent;
+  --shadow-paper: 0 1px 3px rgb(16 24 40 / 0.06), 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-paper-small: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-hover: 0 6px 18px rgb(16 24 40 / 0.1);
+  --radius-panel: 12px;
+  --radius-control: 8px;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'Fira Code', ui-monospace, 'SF Mono', Menlo, monospace;
-  --font-display: 'Fira Code', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-display: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 :root.dark {
   color-scheme: dark;
-  --color-primary: #f7f2e8;
-  --color-on-primary: #24211d;
-  --color-secondary: #bdb3a5;
-  --color-accent: #fb923c;
-  --color-accent-soft: #4a2b1b;
-  --color-background: #171614;
-  --color-foreground: #f7f2e8;
-  --color-card: #211f1b;
-  --color-card-foreground: #f7f2e8;
-  --color-muted: #302d27;
-  --color-muted-foreground: #bdb3a5;
-  --color-border: #5c554b;
-  --color-line: #d7cbb9;
-  --color-destructive: #fca5a5;
-  --color-positive: #86efac;
-  --color-info: #93c5fd;
-  --paper-dot: rgb(247 242 232 / 0.045);
-  --shadow-paper: 4px 4px 0 rgb(0 0 0 / 0.28);
-  --shadow-paper-small: 2px 2px 0 rgb(0 0 0 / 0.24);
+  --color-primary: #5b9df0;
+  --color-on-primary: #0d1117;
+  --color-secondary: #a3adbb;
+  --color-accent: #5b9df0;
+  --color-accent-soft: #16273d;
+  --color-background: #0f1318;
+  --color-foreground: #e8edf3;
+  --color-card: #171c23;
+  --color-card-foreground: #e8edf3;
+  --color-muted: #1f252e;
+  --color-muted-foreground: #a3adbb;
+  --color-border: #2a313b;
+  --color-line: #39414d;
+  --color-destructive: #f28b82;
+  --color-positive: #4cc38a;
+  --color-positive-soft: #12291e;
+  --color-info: #5b9df0;
+  --paper-dot: transparent;
+  --shadow-paper: 0 1px 3px rgb(0 0 0 / 0.4);
+  --shadow-paper-small: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-hover: 0 6px 18px rgb(0 0 0 / 0.45);
 }
 
 /* ── Base ────────────────────────────────────────────────────────────────── */
@@ -67,8 +71,6 @@ body {
   margin: 0;
   min-height: 100vh;
   background-color: var(--color-background);
-  background-image: radial-gradient(var(--paper-dot) 0.7px, transparent 0.7px);
-  background-size: 18px 18px;
   color: var(--color-card-foreground);
   font-family: var(--font-sans);
   font-size: 15px;
@@ -83,8 +85,8 @@ h4 {
   color: var(--color-foreground);
   font-family: var(--font-display);
   font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.035em;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
 a {
@@ -176,4 +178,56 @@ summary,
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ── Shop layout primitives ──────────────────────────────────────────────── */
+.container {
+  width: min(1240px, 100%);
+  margin-inline: auto;
+  padding-inline: 16px;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+/* Six per row on wide screens so 6/12-item rails fill whole rows. */
+@media (min-width: 1180px) {
+  .product-grid.six {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+}
+
+.section-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.section-head a {
+  color: var(--color-accent);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--color-muted-foreground);
 }

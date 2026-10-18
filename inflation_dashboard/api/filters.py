@@ -60,6 +60,12 @@ class DatabaseUnavailableError(RuntimeError):
         self.message = message
 
 
+class DatabaseOutdatedError(DatabaseUnavailableError):
+    """The database lacks the catalog columns (built by an older build script); HTTP 503."""
+
+    code = "database_outdated"
+
+
 def require_database() -> None:
     """Raise DatabaseUnavailableError unless the serving database is available."""
     if not is_sqlite_available():

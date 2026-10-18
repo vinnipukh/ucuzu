@@ -139,6 +139,27 @@ def test_build_dedupes_days_and_keeps_latest_name(tmp_path: Path) -> None:
     assert not [p.name for p in tmp_path.iterdir() if ".building" in p.name or ".staging" in p.name]
 
 
+def test_build_stores_catalog_columns(tmp_path: Path) -> None:
+    raw = tmp_path / "raw" / "01_Food" / "Kim"
+    raw.mkdir(parents=True)
+    (raw / "kim_2026-01-01.csv").write_text("product_id,name,price\n7,ÇAY 500 G,10\n8,Su,5\n", encoding="utf-8")
+    (raw / "kim_2026-01-02.csv").write_text("product_id,name,price\n7,ÇAY 500 G,10\n", encoding="utf-8")
+    (raw / "kim_2026-01-03.csv").write_text("product_id,name,price\n7,ÇAY 500 G,8\n", encoding="utf-8")
+    db_path = tmp_path / "prices.db"
+
+    build_database.build(tmp_path, db_path, workers=1)
+
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute(
+            "SELECT product_id, name_key, latest_price, previous_price, price_since, is_current "
+            "FROM products ORDER BY product_id"
+        ).fetchall()
+        indexes = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'index'")}
+    # The price changed on 01-03 (10 -> 8); Su was last seen two days before Kim's newest file.
+    assert rows == [("7", "çay 500g", 8.0, 10.0, "2026-01-03", 1), ("8", "su", 5.0, None, "2026-01-01", 1)]
+    assert "idx_products_name_key" in indexes
+
+
 def test_split_and_join_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(data_files, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(data_files, "GITIGNORE", tmp_path / ".gitignore")

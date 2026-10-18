@@ -43,6 +43,7 @@ for entry in (REPO_ROOT, Path(__file__).resolve().parent):
 
 import data_files  # noqa: E402
 
+from inflation_dashboard.domain.catalog import name_key  # noqa: E402
 from inflation_dashboard.domain.prices import NAME_COLUMNS, PRICE_COLUMNS, build_product_frame  # noqa: E402
 
 DATA_DIR = REPO_ROOT / "data"
@@ -74,6 +75,9 @@ DATE_PATTERNS = (
 )
 
 UNCATEGORIZED = "Uncategorized"
+# Products last seen longer ago than this (before the newest date in the database)
+# are not current, so retailers that stopped being scraped drop out of the catalog.
+CURRENT_WINDOW_DAYS = 45
 
 SCHEMA = """
 CREATE TABLE retailers (
@@ -96,11 +100,16 @@ CREATE TABLE sources (
     ingested_at TEXT NOT NULL
 );
 -- One row per (retailer, product); name and category are the latest observed values.
+-- name_key (domain.catalog.name_key) matches the same item across retailers;
+-- previous_price/price_since describe the latest price change and is_current marks
+-- products seen within 7 days of their retailer's newest date and within
+-- CURRENT_WINDOW_DAYS of the newest date in the database.
 CREATE TABLE products (
     product_key INTEGER PRIMARY KEY,
     retailer_key INTEGER NOT NULL REFERENCES retailers,
     product_id TEXT NOT NULL,
     product_name TEXT NOT NULL,
+    name_key TEXT NOT NULL,
     category_key INTEGER NOT NULL REFERENCES categories,
     first_date TEXT,
     last_date TEXT,
@@ -108,6 +117,9 @@ CREATE TABLE products (
     min_price REAL,
     max_price REAL,
     observations_count INTEGER,
+    previous_price REAL,
+    price_since TEXT,
+    is_current INTEGER NOT NULL DEFAULT 0,
     UNIQUE (retailer_key, product_id)
 );
 -- One row per product per day, clustered so a product's history is one range read.
@@ -125,6 +137,7 @@ INDEXES = """
 CREATE INDEX idx_products_retailer_name ON products(retailer_key, product_name);
 CREATE INDEX idx_products_name ON products(product_name);
 CREATE INDEX idx_products_product_id ON products(product_id);
+CREATE INDEX idx_products_name_key ON products(name_key);
 CREATE INDEX idx_sources_retailer_date ON sources(retailer_key, date);
 """
 
@@ -333,14 +346,16 @@ class Loader:
 
         Inserts retailers, categories and products, copies the staged rows into
         ``observations`` keeping the last staged row per (product, date), then fills each
-        product's first/last date, min/max price, observation count and latest price.
+        product's first/last date, min/max price, observation count, latest price,
+        latest price change (``previous_price``, ``price_since``) and ``is_current``.
         """
         conn = self.conn
         conn.executemany("INSERT INTO retailers VALUES (?, ?)", [(k, n) for n, k in self.retailers.items()])
         conn.executemany("INSERT INTO categories VALUES (?, ?)", [(k, n) for n, k in self.categories.items()])
         conn.executemany(
-            "INSERT INTO products (product_key, retailer_key, product_id, product_name, category_key) VALUES (?, ?, ?, ?, ?)",
-            [(e[0], rk, pid, e[2], e[3]) for (rk, pid), e in self.products.items()],
+            "INSERT INTO products (product_key, retailer_key, product_id, product_name, name_key, category_key) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [(e[0], rk, pid, e[2], name_key(e[2]), e[3]) for (rk, pid), e in self.products.items()],
         )
         conn.commit()
         print(f"Writing observations ({self.staged_rows:,} staged rows, last row per product/day wins)...")
@@ -379,6 +394,38 @@ class Loader:
             FROM (SELECT product_key, max(date), price FROM observations GROUP BY product_key) AS latest
             WHERE products.product_key = latest.product_key
             """
+        )
+        conn.commit()
+        print("Computing price changes...")
+        # previous_price is the price on the newest day that differs from latest_price;
+        # price_since is the first day of the current price.
+        conn.execute(
+            """
+            UPDATE products SET previous_price = prev.price, price_since = prev.since
+            FROM (
+                SELECT ch.product_key, o.price,
+                       (SELECT min(o2.date) FROM observations AS o2
+                        WHERE o2.product_key = ch.product_key AND o2.date > ch.changed) AS since
+                FROM (
+                    SELECT o.product_key, max(o.date) AS changed
+                    FROM observations AS o JOIN products AS p ON p.product_key = o.product_key
+                    WHERE o.price <> p.latest_price
+                    GROUP BY o.product_key
+                ) AS ch
+                JOIN observations AS o ON o.product_key = ch.product_key AND o.date = ch.changed
+            ) AS prev
+            WHERE products.product_key = prev.product_key
+            """
+        )
+        conn.execute("UPDATE products SET price_since = first_date WHERE price_since IS NULL")
+        conn.execute(
+            """
+            UPDATE products SET is_current = (products.last_date >= r.cutoff AND products.last_date >= g.cutoff)
+            FROM (SELECT retailer_key, date(max(last_date), '-7 days') AS cutoff FROM products GROUP BY retailer_key) AS r,
+                 (SELECT date(max(last_date), ?) AS cutoff FROM products) AS g
+            WHERE products.retailer_key = r.retailer_key
+            """,
+            (f"-{CURRENT_WINDOW_DAYS} days",),
         )
         conn.commit()
 

@@ -8,6 +8,8 @@ This file owns the database schema, indexes, build pipeline and runtime connecti
 
 If the database file is missing or 0 bytes, `/api/health` still returns 200 with `data.database: "unavailable"`, and every data endpoint returns HTTP 503 with error code `database_unavailable` and message "Database not found; run scripts/build_database.py". The API reads no other data source.
 
+A database built before the catalog columns existed (`products` without `name_key`, `previous_price`, `price_since` or `is_current`) still serves every other endpoint, but the `/api/catalog/*` routes return HTTP 503 with error code `database_outdated` and message "Database predates the catalog; run scripts/build_database.py". Rebuild the database to fix it.
+
 ## Build pipeline
 
 `scripts/build_database.py` options: `--data-dir` (default `data/`), `--db-path` (default `PRICES_DB_PATH`, else `data/prices.db`) and `--workers` (default CPU count − 1, at least 1).
@@ -17,9 +19,10 @@ If the database file is missing or 0 bytes, `/api/health` still returns 200 with
 3. **Create the target.** Builds into `<db>.building` with `journal_mode=OFF`, `synchronous=OFF` and a 512 MB page cache, and attaches a scratch database `<db>.staging` (journal off) holding an append-only `obs` table, so staging pages never bloat the served file.
 4. **Ingest raw CSVs** in parallel worker processes (see [Raw CSV ingestion](#raw-csv-ingestion)).
 5. **Ingest JSON fallback** for retailers that got no raw rows (see [JSON fallback](#json-fallback)).
-6. **Write tables.** Inserts `retailers`, `categories` and `products`; copies staged observations into `observations`, keeping the **last staged row** per `(product, date)`; then fills each product's first/last date, min/max price, observation count and latest price.
-7. **Indexes, views, statistics.** Creates the [indexes](#indexes) and [views](#views), runs `ANALYZE`, and switches the file to `journal_mode=WAL` (what the read-only API connections expect).
-8. **Swap in.** Closes the connection, deletes `<db>.staging`, removes any stale `<db>-wal` and `<db>-shm`, and atomically replaces the target with `os.replace(<db>.building, <db>)`.
+6. **Write tables.** Inserts `retailers`, `categories` and `products` (with each product's `name_key`, see [Catalog columns](#catalog-columns)); copies staged observations into `observations`, keeping the **last staged row** per `(product, date)`; then fills each product's first/last date, min/max price, observation count and latest price.
+7. **Compute price changes** (printed as "Computing price changes..."). Fills `previous_price`, `price_since` and `is_current` on every product (see [Catalog columns](#catalog-columns)).
+8. **Indexes, views, statistics.** Creates the [indexes](#indexes) and [views](#views), runs `ANALYZE`, and switches the file to `journal_mode=WAL` (what the read-only API connections expect).
+9. **Swap in.** Closes the connection, deletes `<db>.staging`, removes any stale `<db>-wal` and `<db>-shm`, and atomically replaces the target with `os.replace(<db>.building, <db>)`.
 
 On Windows, stop the API before rebuilding: an open database cannot be replaced. On other platforms, restart the API after a rebuild; running workers keep their open connection and 5-minute caches.
 
@@ -83,10 +86,21 @@ Storage is normalized so repeated text is stored once. The schema is defined in 
 | `retailers` | retailer label | `retailer_key`, `name` (unique) |
 | `categories` | category name | `category_key`, `name` (unique) |
 | `sources` | ingested file (JSON: one synthetic row per date) | `source_key`, `file_path` (unique; raw CSVs relative to `data/`, e.g. `raw/01_Food/...`; JSON as `<file>.json#YYYY-MM-DD`), `retailer_key`, `date`, `file_size`, `mtime`, `rows_ingested`, `ingested_at` |
-| `products` | `(retailer_key, product_id)` (unique) | `product_key`, `retailer_key`, `product_id`, `product_name`, `category_key`, `first_date`, `last_date`, `latest_price`, `min_price`, `max_price`, `observations_count` |
+| `products` | `(retailer_key, product_id)` (unique) | `product_key`, `retailer_key`, `product_id`, `product_name`, `name_key`, `category_key`, `first_date`, `last_date`, `latest_price`, `min_price`, `max_price`, `observations_count`, `previous_price`, `price_since`, `is_current` |
 | `observations` | product per day | `product_key`, `date`, `price`, `category_key` (as observed that day), `source_key` |
 
 `observations` is a `WITHOUT ROWID` table with primary key `(product_key, date)`, so a product's full history is one contiguous range read. A product's name and category in `products` come from its latest observation; renamed products keep a single history.
+
+### Catalog columns
+
+These `products` columns serve the price-comparison catalog (`/api/catalog/*`, [FALCON_API_CONTRACT.md §4.10–§4.13](FALCON_API_CONTRACT.md#410-get-apicataloggroups)):
+
+| Column | Meaning |
+|---|---|
+| `name_key` | `name_key(product_name)` from `inflation_dashboard/domain/catalog.py`: Turkish-aware lowercase (`I` → `ı`, `İ` → `i`), decimal commas as dots, punctuation as spaces, number and unit joined (`500 g` → `500g`), whitespace collapsed. Products of different retailers with the same `name_key` are one catalog item. |
+| `previous_price` | Price on the newest day whose price differs from `latest_price`; `NULL` if the price never changed. |
+| `price_since` | First day of the current price (the day after `previous_price` was last seen), or `first_date` if the price never changed. |
+| `is_current` | `1` when `last_date` is within 7 days of the newest `last_date` of the product's retailer **and** within `CURRENT_WINDOW_DAYS` (45) days of the newest `last_date` in the database; else `0`. Products of retailers that stopped being scraped therefore drop out of the catalog. |
 
 ### Indexes
 
@@ -95,13 +109,14 @@ Storage is normalized so repeated text is stored once. The schema is defined in 
 | `idx_products_retailer_name` | `products(retailer_key, product_name)` |
 | `idx_products_name` | `products(product_name)` |
 | `idx_products_product_id` | `products(product_id)` |
+| `idx_products_name_key` | `products(name_key)` |
 | `idx_sources_retailer_date` | `sources(retailer_key, date)` |
 
 The unique constraints add automatic indexes on `retailers.name`, `categories.name`, `sources.file_path` and `products(retailer_key, product_id)`.
 
 ### Views
 
-The API adapter queries only these read-only views:
+The price adapter (`sqlite_price_repository.py`) queries only these read-only views; the catalog adapter (`sqlite_catalog_repository.py`) reads the `retailers`, `categories`, `products` and `observations` tables directly:
 
 | View | Shape |
 |---|---|

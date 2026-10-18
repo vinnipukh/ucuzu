@@ -1,6 +1,24 @@
 # User Guide
 
-How to use the dashboard. To start it, follow [GETTING-STARTED.md](GETTING-STARTED.md), then open `http://localhost:5173` (or wherever the dashboard is deployed).
+How to use the site. To start it, follow [GETTING-STARTED.md](GETTING-STARTED.md), then open `http://localhost:5173` (or wherever the site is deployed).
+
+The site has two parts:
+
+- the **ucuzu** price-comparison shop at `/` (Turkish), described in [Price comparison shop](#price-comparison-shop);
+- the **inflation dashboard** at `/analiz` (linked as **Analiz** in the shop header and "Enflasyon analizi" in its footer), described from [Header](#header) on. Its "← ucuzu" link returns to the shop.
+
+## Price comparison shop
+
+The same product is matched across stores by its normalized name, so one product page compares every store that sells it. Only current prices are listed: a store's price counts when it was seen within 7 days of that store's newest data. Rental listings (`HousesRent`) are not part of the shop.
+
+- **Header** — the search box (searches `/ara`), a category menu, links to **Fırsatlar** (deals), **Fiyat Alarmı** (price alarms, with a count) and **Analiz** (the dashboard), and a light/dark toggle.
+- **Home (`/`)** — shortcut tiles, recent price drops, popular products of the largest categories and the stores with the most products.
+- **Search (`/ara`)** — every word typed must appear in the product name (Turkish letters, case and units such as `1 L`/`1l` are normalized). Filter by category and store, sort by **Önerilen** (relevance), **En düşük fiyat**, **En yüksek fiyat** or **En çok düşen** (largest drop), and page through results (24 per page). The URL keeps the state (`q`, `group`, `store`, `sort`, `sayfa`), so searches can be bookmarked.
+- **Product page (`/urun/<name>`)** — the cheapest current price and store, the highest current price, the lowest price ever seen and the price gap between stores; every store's offer, cheapest first, with its latest price change; offers that are no longer current are folded under "Güncel olmayan … fiyat"; a step chart of each store's price history (1 month, 3 months or all); and similar products.
+- **Deals (`/firsatlar`)** — current offers whose latest price change was a drop, largest first. Filter by category, minimum drop (10–50 %) and period (last 7 or 30 days).
+- **Price alarms (`/alarmlar`)** — on a product page, **Fiyat alarmı kur** sets a target price (default 5 % below the cheapest current price). The alarms page shows each alarm with the current cheapest price and marks those at or below the target. Alarms are stored only in this browser (`localStorage` key `price-alarms`): they are not sent to the server, no notification is sent, and clearing site data or using another browser loses them.
+
+## Header
 
 ## Header
 
@@ -59,4 +77,5 @@ Month-over-month inflation from the EpeyKatfg artifact: cards for months covered
 
 - **"API unreachable"** or a network error: the API is not running, or the API URL in the sidebar is wrong. Clear the URL to use the same origin, or set the correct one and press Apply.
 - **"Database not found; run scripts/build_database.py"**: the API has no database yet; whoever runs the API must build it (see [GETTING-STARTED.md](GETTING-STARTED.md)).
+- **"Database predates the catalog; run scripts/build_database.py"** on the shop pages: the database was built before the shop existed. The dashboard at `/analiz` still works; rebuild the database to enable the shop.
 - **EpeyKatfg monthly view is empty:** the monthly inflation file is missing on the API side.

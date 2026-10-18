@@ -333,3 +333,95 @@ export interface MonthlyInflationMeta {
 
 /** Full `GET /api/epeykatfg/monthly-inflation` response. */
 export type MonthlyInflationResponse = ApiResponse<MonthlyInflationRecord[], MonthlyInflationMeta>;
+
+// ── Price-comparison catalog ─────────────────────────────────────────────────
+
+/** One store of a catalog group in `GET /api/catalog/groups`. */
+export interface CatalogStore {
+  store: string;
+  retailer: string;
+  offer_count: number;
+  last_date: string | null;
+}
+
+/** One group of `GET /api/catalog/groups` (retailer label prefix, e.g. `Markets`). */
+export interface CatalogGroup {
+  group: string;
+  offer_count: number;
+  last_date: string | null;
+  stores: CatalogStore[];
+}
+
+/** Sort orders accepted by `GET /api/catalog/search`. */
+export type CatalogSort = 'relevance' | 'price_asc' | 'price_desc' | 'drop';
+
+/** One item (all offers sharing a `name_key`) of `GET /api/catalog/search`. */
+export interface CatalogSearchItem {
+  key: string;
+  name: string; // name of the cheapest offer
+  group: string;
+  category: string;
+  store: string; // store of the cheapest offer
+  stores: string[]; // up to three stores, cheapest first
+  offer_count: number;
+  store_count: number;
+  min_price: number;
+  max_price: number;
+  max_drop_percent: number | null;
+  last_date: string | null;
+}
+
+/** `meta` of `GET /api/catalog/search`. */
+export interface CatalogSearchMeta {
+  query: string;
+  group: string | null;
+  store: string | null;
+  sort: CatalogSort;
+  limit: number;
+  offset: number;
+  count: number;
+  total: number;
+}
+
+/** One store's offer, as returned by `GET /api/catalog/item` and `GET /api/catalog/deals`. */
+export interface CatalogOffer {
+  retailer: string;
+  group: string;
+  store: string;
+  product_id: string;
+  product_name: string;
+  name_key: string;
+  category: string;
+  latest_price: number | null;
+  previous_price: number | null;
+  price_since: string | null;
+  first_date: string | null;
+  last_date: string | null;
+  min_price: number | null;
+  max_price: number | null;
+  observations_count: number;
+  is_current: boolean;
+  drop_percent: number | null;
+  history?: [string, number][]; // `GET /api/catalog/item` only
+}
+
+/** `data` of `GET /api/catalog/item`. */
+export interface CatalogItem {
+  key: string;
+  name: string;
+  group: string;
+  category: string;
+  offers: CatalogOffer[];
+  summary: {
+    offer_count: number;
+    current_offer_count: number;
+    store_count: number;
+    min_price: number | null;
+    max_price: number | null;
+    lowest_ever: { price: number; date: string; store: string } | null;
+    last_date: string | null;
+  };
+}
+
+/** Full `GET /api/catalog/search` response. */
+export type CatalogSearchResponse = ApiResponse<CatalogSearchItem[], CatalogSearchMeta>;

@@ -77,7 +77,7 @@ Other files under `data/inflation/` are committed for reference and are not read
 
 ## Updating the data
 
-The checklist (copy, `data_files.py check`/`split`, push batches, rebuild, verify) is in [DEVELOPMENT.md](DEVELOPMENT.md).
+The checklist (copy, `data_files.py check`/`split`, push batches, rebuild, verify) is in [DEVELOPMENT.md](DEVELOPMENT.md). Step-by-step commands for importing from InflationResearchStudy are in [SETUP.md](SETUP.md#4-take-new-csvs-from-inflationresearchstudy).
 
 ## Troubleshooting
 

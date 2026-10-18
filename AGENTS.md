@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Instructions for coding agents working in the Inflation Study Dashboard repository. Documentation index: [docs/README.md](docs/README.md).
+Instructions for coding agents working in the ucuzu / Inflation Study Dashboard repository (price-comparison shop at `/`, inflation dashboard at `/analiz`). Documentation index: [docs/README.md](docs/README.md).
 
 Known code defects are listed in [docs/ARCHITECTURE.md#known-issues](docs/ARCHITECTURE.md#known-issues); do not assume documented behaviour that is listed there.
 
@@ -10,7 +10,7 @@ This repository owns the web application only:
 
 | Path | Role |
 |---|---|
-| `frontend/` | Svelte 5 / SvelteKit production SPA |
+| `frontend/` | Svelte 5 / SvelteKit production SPA: the ucuzu shop (`src/routes/(shop)/`) and the dashboard (`src/routes/analiz/`) |
 | `inflation_dashboard/` | Falcon API, domain/application logic, SQLite adapter |
 | `scripts/` | API server, database build/migration, verification and benchmarks |
 | `data/` | Committed scraper output (`raw/`, `prices_json/`, `inflation/`); no scraper source code belongs here |
@@ -47,7 +47,7 @@ Full boundary rules and conventions: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md
 
 ## Development
 
-Same commands as the summary in [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md), which explains each step:
+Same commands as the summary in [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md), which explains each step. Importing new CSVs from the upstream data repository is walked through in [docs/SETUP.md](docs/SETUP.md#4-take-new-csvs-from-inflationresearchstudy):
 
 ```bash
 uv sync --extra dev

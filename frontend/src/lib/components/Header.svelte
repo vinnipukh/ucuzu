@@ -21,7 +21,7 @@
       </svg>
     </div>
     <div>
-      <p class="paper-kicker">market research / 01</p>
+      <p class="paper-kicker"><a href="/">← ucuzu</a> · market research / 01</p>
       <h1 class="wordmark">Inflation Study</h1>
       <p class="subtitle">Price tracking across Turkish retailers — Falcon API</p>
     </div>
