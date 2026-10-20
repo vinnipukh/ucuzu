@@ -1,0 +1,22 @@
+{
+"İstanbul (Adalar, Bakırköy)": {"name": "İstanbul (Adalar, Bakırköy)", "category": "Uncategorized", "latest_price": 600.0, "min_price": 600.0, "max_price": 600.0, "prices": {"2026-06-01": 600.0, "2026-06-02": 600.0}},
+"İstanbul (Adalar, Beykoz)": {"name": "İstanbul (Adalar, Beykoz)", "category": "Uncategorized", "latest_price": 1000.0, "min_price": 1000.0, "max_price": 1000.0, "prices": {"2026-06-01": 1000.0, "2026-06-02": 1000.0}},
+"İstanbul (Adalar, Beşiktaş)": {"name": "İstanbul (Adalar, Beşiktaş)", "category": "Uncategorized", "latest_price": 1000.0, "min_price": 1000.0, "max_price": 1000.0, "prices": {"2026-06-01": 1000.0, "2026-06-02": 1000.0}},
+"İstanbul (Avcılar, Beylikdüzü)": {"name": "İstanbul (Avcılar, Beylikdüzü)", "category": "Uncategorized", "latest_price": 600.0, "min_price": 600.0, "max_price": 600.0, "prices": {"2026-06-01": 600.0, "2026-06-02": 600.0}},
+"İstanbul (Bakırköy, Beykoz)": {"name": "İstanbul (Bakırköy, Beykoz)", "category": "Uncategorized", "latest_price": 600.0, "min_price": 600.0, "max_price": 600.0, "prices": {"2026-06-01": 600.0, "2026-06-02": 600.0}},
+"İstanbul (Bakırköy, Beyoğlu)": {"name": "İstanbul (Bakırköy, Beyoğlu)", "category": "Uncategorized", "latest_price": 600.0, "min_price": 600.0, "max_price": 600.0, "prices": {"2026-06-01": 600.0, "2026-06-02": 600.0}},
+"İstanbul (Bakırköy, Beşiktaş)": {"name": "İstanbul (Bakırköy, Beşiktaş)", "category": "Uncategorized", "latest_price": 600.0, "min_price": 600.0, "max_price": 600.0, "prices": {"2026-06-01": 600.0, "2026-06-02": 600.0}},
+"İstanbul (Bakırköy, Kadıköy)": {"name": "İstanbul (Bakırköy, Kadıköy)", "category": "Uncategorized", "latest_price": 600.0, "min_price": 600.0, "max_price": 600.0, "prices": {"2026-06-01": 600.0, "2026-06-02": 600.0}},
+"İstanbul (Bakırköy, Küçükçekmece)": {"name": "İstanbul (Bakırköy, Küçükçekmece)", "category": "Uncategorized", "latest_price": 600.0, "min_price": 600.0, "max_price": 600.0, "prices": {"2026-06-01": 600.0, "2026-06-02": 600.0}},
+"İstanbul (Beşiktaş, Beykoz)": {"name": "İstanbul (Beşiktaş, Beykoz)", "category": "Uncategorized", "latest_price": 500.0, "min_price": 500.0, "max_price": 500.0, "prices": {"2026-06-01": 500.0, "2026-06-02": 500.0}},
+"İstanbul (Beşiktaş, Eminönü)": {"name": "İstanbul (Beşiktaş, Eminönü)", "category": "Uncategorized", "latest_price": 600.0, "min_price": 600.0, "max_price": 600.0, "prices": {"2026-06-01": 600.0, "2026-06-02": 600.0}},
+"İstanbul (Beşiktaş, Fatih)": {"name": "İstanbul (Beşiktaş, Fatih)", "category": "Uncategorized", "latest_price": 600.0, "min_price": 600.0, "max_price": 600.0, "prices": {"2026-06-01": 600.0, "2026-06-02": 600.0}},
+"İstanbul (Beşiktaş, Kadıköy)": {"name": "İstanbul (Beşiktaş, Kadıköy)", "category": "Uncategorized", "latest_price": 600.0, "min_price": 600.0, "max_price": 600.0, "prices": {"2026-06-01": 600.0, "2026-06-02": 600.0}},
+"İstanbul (Beşiktaş, Sarıyer)": {"name": "İstanbul (Beşiktaş, Sarıyer)", "category": "Uncategorized", "latest_price": 500.0, "min_price": 500.0, "max_price": 500.0, "prices": {"2026-06-01": 500.0, "2026-06-02": 500.0}},
+"İstanbul (Beşiktaş, Şişli)": {"name": "İstanbul (Beşiktaş, Şişli)", "category": "Uncategorized", "latest_price": 450.0, "min_price": 450.0, "max_price": 450.0, "prices": {"2026-06-01": 450.0, "2026-06-02": 450.0}},
+"İstanbul (Kadıköy, Kartal)": {"name": "İstanbul (Kadıköy, Kartal)", "category": "Uncategorized", "latest_price": 600.0, "min_price": 600.0, "max_price": 600.0, "prices": {"2026-06-01": 600.0, "2026-06-02": 600.0}},
+"İstanbul (Kadıköy, Üsküdar)": {"name": "İstanbul (Kadıköy, Üsküdar)", "category": "Uncategorized", "latest_price": 500.0, "min_price": 500.0, "max_price": 500.0, "prices": {"2026-06-01": 500.0, "2026-06-02": 500.0}},
+"İstanbul (Kartal, Pendik)": {"name": "İstanbul (Kartal, Pendik)", "category": "Uncategorized", "latest_price": 900.0, "min_price": 900.0, "max_price": 900.0, "prices": {"2026-06-01": 900.0, "2026-06-02": 900.0}},
+"İstanbul (Zeytinburnu, Küçükçekmece)": {"name": "İstanbul (Zeytinburnu, Küçükçekmece)", "category": "Uncategorized", "latest_price": 500.0, "min_price": 500.0, "max_price": 500.0, "prices": {"2026-06-01": 500.0, "2026-06-02": 500.0}},
+"İstanbul (Çatalca, Silivri)": {"name": "İstanbul (Çatalca, Silivri)", "category": "Uncategorized", "latest_price": 1000.0, "min_price": 1000.0, "max_price": 1000.0, "prices": {"2026-06-01": 1000.0, "2026-06-02": 1000.0}}
+}
