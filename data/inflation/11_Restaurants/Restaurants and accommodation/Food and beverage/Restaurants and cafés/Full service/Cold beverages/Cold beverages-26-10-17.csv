@@ -1,0 +1,520 @@
+product_name,price,category_number,sub_category_number
+AD ASTRA KAFE | LİMONATA | menum.co/astra-cafe,80.00,11,1111153
+AGA KÖFTE 2005 | Beyoğlu gazoz (250 Ml.) | menum.co/agakofte-2005,16.00,11,1111153
+AGA KÖFTE 2005 | Coco Cola (200 Ml.) | menum.co/agakofte-2005,18.00,11,1111153
+AGA KÖFTE 2005 | Şalgam | menum.co/agakofte-2005,18.00,11,1111153
+Azak Blue Restaurant | Su | menum.co/azak-restaurant,30.00,11,1111153
+Azak Blue Restaurant | Şalgam | menum.co/azak-restaurant,50.00,11,1111153
+BAYRAMOĞLU RESORT HOTEL | BARDAK SU | menum.co/Restaurant1,25.00,11,1111153
+BAYRAMOĞLU RESORT HOTEL | BUZLU ÇAY | menum.co/Restaurant1,100.00,11,1111153
+BAYRAMOĞLU RESORT HOTEL | COCA COLA 33 CL | menum.co/Restaurant1,100.00,11,1111153
+BAYRAMOĞLU RESORT HOTEL | COCA COLA ZERO 33 CL | menum.co/Restaurant1,100.00,11,1111153
+BAYRAMOĞLU RESORT HOTEL | COCA COLA | menum.co/Restaurant1,120.00,11,1111153
+BAYRAMOĞLU RESORT HOTEL | ENERJİ İÇECEĞİ 33 CL | menum.co/Restaurant1,150.00,11,1111153
+BAYRAMOĞLU RESORT HOTEL | FANTA 33 CL | menum.co/Restaurant1,100.00,11,1111153
+BAYRAMOĞLU RESORT HOTEL | Karpuz Limonata | menum.co/Restaurant1,200.00,11,1111153
+BAYRAMOĞLU RESORT HOTEL | MEYVELİ SODA | menum.co/Restaurant1,65.00,11,1111153
+BAYRAMOĞLU RESORT HOTEL | PORTAKAL SUYU | menum.co/Restaurant1,200.00,11,1111153
+BAYRAMOĞLU RESORT HOTEL | SODA | menum.co/Restaurant1,60.00,11,1111153
+BAYRAMOĞLU RESORT HOTEL | SOĞUK KAHVE | menum.co/Restaurant1,120.00,11,1111153
+BAYRAMOĞLU RESORT HOTEL | SPRITE 33CL | menum.co/Restaurant1,100.00,11,1111153
+"BAYRAMOĞLU RESORT HOTEL | SU 0,5 LT | menum.co/Restaurant1",40.00,11,1111153
+"BAYRAMOĞLU RESORT HOTEL | SU 1,5 LT | menum.co/Restaurant1",100.00,11,1111153
+Bo İstanbul | Coca Cola Zero | menum.co/BoIstanbul,100.00,11,1111153
+Bo İstanbul | Coca Cola | menum.co/BoIstanbul,100.00,11,1111153
+Bo İstanbul | Fanta | menum.co/BoIstanbul,100.00,11,1111153
+Bo İstanbul | Sprite | menum.co/BoIstanbul,100.00,11,1111153
+Burdur İş yurtları Kurumu Restoran | Sarıyer Kola | menum.co/Burdur-isyurdu-restoran,35.00,11,1111153
+Cafe Sheen | Coca Cola | menum.co/SheenCafe,50.00,11,1111153
+Cafe Sheen | Fanta | menum.co/SheenCafe,50.00,11,1111153
+Cafe Sheen | Fuse Tea (SOĞUK İÇECEKLER) | menum.co/SheenCafe,50.00,11,1111153
+Cafe Sheen | Ice Americano | menum.co/SheenCafe,85.00,11,1111153
+Cafe Sheen | Ice Latte | menum.co/SheenCafe,90.00,11,1111153
+Cafe Sheen | Ice Mocha | menum.co/SheenCafe,95.00,11,1111153
+Cafe Sheen | Mango Suyu | menum.co/SheenCafe,140.00,11,1111153
+Cafe Sheen | Muz Mix (SOĞUK İÇECEKLER) | menum.co/SheenCafe,140.00,11,1111153
+Cafe Sheen | Muz-Çilek-Elma (SOĞUK İÇECEKLER) | menum.co/SheenCafe,160.00,11,1111153
+Cafe Sheen | Nar Suyu | menum.co/SheenCafe,140.00,11,1111153
+Cafe Sheen | Portakal Suyu | menum.co/SheenCafe,90.00,11,1111153
+Cafe Sheen | Schweppes | menum.co/SheenCafe,50.00,11,1111153
+Cafe Sheen | Sprite | menum.co/SheenCafe,50.00,11,1111153
+Cezve sanat | CARAMEL MİLKSHAKE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | CHURCHİLL | menum.co/Cafe-restoran-sahne,150.00,11,1111153
+Cezve sanat | ENERJİ İÇECEĞİ | menum.co/Cafe-restoran-sahne,15.00,11,1111153
+Cezve sanat | GAZOZ 7UP | menum.co/Cafe-restoran-sahne,120.00,11,1111153
+Cezve sanat | ICE AMERİCANO | menum.co/Cafe-restoran-sahne,190.00,11,1111153
+Cezve sanat | ICE CARAMEL LATTE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | ICE LATTE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | ICE MOCHA | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | ICE TEA | menum.co/Cafe-restoran-sahne,120.00,11,1111153
+Cezve sanat | KARADUT FROZEN | menum.co/Cafe-restoran-sahne,190.00,11,1111153
+Cezve sanat | KARADUT MİLKSHAKE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | KARADUT SMOOTHİE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | KARADUT ŞERBETİ (MEŞRUBATLAR) | menum.co/Cafe-restoran-sahne,160.00,11,1111153
+Cezve sanat | KİVİ FROZEN | menum.co/Cafe-restoran-sahne,190.00,11,1111153
+Cezve sanat | KİVİ MİLKSHAKE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | KİVİ SMOOTHİE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | LİMONOTA (MEŞRUBATLAR) | menum.co/Cafe-restoran-sahne,170.00,11,1111153
+Cezve sanat | MEYVELİ SODA | menum.co/Cafe-restoran-sahne,90.00,11,1111153
+Cezve sanat | MUZ FROZEN | menum.co/Cafe-restoran-sahne,190.00,11,1111153
+Cezve sanat | MUZ MİLKSHAKE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | MUZ SMOOTHİE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | OREO MİLKSHAKE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | ORMAN MEYVE MİLKSHAKE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | ORMAN MEYVELİ FROZEN | menum.co/Cafe-restoran-sahne,190.00,11,1111153
+Cezve sanat | ORMAN MEYVELİ SMOOTHİE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | PEPSİ COLA | menum.co/Cafe-restoran-sahne,120.00,11,1111153
+Cezve sanat | SADE SODA | menum.co/Cafe-restoran-sahne,80.00,11,1111153
+Cezve sanat | Su | menum.co/Cafe-restoran-sahne,50.00,11,1111153
+Cezve sanat | TROPİCANO MEYVE SUYU | menum.co/Cafe-restoran-sahne,120.00,11,1111153
+Cezve sanat | VANİLYA MİLKSHAKE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | VANİLYA SMOOTHİE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | YEDİGÜN (MEŞRUBATLAR) | menum.co/Cafe-restoran-sahne,120.00,11,1111153
+Cezve sanat | YEŞİL ELMA FROZEN | menum.co/Cafe-restoran-sahne,190.00,11,1111153
+Cezve sanat | YEŞİL ELMA MİLKSHAKE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | YEŞİL ELMA SMOOTHİE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | ÇİKOLATA MİLKSHAKE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | ÇİLEK FROZEN | menum.co/Cafe-restoran-sahne,190.00,11,1111153
+Cezve sanat | ÇİLEK MİLKSHAKE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | ÇİLEK SMOOTHİE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | ŞEFTALİ FROZEN | menum.co/Cafe-restoran-sahne,190.00,11,1111153
+Cezve sanat | ŞEFTALİ MİLKSHAKE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+Cezve sanat | ŞEFTALİ SMOOTHİE | menum.co/Cafe-restoran-sahne,200.00,11,1111153
+diva pastanesi | Bodrum Mandalina Gazozu | menum.co/diva-2pastanesi,60.00,11,1111153
+diva pastanesi | Dimes meyve suyu | menum.co/diva-2pastanesi,30.00,11,1111153
+diva pastanesi | Meyve suları | menum.co/diva-2pastanesi,80.00,11,1111153
+ECEM CAFE | Coca-Cola | menum.co/Ecem-restoran,70.00,11,1111153
+ECEM CAFE | Fanta | menum.co/Ecem-restoran,70.00,11,1111153
+ECEM CAFE | Lipton İce tea | menum.co/Ecem-restoran,70.00,11,1111153
+ECEM CAFE | Sprite | menum.co/Ecem-restoran,70.00,11,1111153
+ECEM CAFE | Su | menum.co/Ecem-restoran,20.00,11,1111153
+Evim Izgara | Fanta | menum.co/evimizgara,50.00,11,1111153
+Evim Izgara | Gazoz | menum.co/evimizgara,40.00,11,1111153
+Evim Izgara | Kola | menum.co/evimizgara,50.00,11,1111153
+Evim Izgara | Su | menum.co/evimizgara,10.00,11,1111153
+Fibonacci Cafe & Bistro | Ice Americano | menum.co/fibonacci-cafe-bistro,130.00,11,1111153
+Fibonacci Cafe & Bistro | Ice Caramel Latte | menum.co/fibonacci-cafe-bistro,160.00,11,1111153
+Fibonacci Cafe & Bistro | Ice Latte | menum.co/fibonacci-cafe-bistro,150.00,11,1111153
+Fibonacci Cafe & Bistro | Ice Mocha | menum.co/fibonacci-cafe-bistro,175.00,11,1111153
+Fibonacci Cafe & Bistro | Iced White Chocolate Mocha | menum.co/fibonacci-cafe-bistro,175.00,11,1111153
+Fİ 712 | BEYPAZARI SODA | fi712.qr.menulux.com,120.00,11,1111153
+Fİ 712 | CAPPY ELMA (SOFT İÇECEKLER) | fi712.qr.menulux.com,200.00,11,1111153
+Fİ 712 | CAPPY KARIŞIK (SOFT İÇECEKLER) | fi712.qr.menulux.com,200.00,11,1111153
+Fİ 712 | CAPPY VİŞNE (SOFT İÇECEKLER) | fi712.qr.menulux.com,200.00,11,1111153
+Fİ 712 | CAPPY ŞEFTALİ (SOFT İÇECEKLER) | fi712.qr.menulux.com,200.00,11,1111153
+Fİ 712 | CHURCHİLL | fi712.qr.menulux.com,175.00,11,1111153
+Fİ 712 | COCA COLA ZERO | fi712.qr.menulux.com,200.00,11,1111153
+Fİ 712 | COCA COLA | fi712.qr.menulux.com,200.00,11,1111153
+Fİ 712 | COOL LİME | fi712.qr.menulux.com,550.00,11,1111153
+Fİ 712 | FANTA | fi712.qr.menulux.com,200.00,11,1111153
+Fİ 712 | MOET CHANDON ICE IMPARIAL | fi712.qr.menulux.com,14250.00,11,1111153
+Fİ 712 | REDBULL | fi712.qr.menulux.com,300.00,11,1111153
+Fİ 712 | REDBULL ŞEKERSİZ | fi712.qr.menulux.com,300.00,11,1111153
+Fİ 712 | SAN PELLEGRINO (SOFT İÇECEKLER) | fi712.qr.menulux.com,300.00,11,1111153
+Fİ 712 | SCHWEPPES TONİK | fi712.qr.menulux.com,200.00,11,1111153
+Fİ 712 | SIKMA PORTAKAL SUYU | fi712.qr.menulux.com,250.00,11,1111153
+Fİ 712 | SPRİTE | fi712.qr.menulux.com,200.00,11,1111153
+Fİ 712 | ULUDAĞ PREMIUM SU BÜYÜK | fi712.qr.menulux.com,150.00,11,1111153
+Fİ 712 | ULUDAĞ SODA | fi712.qr.menulux.com,120.00,11,1111153
+FİKİRHANE | Aromalı milkshake | menum.co/FIKIRHANE-CAFE-RESTAURANT,165.00,11,1111153
+FİKİRHANE | Frozen limonata | menum.co/FIKIRHANE-CAFE-RESTAURANT,120.00,11,1111153
+FİKİRHANE | Frozen | menum.co/FIKIRHANE-CAFE-RESTAURANT,120.00,11,1111153
+FİKİRHANE | Sade milkshake | menum.co/FIKIRHANE-CAFE-RESTAURANT,150.00,11,1111153
+FİKİRHANE | çilekli frozen limonata | menum.co/FIKIRHANE-CAFE-RESTAURANT,125.00,11,1111153
+GİLLA LOUNGE | Red Bull Blue Editon | menum.co/lounge-gilla,120.00,11,1111153
+GİLLA LOUNGE | Red Bull Regular | menum.co/lounge-gilla,120.00,11,1111153
+GİLLA LOUNGE | Red Bull Sugar Free | menum.co/lounge-gilla,100.00,11,1111153
+GİLLA LOUNGE | Red Bull White Edition | menum.co/lounge-gilla,120.00,11,1111153
+GOOD FOR YOU | ICE AMERICANO | menum.co/coffee-goodforyou,110.00,11,1111153
+GOOD FOR YOU | ICE CAPPUCCINO | menum.co/coffee-goodforyou,140.00,11,1111153
+GOOD FOR YOU | ICE FILTRE KAHVE | menum.co/coffee-goodforyou,100.00,11,1111153
+GOOD FOR YOU | ICE LATTE | menum.co/coffee-goodforyou,140.00,11,1111153
+GOOD FOR YOU | ICE MOCHA | menum.co/coffee-goodforyou,150.00,11,1111153
+"HAMPTON BY HİLTON MERTER İSTANBUL | COLA,FANTA,SPRITE,FUSE TEA,SPRİTE,CAM SU (0.75),SADE LİMONATA,ICE AMRICANO | menum.co/THE-HUB",100.00,11,1111153
+"HAMPTON BY HİLTON MERTER İSTANBUL | FROZEN(KARADUT,BÖĞÜRTLEN,MUZ,ÇİLEK) | menum.co/THE-HUB",140.00,11,1111153
+HAMPTON BY HİLTON MERTER İSTANBUL | MİLKSHAKE | menum.co/THE-HUB,150.00,11,1111153
+İSTASYON 1923 | AROMALI MADEN SUYU | istasyon1923.qr.menulux.com,60.00,11,1111153
+İSTASYON 1923 | BÜYÜK SU | istasyon1923.qr.menulux.com,60.00,11,1111153
+İSTASYON 1923 | CAPPY (MEŞRUBATLAR) | istasyon1923.qr.menulux.com,90.00,11,1111153
+İSTASYON 1923 | CHURCHİLL | istasyon1923.qr.menulux.com,100.00,11,1111153
+İSTASYON 1923 | COCA COLA ZERO | istasyon1923.qr.menulux.com,90.00,11,1111153
+İSTASYON 1923 | COCA COLA | istasyon1923.qr.menulux.com,90.00,11,1111153
+İSTASYON 1923 | FANTA | istasyon1923.qr.menulux.com,90.00,11,1111153
+İSTASYON 1923 | ICE TEA | istasyon1923.qr.menulux.com,90.00,11,1111153
+İSTASYON 1923 | İSTASYON CHURCHİLL | istasyon1923.qr.menulux.com,120.00,11,1111153
+İSTASYON 1923 | KÜÇÜK SU | istasyon1923.qr.menulux.com,30.00,11,1111153
+İSTASYON 1923 | LİMONATA | istasyon1923.qr.menulux.com,150.00,11,1111153
+İSTASYON 1923 | MADEN SUYU | istasyon1923.qr.menulux.com,50.00,11,1111153
+İSTASYON 1923 | SPRİTE | istasyon1923.qr.menulux.com,90.00,11,1111153
+İSTASYON 1923 | Taze Sıkılmış Meyve Suyu | istasyon1923.qr.menulux.com,175.00,11,1111153
+İSTASYON 1923 | ŞALGAM | istasyon1923.qr.menulux.com,60.00,11,1111153
+İSTASYON 1923 | ŞERBET (750 ml) (MEŞRUBATLAR) | istasyon1923.qr.menulux.com,249.00,11,1111153
+İSTASYON 1923 | ŞERBET (BARDAK) (MEŞRUBATLAR) | istasyon1923.qr.menulux.com,70.00,11,1111153
+kepi-izgara-pide | COCA COLA ZERO KUTU | menum.co/kepi-izgara-pide,90.00,11,1111153
+kepi-izgara-pide | COCA COLA ZERO ŞİŞE | menum.co/kepi-izgara-pide,90.00,11,1111153
+kepi-izgara-pide | FANTA KUTU | menum.co/kepi-izgara-pide,90.00,11,1111153
+kepi-izgara-pide | KUTU GAZOZ | menum.co/kepi-izgara-pide,90.00,11,1111153
+kepi-izgara-pide | KUTU KOLA | menum.co/kepi-izgara-pide,90.00,11,1111153
+kepi-izgara-pide | KUTU MEYVE SUYU KARIŞIK | menum.co/kepi-izgara-pide,90.00,11,1111153
+kepi-izgara-pide | PORTAKALLI GAZOZ KUTU | menum.co/kepi-izgara-pide,70.00,11,1111153
+kepi-izgara-pide | PORTAKALLI GAZOZ ŞİŞE | menum.co/kepi-izgara-pide,90.00,11,1111153
+kepi-izgara-pide | SADE GAZOZ ŞİŞE | menum.co/kepi-izgara-pide,90.00,11,1111153
+kepi-izgara-pide | SADE SODA | menum.co/kepi-izgara-pide,45.00,11,1111153
+kepi-izgara-pide | SU | menum.co/kepi-izgara-pide,30.00,11,1111153
+kepi-izgara-pide | ŞALGAM | menum.co/kepi-izgara-pide,90.00,11,1111153
+kepi-izgara-pide | ŞIRA | menum.co/kepi-izgara-pide,90.00,11,1111153
+kepi-izgara-pide | ŞİŞE FANTA | menum.co/kepi-izgara-pide,90.00,11,1111153
+kepi-izgara-pide | ŞİŞE KOLA | menum.co/kepi-izgara-pide,90.00,11,1111153
+KEY-F RESTAURANT & CAFE | Cappy Ananas (SOĞUK İÇECEKLER) | keyfrestaurant.qr.menulux.com,180.00,11,1111153
+KEY-F RESTAURANT & CAFE | Cappy Elma (SOĞUK İÇECEKLER) | keyfrestaurant.qr.menulux.com,180.00,11,1111153
+KEY-F RESTAURANT & CAFE | Cappy Karışık (SOĞUK İÇECEKLER) | keyfrestaurant.qr.menulux.com,180.00,11,1111153
+KEY-F RESTAURANT & CAFE | Cappy Portakal (SOĞUK İÇECEKLER) | keyfrestaurant.qr.menulux.com,180.00,11,1111153
+KEY-F RESTAURANT & CAFE | Cappy Vişne (SOĞUK İÇECEKLER) | keyfrestaurant.qr.menulux.com,180.00,11,1111153
+KEY-F RESTAURANT & CAFE | Cappy Şeftali (SOĞUK İÇECEKLER) | keyfrestaurant.qr.menulux.com,180.00,11,1111153
+KEY-F RESTAURANT & CAFE | Churchill | keyfrestaurant.qr.menulux.com,160.00,11,1111153
+KEY-F RESTAURANT & CAFE | Coca Cola Zero | keyfrestaurant.qr.menulux.com,160.00,11,1111153
+KEY-F RESTAURANT & CAFE | Coca Cola | keyfrestaurant.qr.menulux.com,160.00,11,1111153
+KEY-F RESTAURANT & CAFE | Energy Boost (Red Bull Twist) | keyfrestaurant.qr.menulux.com,440.00,11,1111153
+KEY-F RESTAURANT & CAFE | Fanta | keyfrestaurant.qr.menulux.com,160.00,11,1111153
+KEY-F RESTAURANT & CAFE | Fuse Tea Limon (SOĞUK İÇECEKLER) | keyfrestaurant.qr.menulux.com,180.00,11,1111153
+KEY-F RESTAURANT & CAFE | Fuse Tea Şeftali (SOĞUK İÇECEKLER) | keyfrestaurant.qr.menulux.com,180.00,11,1111153
+KEY-F RESTAURANT & CAFE | Limonata | keyfrestaurant.qr.menulux.com,220.00,11,1111153
+KEY-F RESTAURANT & CAFE | Red Bull | keyfrestaurant.qr.menulux.com,250.00,11,1111153
+KEY-F RESTAURANT & CAFE | San Pellegrino (SOĞUK İÇECEKLER) | keyfrestaurant.qr.menulux.com,290.00,11,1111153
+KEY-F RESTAURANT & CAFE | Schweppes Bitter Limon | keyfrestaurant.qr.menulux.com,220.00,11,1111153
+KEY-F RESTAURANT & CAFE | Schweppes Mandarin | keyfrestaurant.qr.menulux.com,220.00,11,1111153
+KEY-F RESTAURANT & CAFE | Schweppes Tonik | keyfrestaurant.qr.menulux.com,220.00,11,1111153
+KEY-F RESTAURANT & CAFE | Soda | keyfrestaurant.qr.menulux.com,90.00,11,1111153
+KEY-F RESTAURANT & CAFE | Sprite | keyfrestaurant.qr.menulux.com,160.00,11,1111153
+KEY-F RESTAURANT & CAFE | Su 330 ml | keyfrestaurant.qr.menulux.com,60.00,11,1111153
+KEY-F RESTAURANT & CAFE | Su 750 ml | keyfrestaurant.qr.menulux.com,120.00,11,1111153
+KEY-F RESTAURANT & CAFE | Taze Portakal Suyu | keyfrestaurant.qr.menulux.com,240.00,11,1111153
+KEY-F RESTAURANT & CAFE | Tennessee Lemonade (Lynchburg Lemonade) | keyfrestaurant.qr.menulux.com,620.00,11,1111153
+KEY-F RESTAURANT & CAFE | Çilekli Limonata | keyfrestaurant.qr.menulux.com,260.00,11,1111153
+KEYF-ISUMELA | FANTA | menum.co/KEYFI-SUMELA-RESTORANT,100.00,11,1111153
+KEYF-ISUMELA | KOLA | menum.co/KEYFI-SUMELA-RESTORANT,100.00,11,1111153
+KEYF-ISUMELA | MEYVE SUYU ÇEŞİTLERİ | menum.co/KEYFI-SUMELA-RESTORANT,100.00,11,1111153
+KEYF-ISUMELA | SODA | menum.co/KEYFI-SUMELA-RESTORANT,75.00,11,1111153
+KEYF-ISUMELA | SU | menum.co/KEYFI-SUMELA-RESTORANT,25.00,11,1111153
+Konya Etli Ekmek Çerkezköy | 1 Litre Kola Fanta | menum.co/Konyaetliekmek,140.00,11,1111153
+Konya Etli Ekmek Çerkezköy | 2.5 Litre Kola Fanta | menum.co/Konyaetliekmek,180.00,11,1111153
+Konya Etli Ekmek Çerkezköy | Didi Soğuk Çay | menum.co/Konyaetliekmek,70.00,11,1111153
+Konya Etli Ekmek Çerkezköy | Kola Turka | menum.co/Konyaetliekmek,70.00,11,1111153
+Konya Etli Ekmek Çerkezköy | Kızılay Soda | menum.co/Konyaetliekmek,65.00,11,1111153
+Konya Etli Ekmek Çerkezköy | SU | menum.co/Konyaetliekmek,25.00,11,1111153
+Konya Etli Ekmek Çerkezköy | Tamek Karışık Meyve Suyu | menum.co/Konyaetliekmek,70.00,11,1111153
+Konya Etli Ekmek Çerkezköy | Çamlıca Gazoz | menum.co/Konyaetliekmek,70.00,11,1111153
+Konya Etli Ekmek Çerkezköy | Şalgam | menum.co/Konyaetliekmek,65.00,11,1111153
+Köftehor Marmaris | Fanta | menum.co/koftehor-2,75.00,11,1111153
+Köftehor Marmaris | Koka Kola | menum.co/koftehor-2,75.00,11,1111153
+Köftehor Marmaris | Kola Zero | menum.co/koftehor-2,75.00,11,1111153
+Köftehor Marmaris | Sprite | menum.co/koftehor-2,75.00,11,1111153
+lavinya-pastanesi | Coca cola teneke 330ml | menum.co/lavinya-pastanesi,100.00,11,1111153
+lavinya-pastanesi | Sade maden suyu | menum.co/lavinya-pastanesi,35.00,11,1111153
+lavinya-pastanesi | Soğuk kahve | menum.co/lavinya-pastanesi,150.00,11,1111153
+lavinya-pastanesi | Su | menum.co/lavinya-pastanesi,20.00,11,1111153
+Liz Coffee Menü | Ananas Frozen | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Cam Şişe Su | menum.co/lizcoffee,40.00,11,1111153
+Liz Coffee Menü | Churchill | menum.co/lizcoffee,70.00,11,1111153
+Liz Coffee Menü | Classic Frappe | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Espresso On The Rocks (Soğuk Kahveler) | menum.co/lizcoffee,120.00,11,1111153
+Liz Coffee Menü | Iced Americano | menum.co/lizcoffee,120.00,11,1111153
+Liz Coffee Menü | Iced Latte | menum.co/lizcoffee,140.00,11,1111153
+Liz Coffee Menü | Iced Mocha | menum.co/lizcoffee,160.00,11,1111153
+Liz Coffee Menü | Iced White Mocha | menum.co/lizcoffee,160.00,11,1111153
+Liz Coffee Menü | Karamelli Milkshake | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Karpuz Frozen | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Limonata | menum.co/lizcoffee,80.00,11,1111153
+Liz Coffee Menü | Limonlu Frozen | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Mango Frozen | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Mocha Frappe | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Muzlu Milkshake | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Orman Meyveli Frozen | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Soda | menum.co/lizcoffee,50.00,11,1111153
+Liz Coffee Menü | Taze Sıkılmış Portakal Suyu | menum.co/lizcoffee,80.00,11,1111153
+Liz Coffee Menü | Vanilyalı Milkshake | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | White Mocha Frappe | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Yaban Mersinli Frozen | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Çikolatalı Milkshake | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Çilek Frozen | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Çilekli Milkshake | menum.co/lizcoffee,150.00,11,1111153
+Liz Coffee Menü | Şeftali Frozen | menum.co/lizcoffee,150.00,11,1111153
+Mavi Ada BISTRO | BLUE LAGOON (İÇECEK MENÜ / alkölsüz kokteyl) | menum.co/Mavi-Ada-BISTRO,360.00,11,1111153
+Mavi Ada BISTRO | Burn (İÇECEK MENÜ / Soft İçecekler) | menum.co/Mavi-Ada-BISTRO,140.00,11,1111153
+Mavi Ada BISTRO | Churchıll | menum.co/Mavi-Ada-BISTRO,150.00,11,1111153
+Mavi Ada BISTRO | Coca Cola | menum.co/Mavi-Ada-BISTRO,120.00,11,1111153
+Mavi Ada BISTRO | Fanta | menum.co/Mavi-Ada-BISTRO,120.00,11,1111153
+Mavi Ada BISTRO | Frozen | menum.co/Mavi-Ada-BISTRO,200.00,11,1111153
+Mavi Ada BISTRO | İce Tea | menum.co/Mavi-Ada-BISTRO,120.00,11,1111153
+Mavi Ada BISTRO | Limonata | menum.co/Mavi-Ada-BISTRO,160.00,11,1111153
+Mavi Ada BISTRO | Meyveli Soda | menum.co/Mavi-Ada-BISTRO,100.00,11,1111153
+Mavi Ada BISTRO | RED LİON (İÇECEK MENÜ / alkölsüz kokteyl) | menum.co/Mavi-Ada-BISTRO,360.00,11,1111153
+Mavi Ada BISTRO | Redbull | menum.co/Mavi-Ada-BISTRO,160.00,11,1111153
+Mavi Ada BISTRO | Soda | menum.co/Mavi-Ada-BISTRO,80.00,11,1111153
+Mavi Ada BISTRO | Sprite | menum.co/Mavi-Ada-BISTRO,120.00,11,1111153
+Mavi Ada BISTRO | Su | menum.co/Mavi-Ada-BISTRO,50.00,11,1111153
+Meyli Modern Meyhane | CAPPY MEYVE SUYU | menum.co/Meyli-Modern-Meyhane,130.00,11,1111153
+Meyli Modern Meyhane | PEPSİ KUTU | menum.co/Meyli-Modern-Meyhane,130.00,11,1111153
+Meyli Modern Meyhane | REDBUL (SOFT İCECEKLER) | menum.co/Meyli-Modern-Meyhane,180.00,11,1111153
+Meyli Modern Meyhane | SODA | menum.co/Meyli-Modern-Meyhane,80.00,11,1111153
+Meyli Modern Meyhane | YEDİGÜN (SOFT İCECEKLER) | menum.co/Meyli-Modern-Meyhane,130.00,11,1111153
+Meyli Modern Meyhane | ŞALGAM [ KÜÇÜK ] | menum.co/Meyli-Modern-Meyhane,125.00,11,1111153
+Meyli Modern Meyhane | ŞALGAM SUYU 1 LİTRE | menum.co/Meyli-Modern-Meyhane,200.00,11,1111153
+Meşhur Araç Köftecisi | Fanta | menum.co/meshurarackoftecisi,55.00,11,1111153
+Meşhur Araç Köftecisi | Kola | menum.co/meshurarackoftecisi,55.00,11,1111153
+Meşhur Araç Köftecisi | Sprite | menum.co/meshurarackoftecisi,55.00,11,1111153
+Meşhur Araç Köftecisi | Şalgam | menum.co/meshurarackoftecisi,50.00,11,1111153
+PAPYON CAFE | BERRY HIBISCUS (MEŞRUBATLAR) | menum.co/PAPYON-CAFE,250.00,11,1111153
+PAPYON CAFE | CAPPY (MEŞRUBATLAR) | menum.co/PAPYON-CAFE,100.00,11,1111153
+PAPYON CAFE | CHURCHILL | menum.co/PAPYON-CAFE,200.00,11,1111153
+PAPYON CAFE | COCA COLA ZERO | menum.co/PAPYON-CAFE,100.00,11,1111153
+PAPYON CAFE | COCA COLA | menum.co/PAPYON-CAFE,100.00,11,1111153
+PAPYON CAFE | COOL LİME | menum.co/PAPYON-CAFE,250.00,11,1111153
+PAPYON CAFE | FANTA | menum.co/PAPYON-CAFE,100.00,11,1111153
+PAPYON CAFE | ICE AMERICANO | menum.co/PAPYON-CAFE,200.00,11,1111153
+PAPYON CAFE | ICE CARAMEL LATTE | menum.co/PAPYON-CAFE,250.00,11,1111153
+PAPYON CAFE | ICE LATTE | menum.co/PAPYON-CAFE,200.00,11,1111153
+PAPYON CAFE | ICE MOCHA | menum.co/PAPYON-CAFE,250.00,11,1111153
+PAPYON CAFE | ICE WHITE MOCHA | menum.co/PAPYON-CAFE,250.00,11,1111153
+PAPYON CAFE | KARAMEL MILKSHAKE | menum.co/PAPYON-CAFE,250.00,11,1111153
+PAPYON CAFE | KARPUZ FROZEN | menum.co/PAPYON-CAFE,250.00,11,1111153
+PAPYON CAFE | KAVUN FROZEN | menum.co/PAPYON-CAFE,250.00,11,1111153
+PAPYON CAFE | LİMONATA | menum.co/PAPYON-CAFE,200.00,11,1111153
+PAPYON CAFE | MEYVELİ SODA | menum.co/PAPYON-CAFE,100.00,11,1111153
+PAPYON CAFE | NANE LİMON FROZEN | menum.co/PAPYON-CAFE,250.00,11,1111153
+PAPYON CAFE | NİĞDE GAZOZU | menum.co/PAPYON-CAFE,100.00,11,1111153
+PAPYON CAFE | REDBULL | menum.co/PAPYON-CAFE,200.00,11,1111153
+PAPYON CAFE | SODA | menum.co/PAPYON-CAFE,90.00,11,1111153
+PAPYON CAFE | SPRİTE | menum.co/PAPYON-CAFE,100.00,11,1111153
+PAPYON CAFE | SU | menum.co/PAPYON-CAFE,35.00,11,1111153
+PAPYON CAFE | ÇİKOLATA MILKSHAKE | menum.co/PAPYON-CAFE,250.00,11,1111153
+PAPYON CAFE | ÇİLEK FROZEN | menum.co/PAPYON-CAFE,250.00,11,1111153
+PAPYON CAFE | ÇİLEK MILKSHAKE | menum.co/PAPYON-CAFE,250.00,11,1111153
+PAPYON CAFE | ÇİLEKLİ LİMONATA | menum.co/PAPYON-CAFE,200.00,11,1111153
+piccolo napoli | Coca Cola | menum.co/piccolo-napoli,100.00,11,1111153
+piccolo napoli | ICED AMERICANO | menum.co/piccolo-napoli,180.00,11,1111153
+piccolo napoli | ICED LATTE | menum.co/piccolo-napoli,200.00,11,1111153
+piccolo napoli | Sprite | menum.co/piccolo-napoli,100.00,11,1111153
+POSEİDON MAVİSEHİR | LYNCHBURG LEMONADE | menum.co/poseidonmavisehir,750.00,11,1111153
+Rumeli Köftecisi | İce Tea Şeftali | menum.co/rumeli-koftecisi,70.00,11,1111153
+Rumeli Köftecisi | Niğde Gazozu | menum.co/rumeli-koftecisi,60.00,11,1111153
+Rumeli Köftecisi | Pepsi Max | menum.co/rumeli-koftecisi,70.00,11,1111153
+Rumeli Köftecisi | Pepsi | menum.co/rumeli-koftecisi,70.00,11,1111153
+Santolina Restaurant | Cappy Meyve Suyu | menum.co/santolina-restaurant,60.00,11,1111153
+Santolina Restaurant | Kutu Kola (330ml) | menum.co/santolina-restaurant,60.00,11,1111153
+Santolina Restaurant | Maden Suyu | menum.co/santolina-restaurant,40.00,11,1111153
+Santolina Restaurant | Niğde Gazozu | menum.co/santolina-restaurant,50.00,11,1111153
+Santolina Restaurant | Sarıyer Kola (Kutu) | menum.co/santolina-restaurant,35.00,11,1111153
+Santolina Restaurant | Sarıyer Kola (Şişe) | menum.co/santolina-restaurant,35.00,11,1111153
+Santolina Restaurant | Su (330ml) | menum.co/santolina-restaurant,30.00,11,1111153
+Santolina Restaurant | Su (Litrelik) | menum.co/santolina-restaurant,50.00,11,1111153
+Santolina Restaurant | Şalgam (Açık) | menum.co/santolina-restaurant,50.00,11,1111153
+Santolina Restaurant | Şalgam (Kapalı) | menum.co/santolina-restaurant,50.00,11,1111153
+Santolina Restaurant | Şişe Kola | menum.co/santolina-restaurant,50.00,11,1111153
+Spica Bistro | Cappy Karışık (SOĞUK İÇECEKLER) | menum.co/SpicaBistro,110.00,11,1111153
+Spica Bistro | Cappy Vişne (SOĞUK İÇECEKLER) | menum.co/SpicaBistro,110.00,11,1111153
+Spica Bistro | Cappy Şeftali (SOĞUK İÇECEKLER) | menum.co/SpicaBistro,110.00,11,1111153
+Spica Bistro | Coca Cola Zero | menum.co/SpicaBistro,110.00,11,1111153
+Spica Bistro | Coca Cola | menum.co/SpicaBistro,110.00,11,1111153
+Spica Bistro | Fanta | menum.co/SpicaBistro,110.00,11,1111153
+Spica Bistro | Fuse Tea Limon (SOĞUK İÇECEKLER) | menum.co/SpicaBistro,110.00,11,1111153
+Spica Bistro | Fuse Tea Şeftali (SOĞUK İÇECEKLER) | menum.co/SpicaBistro,110.00,11,1111153
+Spica Bistro | Ice zebra mocha | menum.co/SpicaBistro,240.00,11,1111153
+Spica Bistro | Iced Americano | menum.co/SpicaBistro,180.00,11,1111153
+Spica Bistro | Iced Mocha | menum.co/SpicaBistro,230.00,11,1111153
+Spica Bistro | Iced White Mocha | menum.co/SpicaBistro,230.00,11,1111153
+Spica Bistro | İced Filtre | menum.co/SpicaBistro,170.00,11,1111153
+Spica Bistro | İced Latte | menum.co/SpicaBistro,210.00,11,1111153
+Spica Bistro | RedBull | menum.co/SpicaBistro,170.00,11,1111153
+Spica Bistro | Sade Soda | menum.co/SpicaBistro,90.00,11,1111153
+Spica Bistro | Sprite | menum.co/SpicaBistro,110.00,11,1111153
+Spica Bistro | Su | menum.co/SpicaBistro,60.00,11,1111153
+STALK CASUAL KİTCHEN | BERRY BANANA (SMOOTHIE) | stalk2.qr.menulux.com,300.00,11,1111153
+STALK CASUAL KİTCHEN | C. COLA ZERO | stalk2.qr.menulux.com,150.00,11,1111153
+STALK CASUAL KİTCHEN | CHURCHILL | stalk2.qr.menulux.com,150.00,11,1111153
+STALK CASUAL KİTCHEN | COCA COLA | stalk2.qr.menulux.com,150.00,11,1111153
+STALK CASUAL KİTCHEN | COOL LİME | stalk2.qr.menulux.com,260.00,11,1111153
+STALK CASUAL KİTCHEN | EL YAPIMI LİMONATA | stalk2.qr.menulux.com,200.00,11,1111153
+STALK CASUAL KİTCHEN | ELMA SUYU | stalk2.qr.menulux.com,325.00,11,1111153
+STALK CASUAL KİTCHEN | ELMALI LİMONATA | stalk2.qr.menulux.com,220.00,11,1111153
+STALK CASUAL KİTCHEN | FUCE TEA (SOĞUK İÇECEKLER) | stalk2.qr.menulux.com,150.00,11,1111153
+STALK CASUAL KİTCHEN | HAVUÇ SUYU | stalk2.qr.menulux.com,325.00,11,1111153
+STALK CASUAL KİTCHEN | ICE AMERICANO | stalk2.qr.menulux.com,230.00,11,1111153
+STALK CASUAL KİTCHEN | ICE CARAMEL COFFEE | stalk2.qr.menulux.com,250.00,11,1111153
+STALK CASUAL KİTCHEN | ICE FILTER COFFE | stalk2.qr.menulux.com,200.00,11,1111153
+STALK CASUAL KİTCHEN | ICE LATTE | stalk2.qr.menulux.com,220.00,11,1111153
+STALK CASUAL KİTCHEN | ICE LOTUS LATTE | stalk2.qr.menulux.com,260.00,11,1111153
+STALK CASUAL KİTCHEN | ICE MOCHA | stalk2.qr.menulux.com,250.00,11,1111153
+STALK CASUAL KİTCHEN | ICE SPANISH | stalk2.qr.menulux.com,260.00,11,1111153
+STALK CASUAL KİTCHEN | ICE WHITE MOCHA | stalk2.qr.menulux.com,250.00,11,1111153
+STALK CASUAL KİTCHEN | LOTUS (MILKSHAKE) | stalk2.qr.menulux.com,250.00,11,1111153
+STALK CASUAL KİTCHEN | MADEN SUYU | stalk2.qr.menulux.com,110.00,11,1111153
+STALK CASUAL KİTCHEN | MUZ (MILKSHAKE) | stalk2.qr.menulux.com,250.00,11,1111153
+STALK CASUAL KİTCHEN | MUZLU (SMOOTHIE) | stalk2.qr.menulux.com,300.00,11,1111153
+STALK CASUAL KİTCHEN | NANELİ LİMONATA | stalk2.qr.menulux.com,220.00,11,1111153
+STALK CASUAL KİTCHEN | ORMAN MEYVE / NANE (FROZEN) | stalk2.qr.menulux.com,300.00,11,1111153
+STALK CASUAL KİTCHEN | ORMAN MEYVELİ (SMOOTHIE) | stalk2.qr.menulux.com,300.00,11,1111153
+STALK CASUAL KİTCHEN | ORMAN MEYVELİ LİMONATA | stalk2.qr.menulux.com,220.00,11,1111153
+STALK CASUAL KİTCHEN | PORTAKAL SUYU | stalk2.qr.menulux.com,325.00,11,1111153
+STALK CASUAL KİTCHEN | SPRITE | stalk2.qr.menulux.com,150.00,11,1111153
+STALK CASUAL KİTCHEN | SU | stalk2.qr.menulux.com,80.00,11,1111153
+STALK CASUAL KİTCHEN | VANİLYA (MILKSHAKE) | stalk2.qr.menulux.com,250.00,11,1111153
+STALK CASUAL KİTCHEN | ÇİKOLATA (MILKSHAKE) | stalk2.qr.menulux.com,250.00,11,1111153
+STALK CASUAL KİTCHEN | ÇİLEK (FROZEN) | stalk2.qr.menulux.com,300.00,11,1111153
+STALK CASUAL KİTCHEN | ÇİLEK (MILKSHAKE) | stalk2.qr.menulux.com,250.00,11,1111153
+STALK CASUAL KİTCHEN | ÇİLEKLİ (SMOOTHIE) | stalk2.qr.menulux.com,300.00,11,1111153
+STALK CASUAL KİTCHEN | ÇİLEKLİ LİMONATA | stalk2.qr.menulux.com,220.00,11,1111153
+Sümer Coffee Lounge 1937 | Cappy (Kutu İçecekler ve Diğer İçecekler) | menum.co/Sumercoffeelounge,100.00,11,1111153
+Sümer Coffee Lounge 1937 | Churchill | menum.co/Sumercoffeelounge,140.00,11,1111153
+Sümer Coffee Lounge 1937 | Coca Cola | menum.co/Sumercoffeelounge,100.00,11,1111153
+Sümer Coffee Lounge 1937 | Cool lime | menum.co/Sumercoffeelounge,220.00,11,1111153
+Sümer Coffee Lounge 1937 | Fanta | menum.co/Sumercoffeelounge,100.00,11,1111153
+Sümer Coffee Lounge 1937 | Frappe | menum.co/Sumercoffeelounge,220.00,11,1111153
+Sümer Coffee Lounge 1937 | Iced Americano | menum.co/Sumercoffeelounge,180.00,11,1111153
+Sümer Coffee Lounge 1937 | Iced Filter Coffee | menum.co/Sumercoffeelounge,190.00,11,1111153
+Sümer Coffee Lounge 1937 | Iced Latte | menum.co/Sumercoffeelounge,200.00,11,1111153
+Sümer Coffee Lounge 1937 | Iced Mocha | menum.co/Sumercoffeelounge,210.00,11,1111153
+Sümer Coffee Lounge 1937 | Limonata | menum.co/Sumercoffeelounge,160.00,11,1111153
+Sümer Coffee Lounge 1937 | Lotus Frappe | menum.co/Sumercoffeelounge,240.00,11,1111153
+Sümer Coffee Lounge 1937 | Lotus Milkshake | menum.co/Sumercoffeelounge,240.00,11,1111153
+Sümer Coffee Lounge 1937 | Maltana Ananas (Kutu İçecekler ve Diğer İçecekler) | menum.co/Sumercoffeelounge,110.00,11,1111153
+Sümer Coffee Lounge 1937 | Maltana Armut (Kutu İçecekler ve Diğer İçecekler) | menum.co/Sumercoffeelounge,110.00,11,1111153
+Sümer Coffee Lounge 1937 | Maltana Energy (Kutu İçecekler ve Diğer İçecekler) | menum.co/Sumercoffeelounge,110.00,11,1111153
+Sümer Coffee Lounge 1937 | Maltana Şeftali (Kutu İçecekler ve Diğer İçecekler) | menum.co/Sumercoffeelounge,110.00,11,1111153
+Sümer Coffee Lounge 1937 | Mango Pistachio Frozen | menum.co/Sumercoffeelounge,240.00,11,1111153
+Sümer Coffee Lounge 1937 | Marshmallow Frappe | menum.co/Sumercoffeelounge,230.00,11,1111153
+Sümer Coffee Lounge 1937 | Meyveli Soda | menum.co/Sumercoffeelounge,110.00,11,1111153
+Sümer Coffee Lounge 1937 | Nutella Frappe | menum.co/Sumercoffeelounge,240.00,11,1111153
+Sümer Coffee Lounge 1937 | Nutella Milkshake | menum.co/Sumercoffeelounge,250.00,11,1111153
+Sümer Coffee Lounge 1937 | Oreolu Frappe | menum.co/Sumercoffeelounge,250.00,11,1111153
+Sümer Coffee Lounge 1937 | Passion Fruit Frozen | menum.co/Sumercoffeelounge,220.00,11,1111153
+Sümer Coffee Lounge 1937 | Portakal Suyu | menum.co/Sumercoffeelounge,170.00,11,1111153
+Sümer Coffee Lounge 1937 | Redbull | menum.co/Sumercoffeelounge,170.00,11,1111153
+Sümer Coffee Lounge 1937 | Sprite | menum.co/Sumercoffeelounge,100.00,11,1111153
+Sümer Coffee Lounge 1937 | Su | menum.co/Sumercoffeelounge,50.00,11,1111153
+Sümer Coffee Lounge 1937 | Tüm Aromalı Frozen | menum.co/Sumercoffeelounge,210.00,11,1111153
+Sümer Coffee Lounge 1937 | Tüm Aromalı Milkshake | menum.co/Sumercoffeelounge,220.00,11,1111153
+Sümer Coffee Lounge 1937 | Uludağ Premium Soda | menum.co/Sumercoffeelounge,100.00,11,1111153
+The Bullshit Pub URLA | CHURCHILL | menum.co/restoran-thebullshitpuburla,120.00,11,1111153
+The Bullshit Pub URLA | MEŞRUBAT (ALKOLSÜZ İÇECEKLER) | menum.co/restoran-thebullshitpuburla,120.00,11,1111153
+The Bullshit Pub URLA | SODA | menum.co/restoran-thebullshitpuburla,80.00,11,1111153
+The Bullshit Pub URLA | SU | menum.co/restoran-thebullshitpuburla,50.00,11,1111153
+The Mediteran Hotel Restaurant | Energy Drink / Enerji İçeceği | menum.co/Mediteran-Restaurant,240.00,11,1111153
+The Mediteran Hotel Restaurant | Fresh Orange Juice / Taze Portakal Suyu | menum.co/Mediteran-Restaurant,250.00,11,1111153
+The Mediteran Hotel Restaurant | Frozen Homemade Mint Lemonade / Ev yapımı Limonata | menum.co/Mediteran-Restaurant,290.00,11,1111153
+The Mediteran Hotel Restaurant | Iced Coffee / Buzlu Kahve | menum.co/Mediteran-Restaurant,300.00,11,1111153
+The Mediteran Hotel Restaurant | Large Bottle Water / Büyük Su | menum.co/Mediteran-Restaurant,150.00,11,1111153
+The Mediteran Hotel Restaurant | Milkshakes | menum.co/Mediteran-Restaurant,330.00,11,1111153
+The Mediteran Hotel Restaurant | Seasonal Fresh Fruit Juices / Taze Meyve Suları | menum.co/Mediteran-Restaurant,290.00,11,1111153
+The Mediteran Hotel Restaurant | Small Bottle Water / Küçük Su | menum.co/Mediteran-Restaurant,75.00,11,1111153
+The Mediteran Hotel Restaurant | Soda Water / Soda | menum.co/Mediteran-Restaurant,100.00,11,1111153
+The Mediteran Hotel Restaurant | Soft Drinks / Meşrubatlar (Soft Drinks / Meşrubatlar) | menum.co/Mediteran-Restaurant,170.00,11,1111153
+Uysal Alabalık | Maden Suyu /Meyveli Maden Suyu | menum.co/uysal-alabalik,25.00,11,1111153
+Uysal Alabalık | Su ( 50cl ) | menum.co/uysal-alabalik,20.00,11,1111153
+Uçak Kardeşler Akaryakıt | COCA COLA KUTU | menum.co/ucakkardesler,85.00,11,1111153
+Uçak Kardeşler Akaryakıt | COCA COLA ZERO KUTU | menum.co/ucakkardesler,85.00,11,1111153
+Viento Coffee & Sweet | Ananas Frozen | menum.co/VientoCoffeeSweet,340.00,11,1111153
+Viento Coffee & Sweet | Berry Hibiscus (Alkolsüz Kokteyller) | menum.co/VientoCoffeeSweet,260.00,11,1111153
+Viento Coffee & Sweet | Blue Hawaii (Alkolsüz Kokteyller) | menum.co/VientoCoffeeSweet,340.00,11,1111153
+Viento Coffee & Sweet | Coca Cola | menum.co/VientoCoffeeSweet,110.00,11,1111153
+Viento Coffee & Sweet | Cool Lime | menum.co/VientoCoffeeSweet,260.00,11,1111153
+Viento Coffee & Sweet | Cosmopolitan (Alkolsüz Kokteyller) | menum.co/VientoCoffeeSweet,340.00,11,1111153
+Viento Coffee & Sweet | Fanta | menum.co/VientoCoffeeSweet,110.00,11,1111153
+Viento Coffee & Sweet | Hindistan Cevizi-Ananas Smoothie | menum.co/VientoCoffeeSweet,360.00,11,1111153
+Viento Coffee & Sweet | Ice Tea | menum.co/VientoCoffeeSweet,110.00,11,1111153
+Viento Coffee & Sweet | Karpuz-Çilek Smoothie | menum.co/VientoCoffeeSweet,360.00,11,1111153
+Viento Coffee & Sweet | Kuzu Kulağı (Alkolsüz Kokteyller) | menum.co/VientoCoffeeSweet,340.00,11,1111153
+Viento Coffee & Sweet | Mango Frozen | menum.co/VientoCoffeeSweet,340.00,11,1111153
+Viento Coffee & Sweet | Mango-Ananas Smoothie | menum.co/VientoCoffeeSweet,360.00,11,1111153
+Viento Coffee & Sweet | Mango-Çilek Smoothie | menum.co/VientoCoffeeSweet,360.00,11,1111153
+Viento Coffee & Sweet | Margarita (Alkolsüz Kokteyller) | menum.co/VientoCoffeeSweet,340.00,11,1111153
+Viento Coffee & Sweet | Meyve Suyu | menum.co/VientoCoffeeSweet,110.00,11,1111153
+Viento Coffee & Sweet | Nar Suyu | menum.co/VientoCoffeeSweet,150.00,11,1111153
+Viento Coffee & Sweet | Orman Meyveli Frozen | menum.co/VientoCoffeeSweet,340.00,11,1111153
+Viento Coffee & Sweet | Orman Meyveli Smoothie | menum.co/VientoCoffeeSweet,360.00,11,1111153
+Viento Coffee & Sweet | Pina Colada (Alkolsüz Kokteyller) | menum.co/VientoCoffeeSweet,340.00,11,1111153
+Viento Coffee & Sweet | Portakal Suyu | menum.co/VientoCoffeeSweet,150.00,11,1111153
+Viento Coffee & Sweet | Soda | menum.co/VientoCoffeeSweet,90.00,11,1111153
+Viento Coffee & Sweet | Soğuk Seçim | menum.co/VientoCoffeeSweet,30.00,11,1111153
+Viento Coffee & Sweet | Sprite | menum.co/VientoCoffeeSweet,110.00,11,1111153
+Viento Coffee & Sweet | Su | menum.co/VientoCoffeeSweet,75.00,11,1111153
+Viento Coffee & Sweet | X On The Beach (Alkolsüz Kokteyller) | menum.co/VientoCoffeeSweet,340.00,11,1111153
+Viento Coffee & Sweet | Yaban Mersinli Milkshake | menum.co/VientoCoffeeSweet,380.00,11,1111153
+Viento Coffee & Sweet | Çikolatalı Frozen | menum.co/VientoCoffeeSweet,340.00,11,1111153
+Viento Coffee & Sweet | Çikolatalı Milkshake | menum.co/VientoCoffeeSweet,380.00,11,1111153
+Viento Coffee & Sweet | Çilekli Frozen | menum.co/VientoCoffeeSweet,340.00,11,1111153
+Viento Coffee & Sweet | Çilekli Milkshake | menum.co/VientoCoffeeSweet,380.00,11,1111153
+Yener Restorant | Cocola (Litrelik İçecekler) | menum.co/Yener-Restorant,50.00,11,1111153
+Yener Restorant | Cocola Zero Sugar (Litrelik İçecekler) | menum.co/Yener-Restorant,50.00,11,1111153
+Yener Restorant | Cola Şişe | menum.co/Yener-Restorant,30.00,11,1111153
+Yener Restorant | Fanta Kutu | menum.co/Yener-Restorant,35.00,11,1111153
+Yener Restorant | Fanta Şişe | menum.co/Yener-Restorant,30.00,11,1111153
+Yener Restorant | Sprite Kutu | menum.co/Yener-Restorant,30.00,11,1111153
+YILDIZ PİDE & LAHMACUN SALONU | Meyve Suyu Karışık | menum.co/yildiz-pide-lahmacun,35.00,11,1111153
+YILDIZ PİDE & LAHMACUN SALONU | Niğde Gazozu | menum.co/yildiz-pide-lahmacun,25.00,11,1111153
+YILDIZ PİDE & LAHMACUN SALONU | Sarıyer Fanta | menum.co/yildiz-pide-lahmacun,35.00,11,1111153
+YILDIZ PİDE & LAHMACUN SALONU | Sarıyer Kola | menum.co/yildiz-pide-lahmacun,35.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | 7 Up Gazoz | zevahir360.qr.menulux.com,160.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ANANAS FROZEN | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | BEYAZ ÇİKOLATA FRAPPE | zevahir360.qr.menulux.com,260.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | CARAMEL FRAPPE | zevahir360.qr.menulux.com,260.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | CARAMEL MİLKSHAKE | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Churchill | zevahir360.qr.menulux.com,150.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | DOĞAL LİMONATA | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ICE AMERİCANO | zevahir360.qr.menulux.com,230.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ICE CAPPUCİNO | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ICE LATTE CARAMEL | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ICE LATTE VANİLYA | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ICE LATTE | zevahir360.qr.menulux.com,230.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ICE LATTE ÇİKOLATA | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ICE MOCHA | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ICE WHİTE MOCHA | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | KARADUT FROZEN | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | KARPUZ FROZEN | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Lipton Ice Tea Limon | zevahir360.qr.menulux.com,140.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Lipton Ice Tea Mango | zevahir360.qr.menulux.com,140.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Lipton Ice Tea Şeftali | zevahir360.qr.menulux.com,140.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | LİMON FROZEN | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | MANGO FROZEN | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | MEYVELİ SODA | zevahir360.qr.menulux.com,140.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Pepsi Max | zevahir360.qr.menulux.com,160.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Pepsi | zevahir360.qr.menulux.com,160.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Portakal Suyu | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Sade Soda | zevahir360.qr.menulux.com,120.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Su | zevahir360.qr.menulux.com,80.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Tropicana Karışık (SOĞUK İÇECEKLER) | zevahir360.qr.menulux.com,140.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Tropicana Kayısı (SOĞUK İÇECEKLER) | zevahir360.qr.menulux.com,140.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Tropicana Vişne (SOĞUK İÇECEKLER) | zevahir360.qr.menulux.com,140.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Tropicana Şeftali (SOĞUK İÇECEKLER) | zevahir360.qr.menulux.com,140.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | VANİLYA FRAPPE | zevahir360.qr.menulux.com,260.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | VANİLYA MİLKSHAKE | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Yedigün (SOĞUK İÇECEKLER) | zevahir360.qr.menulux.com,160.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | YEŞİL ELMA FROZEN | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ÇİKOLATA FRAPPE | zevahir360.qr.menulux.com,260.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ÇİKOLATA MİLKSHAKE | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ÇİLEK FROZEN | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ÇİLEK MİLKSHAKE | zevahir360.qr.menulux.com,250.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ŞALGAM | zevahir360.qr.menulux.com,140.00,11,1111153
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | ŞEFTALİ FROZEN | zevahir360.qr.menulux.com,250.00,11,1111153
+ÖZDERE PİDE | Acısız şalgam | menum.co/Ozdere-Pide,70.00,11,1111153
+ÖZDERE PİDE | Coco cola zero | menum.co/Ozdere-Pide,100.00,11,1111153
+ÖZDERE PİDE | Coco cola | menum.co/Ozdere-Pide,100.00,11,1111153
+ÖZDERE PİDE | Fanta | menum.co/Ozdere-Pide,100.00,11,1111153
+ÖZDERE PİDE | Ice tea limon | menum.co/Ozdere-Pide,100.00,11,1111153
+ÖZDERE PİDE | Ice tea şeftali | menum.co/Ozdere-Pide,100.00,11,1111153
+ÖZDERE PİDE | Meyve suları | menum.co/Ozdere-Pide,100.00,11,1111153
+ÖZDERE PİDE | Niğde gazozu | menum.co/Ozdere-Pide,70.00,11,1111153
+ÖZDERE PİDE | Pepsi cola | menum.co/Ozdere-Pide,100.00,11,1111153
+ÖZDERE PİDE | Pepsi kola | menum.co/Ozdere-Pide,100.00,11,1111153
+ÖZDERE PİDE | Pepsi Yedigün | menum.co/Ozdere-Pide,100.00,11,1111153
+ÖZDERE PİDE | Sade soda | menum.co/Ozdere-Pide,60.00,11,1111153
+ÖZDERE PİDE | Su | menum.co/Ozdere-Pide,25.00,11,1111153
+ÖZDERE PİDE | çilekli frozen | menum.co/Ozdere-Pide,130.00,11,1111153
+ÖZDERE PİDE | Şalgam acılı | menum.co/Ozdere-Pide,70.00,11,1111153
+Şerifoğlu Restaurant | SODA | menum.co/Serifoglu-Restaurant,20.00,11,1111153
+Şerifoğlu Restaurant | SU | menum.co/Serifoglu-Restaurant,15.00,11,1111153
+Şölen Börekçisi | Soda | menum.co/Solen,25.00,11,1111153
+Şölen Börekçisi | Sprite | menum.co/Solen,45.00,11,1111153
+Şölen Börekçisi | Su | menum.co/Solen,12.50,11,1111153
+Şölen Börekçisi | Çamlıca Gazoz | menum.co/Solen,35.00,11,1111153
+𝐁𝐊𝐌 𝐌𝐔𝐓𝐅𝐀𝐊 𝐂𝐎𝐌𝐄𝐃𝐘 𝐂𝐋𝐔𝐁 | LYNCHBURG LEMONADE | menum.co/bkm-mutfak-comedy-club,560.00,11,1111153

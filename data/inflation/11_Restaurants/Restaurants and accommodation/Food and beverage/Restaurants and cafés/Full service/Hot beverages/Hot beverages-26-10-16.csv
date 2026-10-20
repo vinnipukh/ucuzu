@@ -1,0 +1,435 @@
+product_name,price,category_number,sub_category_number
+AD ASTRA KAFE | BİTKİ ÇAYI | menum.co/astra-cafe,70.00,11,1111152
+AD ASTRA KAFE | FİLTRE KAHVE | menum.co/astra-cafe,75.00,11,1111152
+AD ASTRA KAFE | FİNCAN ÇAY | menum.co/astra-cafe,20.00,11,1111152
+AD ASTRA KAFE | KIŞ ÇAYI | menum.co/astra-cafe,75.00,11,1111152
+AD ASTRA KAFE | LATTE | menum.co/astra-cafe,85.00,11,1111152
+AD ASTRA KAFE | MOCHA | menum.co/astra-cafe,90.00,11,1111152
+AD ASTRA KAFE | SAHLEP | menum.co/astra-cafe,75.00,11,1111152
+AD ASTRA KAFE | SICAK ÇİKOLATA | menum.co/astra-cafe,80.00,11,1111152
+AD ASTRA KAFE | SPECİAL KAHVE | menum.co/astra-cafe,70.00,11,1111152
+AD ASTRA KAFE | SÜTLÜ KAHVE | menum.co/astra-cafe,60.00,11,1111152
+AD ASTRA KAFE | ÇAY | menum.co/astra-cafe,15.00,11,1111152
+Ayayorgi Suites & Homes | BÜYÜK ÇAY | menum.co/ayayorgihomes,50.00,11,1111152
+Ayayorgi Suites & Homes | NESCAFE | menum.co/ayayorgihomes,100.00,11,1111152
+Ayayorgi Suites & Homes | TÜRK KAHVESİ | menum.co/ayayorgihomes,100.00,11,1111152
+Ayayorgi Suites & Homes | ÇAY | menum.co/ayayorgihomes,35.00,11,1111152
+BAYRAMOĞLU RESORT HOTEL | NESCAFE | menum.co/Restaurant1,90.00,11,1111152
+BAYRAMOĞLU RESORT HOTEL | SICAK SÜT (SICAK İÇECEKLER) | menum.co/Restaurant1,65.00,11,1111152
+BAYRAMOĞLU RESORT HOTEL | TÜRK KAHVESİ | menum.co/Restaurant1,100.00,11,1111152
+BAYRAMOĞLU RESORT HOTEL | ÇAY BARDAK | menum.co/Restaurant1,60.00,11,1111152
+BAYRAMOĞLU RESORT HOTEL | ÇAY FİNCAN | menum.co/Restaurant1,80.00,11,1111152
+Bo İstanbul | Americano | menum.co/BoIstanbul,200.00,11,1111152
+Bo İstanbul | Bitki Çayı | menum.co/BoIstanbul,240.00,11,1111152
+Bo İstanbul | Cafe Latte | menum.co/BoIstanbul,220.00,11,1111152
+Bo İstanbul | Double Espresso | menum.co/BoIstanbul,220.00,11,1111152
+Bo İstanbul | Espresso | menum.co/BoIstanbul,170.00,11,1111152
+Bo İstanbul | Sütlü Çay | menum.co/BoIstanbul,110.00,11,1111152
+Bo İstanbul | Türk Kahvesi | menum.co/BoIstanbul,150.00,11,1111152
+Bo İstanbul | Çay | menum.co/BoIstanbul,90.00,11,1111152
+Brew Lab | Caffe Latte | menum.co/Brew-Lab,220.00,11,1111152
+Brew Lab | Cappuccino | menum.co/Brew-Lab,220.00,11,1111152
+Brew Lab | Espresso | menum.co/Brew-Lab,160.00,11,1111152
+Brew Lab | Filtre Kahve | menum.co/Brew-Lab,170.00,11,1111152
+Burdur İş yurtları Kurumu Restoran | Juss Tea Limon | menum.co/Burdur-isyurdu-restoran,35.00,11,1111152
+Burdur İş yurtları Kurumu Restoran | Juss Tea Şeftali | menum.co/Burdur-isyurdu-restoran,35.00,11,1111152
+Cafe Sheen | Ada Çayı | menum.co/SheenCafe,70.00,11,1111152
+Cafe Sheen | Americano | menum.co/SheenCafe,80.00,11,1111152
+Cafe Sheen | Bardak Çay | menum.co/SheenCafe,20.00,11,1111152
+Cafe Sheen | Cappucino | menum.co/SheenCafe,85.00,11,1111152
+Cafe Sheen | Dibek Kahvesi | menum.co/SheenCafe,65.00,11,1111152
+Cafe Sheen | Duble Espresso | menum.co/SheenCafe,100.00,11,1111152
+Cafe Sheen | Duble Kahveler | menum.co/SheenCafe,70.00,11,1111152
+Cafe Sheen | Espresso | menum.co/SheenCafe,70.00,11,1111152
+Cafe Sheen | Filtre Kahve | menum.co/SheenCafe,70.00,11,1111152
+Cafe Sheen | Fincan Çay | menum.co/SheenCafe,35.00,11,1111152
+Cafe Sheen | Ihlamur | menum.co/SheenCafe,70.00,11,1111152
+Cafe Sheen | Kış Çayı | menum.co/SheenCafe,70.00,11,1111152
+Cafe Sheen | Menengiç Kahvesi | menum.co/SheenCafe,65.00,11,1111152
+Cafe Sheen | Osmanlı Kahvesi | menum.co/SheenCafe,65.00,11,1111152
+Cafe Sheen | Rezene Çayı | menum.co/SheenCafe,70.00,11,1111152
+Cafe Sheen | Türk Kahvesi | menum.co/SheenCafe,50.00,11,1111152
+Cafe Sheen | Yeşil Çay | menum.co/SheenCafe,70.00,11,1111152
+Cezve sanat | ADA ÇAYI | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | AMERİCANO | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | BALLI SÜT (SICAK İÇECEKLER) | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | BEYAZ SICAK ÇİKOLATA | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | BÖĞÜRTLEN Lİ TÜRK KAHVESİ | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+Cezve sanat | CAPPUCİNO | menum.co/Cafe-restoran-sahne,180.00,11,1111152
+Cezve sanat | CARAMEL LATTE | menum.co/Cafe-restoran-sahne,180.00,11,1111152
+Cezve sanat | COLOMBİA FİLTRE KAHVE | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | DAMLA SAKIZLI SALEP | menum.co/Cafe-restoran-sahne,180.00,11,1111152
+Cezve sanat | DOUBLE AROMALI TÜRK KAHVELERİ | menum.co/Cafe-restoran-sahne,250.00,11,1111152
+Cezve sanat | DOUBLE ESPRESSO | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+Cezve sanat | DOUBLE TÜRK KAHVESİ | menum.co/Cafe-restoran-sahne,240.00,11,1111152
+Cezve sanat | ELMA ÇAYI | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | ESPRESSO | menum.co/Cafe-restoran-sahne,150.00,11,1111152
+Cezve sanat | FİLTRE KAHVE | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | FİNCAN ÇAY | menum.co/Cafe-restoran-sahne,80.00,11,1111152
+Cezve sanat | GİNSENG Lİ SALEP | menum.co/Cafe-restoran-sahne,190.00,11,1111152
+"Cezve sanat | GİNSENG, ZERDEÇAL, ZENCEFİL Lİ SALEP | menum.co/Cafe-restoran-sahne",190.00,11,1111152
+Cezve sanat | GUETEMALA FİLTRE KAHVE | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | IHLAMUR | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | KARADUT LU TÜRK KAHVESİ | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+Cezve sanat | KARPUZLU TÜRK KAHVESİ | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+Cezve sanat | KAVUNLU TÜRK KAHVESİ | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+Cezve sanat | KENYA FİLTRE KAHVE | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | KIŞ ÇAYI | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | KUŞBURNU ÇAYI | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | LATTE | menum.co/Cafe-restoran-sahne,180.00,11,1111152
+Cezve sanat | MACHİATO | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | MENENGİÇ KAHVESİ | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+Cezve sanat | MOCHA | menum.co/Cafe-restoran-sahne,180.00,11,1111152
+Cezve sanat | NANE LİMON ÇAYI | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | OSMANLI DİBEK KAHVESİ | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+Cezve sanat | PAPATYA ÇAYI | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | PETİBÖRLÜ TÜRK KAHVESİ | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+Cezve sanat | SADE NESCAFE | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+Cezve sanat | SAFRAN ÇAYI | menum.co/Cafe-restoran-sahne,180.00,11,1111152
+Cezve sanat | SAFRANLI TÜRK KAHVESİ | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+Cezve sanat | SALEP | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | SICAK ÇİKOLATA | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | SÜT (SICAK İÇECEKLER) | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+Cezve sanat | SÜTLÜ NESCAFE | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | SÜTLÜ TÜRK KAHVESİ | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+Cezve sanat | SÜVARİ AROMALI TÜRK KAHVELERİ | menum.co/Cafe-restoran-sahne,250.00,11,1111152
+Cezve sanat | SÜVARİ TÜRK KAHVESİ | menum.co/Cafe-restoran-sahne,240.00,11,1111152
+Cezve sanat | TÜRK KAHVESİ | menum.co/Cafe-restoran-sahne,150.00,11,1111152
+Cezve sanat | WEHİTE MOCHA | menum.co/Cafe-restoran-sahne,180.00,11,1111152
+Cezve sanat | YEŞİL ÇAY | menum.co/Cafe-restoran-sahne,170.00,11,1111152
+Cezve sanat | ZENCEFİLLİ SALEP | menum.co/Cafe-restoran-sahne,180.00,11,1111152
+Cezve sanat | ZERDEÇAL Lİ SALEP | menum.co/Cafe-restoran-sahne,180.00,11,1111152
+Cezve sanat | ÇAY | menum.co/Cafe-restoran-sahne,60.00,11,1111152
+Cezve sanat | ÇİKOLATALI SALEP | menum.co/Cafe-restoran-sahne,180.00,11,1111152
+Cezve sanat | ÇİKOLATALI TÜRK KAHVESİ | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+Cezve sanat | ÇİLEKLİ TÜRK KAHVESİ | menum.co/Cafe-restoran-sahne,160.00,11,1111152
+diva pastanesi | Fuse tea | menum.co/diva-2pastanesi,80.00,11,1111152
+Efulim Cafe Restaurant | Böğürtlen Suyu (Soğuk Sıcak İçecekler) | menum.co/Efulim-Cafe-Restaurant,50.00,11,1111152
+Efulim Cafe Restaurant | Fanta (Soğuk Sıcak İçecekler) | menum.co/Efulim-Cafe-Restaurant,50.00,11,1111152
+Efulim Cafe Restaurant | Kola (Soğuk Sıcak İçecekler) | menum.co/Efulim-Cafe-Restaurant,50.00,11,1111152
+Efulim Cafe Restaurant | Limonata (Soğuk Sıcak İçecekler) | menum.co/Efulim-Cafe-Restaurant,50.00,11,1111152
+Efulim Cafe Restaurant | Portakal Suyu (Soğuk Sıcak İçecekler) | menum.co/Efulim-Cafe-Restaurant,50.00,11,1111152
+Fibonacci Cafe & Bistro | Damla Sakızlı Sahlep | menum.co/fibonacci-cafe-bistro,100.00,11,1111152
+Fibonacci Cafe & Bistro | Damla Sakızlı Türk Kahvesi | menum.co/fibonacci-cafe-bistro,90.00,11,1111152
+Fibonacci Cafe & Bistro | Dibek Kahvesi | menum.co/fibonacci-cafe-bistro,90.00,11,1111152
+Fibonacci Cafe & Bistro | Double Türk Kahvesi | menum.co/fibonacci-cafe-bistro,130.00,11,1111152
+Fibonacci Cafe & Bistro | Ihlamur çayı | menum.co/fibonacci-cafe-bistro,90.00,11,1111152
+Fibonacci Cafe & Bistro | Menengiç(Çedene) Kahvesi | menum.co/fibonacci-cafe-bistro,120.00,11,1111152
+Fibonacci Cafe & Bistro | Nane Limon Çayı | menum.co/fibonacci-cafe-bistro,90.00,11,1111152
+Fibonacci Cafe & Bistro | Papatya Çayı | menum.co/fibonacci-cafe-bistro,90.00,11,1111152
+Fibonacci Cafe & Bistro | Sahlep | menum.co/fibonacci-cafe-bistro,100.00,11,1111152
+Fibonacci Cafe & Bistro | Sıcak Beyaz Çikolata (SICAK İÇECEKLER) | menum.co/fibonacci-cafe-bistro,120.00,11,1111152
+Fibonacci Cafe & Bistro | Sıcak Çikolata | menum.co/fibonacci-cafe-bistro,120.00,11,1111152
+Fibonacci Cafe & Bistro | Türk Kahvesi | menum.co/fibonacci-cafe-bistro,90.00,11,1111152
+Fibonacci Cafe & Bistro | Yeşil çay | menum.co/fibonacci-cafe-bistro,90.00,11,1111152
+Fibonacci Cafe & Bistro | Çay | menum.co/fibonacci-cafe-bistro,25.00,11,1111152
+Fİ 712 | DEMLEME BARDAK ÇAY | fi712.qr.menulux.com,80.00,11,1111152
+Fİ 712 | FUSE TEA LİMON | fi712.qr.menulux.com,200.00,11,1111152
+Fİ 712 | FUSE TEA ŞEFTALİ | fi712.qr.menulux.com,200.00,11,1111152
+FİKİRHANE | Aromalı matcha latte | menum.co/FIKIRHANE-CAFE-RESTAURANT,165.00,11,1111152
+FİKİRHANE | Fincan Çay | menum.co/FIKIRHANE-CAFE-RESTAURANT,40.00,11,1111152
+FİKİRHANE | Karadut Çayı | menum.co/FIKIRHANE-CAFE-RESTAURANT,40.00,11,1111152
+FİKİRHANE | Kivi Çayı | menum.co/FIKIRHANE-CAFE-RESTAURANT,40.00,11,1111152
+FİKİRHANE | Klasik Çay | menum.co/FIKIRHANE-CAFE-RESTAURANT,25.00,11,1111152
+FİKİRHANE | Kuşburnu Çayı | menum.co/FIKIRHANE-CAFE-RESTAURANT,40.00,11,1111152
+FİKİRHANE | Matcha latte | menum.co/FIKIRHANE-CAFE-RESTAURANT,150.00,11,1111152
+gdfg | ÇAY 1 | menum.co/gdfg,10.00,11,1111152
+gdfg | ÇAY 11 | menum.co/gdfg,20.00,11,1111152
+gdfg | ÇAY 12 | menum.co/gdfg,30.00,11,1111152
+gdfg | ÇAY | menum.co/gdfg,15.00,11,1111152
+Halil Usta Balkaymak Dondurma | Almond Cappucino | menum.co/Halil-Usta-Balkaymak,160.00,11,1111152
+Halil Usta Balkaymak Dondurma | Caramel Macchiato | menum.co/Halil-Usta-Balkaymak,150.00,11,1111152
+Halil Usta Balkaymak Dondurma | Chocolate Mocha | menum.co/Halil-Usta-Balkaymak,150.00,11,1111152
+Halil Usta Balkaymak Dondurma | Coconut Latte | menum.co/Halil-Usta-Balkaymak,160.00,11,1111152
+Halil Usta Balkaymak Dondurma | Cortado | menum.co/Halil-Usta-Balkaymak,120.00,11,1111152
+Halil Usta Balkaymak Dondurma | Double Espresso | menum.co/Halil-Usta-Balkaymak,80.00,11,1111152
+Halil Usta Balkaymak Dondurma | Flat White | menum.co/Halil-Usta-Balkaymak,120.00,11,1111152
+Halil Usta Balkaymak Dondurma | Hot Chocolate | menum.co/Halil-Usta-Balkaymak,110.00,11,1111152
+Halil Usta Balkaymak Dondurma | Lotus Latte | menum.co/Halil-Usta-Balkaymak,175.00,11,1111152
+Halil Usta Balkaymak Dondurma | Salep | menum.co/Halil-Usta-Balkaymak,110.00,11,1111152
+Halil Usta Balkaymak Dondurma | Salted Caramel Latte | menum.co/Halil-Usta-Balkaymak,150.00,11,1111152
+Halil Usta Balkaymak Dondurma | White Chocolate Mocha | menum.co/Halil-Usta-Balkaymak,150.00,11,1111152
+Halil Usta Balkaymak Dondurma | White Hot Chocolate | menum.co/Halil-Usta-Balkaymak,110.00,11,1111152
+HAMPTON BY HİLTON MERTER İSTANBUL | ÇAY | menum.co/THE-HUB,55.00,11,1111152
+İSTASYON 1923 | BARDAK ÇAY | istasyon1923.qr.menulux.com,30.00,11,1111152
+İSTASYON 1923 | FİNCAN ÇAY | istasyon1923.qr.menulux.com,45.00,11,1111152
+İSTASYON 1923 | KLASİK BİTKİ ÇAYLARI | istasyon1923.qr.menulux.com,125.00,11,1111152
+kepi-izgara-pide | FUSE TEA | menum.co/kepi-izgara-pide,90.00,11,1111152
+KEY-F RESTAURANT & CAFE | Bailyes Latte | keyfrestaurant.qr.menulux.com,440.00,11,1111152
+KEY-F RESTAURANT & CAFE | Bitki Çayı | keyfrestaurant.qr.menulux.com,140.00,11,1111152
+KEY-F RESTAURANT & CAFE | Cappuccino | keyfrestaurant.qr.menulux.com,210.00,11,1111152
+KEY-F RESTAURANT & CAFE | Demlik Çay | keyfrestaurant.qr.menulux.com,350.00,11,1111152
+KEY-F RESTAURANT & CAFE | Double Espresso | keyfrestaurant.qr.menulux.com,200.00,11,1111152
+KEY-F RESTAURANT & CAFE | Espresso | keyfrestaurant.qr.menulux.com,140.00,11,1111152
+KEY-F RESTAURANT & CAFE | Fincan Çay | keyfrestaurant.qr.menulux.com,65.00,11,1111152
+KEY-F RESTAURANT & CAFE | Sütlü Kahve | keyfrestaurant.qr.menulux.com,210.00,11,1111152
+KEY-F RESTAURANT & CAFE | Çay | keyfrestaurant.qr.menulux.com,50.00,11,1111152
+KEYF-ISUMELA | NESCAFE | menum.co/KEYFI-SUMELA-RESTORANT,75.00,11,1111152
+KEYF-ISUMELA | TÜRK KAHVESİ | menum.co/KEYFI-SUMELA-RESTORANT,150.00,11,1111152
+KEYF-ISUMELA | ÇAY | menum.co/KEYFI-SUMELA-RESTORANT,25.00,11,1111152
+lavinya-pastanesi | Americano | menum.co/lavinya-pastanesi,120.00,11,1111152
+lavinya-pastanesi | Duble çay | menum.co/lavinya-pastanesi,40.00,11,1111152
+lavinya-pastanesi | Espresso | menum.co/lavinya-pastanesi,100.00,11,1111152
+lavinya-pastanesi | Türk kahvesi | menum.co/lavinya-pastanesi,80.00,11,1111152
+lavinya-pastanesi | ÇAY | menum.co/lavinya-pastanesi,20.00,11,1111152
+Liz Coffee Menü | Ada Çayı | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Americano | menum.co/lizcoffee,110.00,11,1111152
+Liz Coffee Menü | Antep Fıstıklı Latte | menum.co/lizcoffee,140.00,11,1111152
+Liz Coffee Menü | Bardak Çay | menum.co/lizcoffee,50.00,11,1111152
+Liz Coffee Menü | Capuccino | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Chai Tea Latte | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Coconut Latte | menum.co/lizcoffee,140.00,11,1111152
+Liz Coffee Menü | Cortado | menum.co/lizcoffee,120.00,11,1111152
+Liz Coffee Menü | Dibek Kahvesi | menum.co/lizcoffee,110.00,11,1111152
+Liz Coffee Menü | Double Espresso | menum.co/lizcoffee,100.00,11,1111152
+Liz Coffee Menü | Elma Tarçın Çayı | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Espresso Macchiato | menum.co/lizcoffee,100.00,11,1111152
+Liz Coffee Menü | Espresso | menum.co/lizcoffee,90.00,11,1111152
+Liz Coffee Menü | Filtre Kahve | menum.co/lizcoffee,110.00,11,1111152
+Liz Coffee Menü | Fincan Çay | menum.co/lizcoffee,60.00,11,1111152
+Liz Coffee Menü | Flat White | menum.co/lizcoffee,120.00,11,1111152
+Liz Coffee Menü | Frambuazlı Salep | menum.co/lizcoffee,140.00,11,1111152
+Liz Coffee Menü | Fıstıklı Salep | menum.co/lizcoffee,140.00,11,1111152
+Liz Coffee Menü | Hibiskus Çayı | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Ihlamur Çayı | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Karamel Latte | menum.co/lizcoffee,140.00,11,1111152
+Liz Coffee Menü | Kuşburnu Çayı | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Kış Çayı | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Latte | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Melisa Çayı | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Menengiç Kahvesi | menum.co/lizcoffee,110.00,11,1111152
+Liz Coffee Menü | Mocha | menum.co/lizcoffee,140.00,11,1111152
+Liz Coffee Menü | Nane Limon Çayı | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Orman Meyveli Çay | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Osmanlı Kahvesi | menum.co/lizcoffee,110.00,11,1111152
+Liz Coffee Menü | Papatya Çayı | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Salep | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Sıcak Beyaz Çikolata (Sıcak İçecekler) | menum.co/lizcoffee,140.00,11,1111152
+Liz Coffee Menü | Sıcak Çikolata | menum.co/lizcoffee,140.00,11,1111152
+Liz Coffee Menü | ToffeeNut Latte | menum.co/lizcoffee,140.00,11,1111152
+Liz Coffee Menü | Türk Kahvesi | menum.co/lizcoffee,90.00,11,1111152
+Liz Coffee Menü | Vanilya Latte | menum.co/lizcoffee,140.00,11,1111152
+Liz Coffee Menü | White Mocha | menum.co/lizcoffee,140.00,11,1111152
+Liz Coffee Menü | Yasemin Çayı | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Yaseminli Yeşil Çay | menum.co/lizcoffee,130.00,11,1111152
+Liz Coffee Menü | Yeşil Çay | menum.co/lizcoffee,130.00,11,1111152
+Nostro Cafe | Çay | menum.co/Nostro-Cafe,20.00,11,1111152
+PAPYON CAFE | ADAÇAYI (ÇAY VE BİTKİ ÇAYLARI) | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | AMERİCANO | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | BEYAZ ÇİKOLATA (ALTERNATİF SICAK İÇECEKLER) | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | CAPPUCINO | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | CARAMEL LATTE | menum.co/PAPYON-CAFE,250.00,11,1111152
+PAPYON CAFE | DAMLA SAKIZLI TÜRK KAHVESİ | menum.co/PAPYON-CAFE,125.00,11,1111152
+PAPYON CAFE | DİBEK KAHVESİ | menum.co/PAPYON-CAFE,125.00,11,1111152
+PAPYON CAFE | DUBLE TÜRK KAHVESİ | menum.co/PAPYON-CAFE,150.00,11,1111152
+PAPYON CAFE | ESPRESSO | menum.co/PAPYON-CAFE,150.00,11,1111152
+PAPYON CAFE | FİLTRE KAHVE | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | FİNCAN ÇAY | menum.co/PAPYON-CAFE,60.00,11,1111152
+PAPYON CAFE | FLAT WHİTE | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | FUSE TEA | menum.co/PAPYON-CAFE,100.00,11,1111152
+PAPYON CAFE | GRİPSAVAR (ÇAY VE BİTKİ ÇAYLARI) | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | IHLAMUR | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | KAKAO | menum.co/PAPYON-CAFE,40.00,11,1111152
+PAPYON CAFE | KIŞ ÇAYI | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | KİVİ (ALTERNATİF SICAK İÇECEKLER) | menum.co/PAPYON-CAFE,40.00,11,1111152
+PAPYON CAFE | KUŞBURNU (ALTERNATİF SICAK İÇECEKLER) | menum.co/PAPYON-CAFE,40.00,11,1111152
+PAPYON CAFE | LİMON-ZENCEFİL (ÇAY VE BİTKİ ÇAYLARI) | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | MADAGASKAR (ÇAY VE BİTKİ ÇAYLARI) | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | MAYMUN (ALTERNATİF SICAK İÇECEKLER) | menum.co/PAPYON-CAFE,40.00,11,1111152
+PAPYON CAFE | MOCHA | menum.co/PAPYON-CAFE,250.00,11,1111152
+PAPYON CAFE | MUZ (ALTERNATİF SICAK İÇECEKLER) | menum.co/PAPYON-CAFE,40.00,11,1111152
+PAPYON CAFE | NANE LİMON (ÇAY VE BİTKİ ÇAYLARI) | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | ORALET | menum.co/PAPYON-CAFE,40.00,11,1111152
+PAPYON CAFE | PAPATYA (ÇAY VE BİTKİ ÇAYLARI) | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | SALEP | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | SICAK ÇİKOLATA | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | TÜRK KAHVESİ | menum.co/PAPYON-CAFE,100.00,11,1111152
+PAPYON CAFE | WHITE CHOCOLATE MOCHA | menum.co/PAPYON-CAFE,250.00,11,1111152
+PAPYON CAFE | YEŞİL ÇAY | menum.co/PAPYON-CAFE,200.00,11,1111152
+PAPYON CAFE | ÇAY | menum.co/PAPYON-CAFE,35.00,11,1111152
+piccolo napoli | AMERİCANO | menum.co/piccolo-napoli,160.00,11,1111152
+piccolo napoli | BARDAK ÇAY | menum.co/piccolo-napoli,40.00,11,1111152
+piccolo napoli | CAPPUCCİNO | menum.co/piccolo-napoli,180.00,11,1111152
+piccolo napoli | ESPRESSO | menum.co/piccolo-napoli,130.00,11,1111152
+piccolo napoli | FİNCAN ÇAY | menum.co/piccolo-napoli,70.00,11,1111152
+piccolo napoli | FUSE TEA KARPUZ | menum.co/piccolo-napoli,100.00,11,1111152
+piccolo napoli | LATTE | menum.co/piccolo-napoli,180.00,11,1111152
+piccolo napoli | TÜRK KAHVESİ | menum.co/piccolo-napoli,130.00,11,1111152
+Santolina Restaurant | Fuse Tea | menum.co/santolina-restaurant,60.00,11,1111152
+Spica Bistro | Americano | menum.co/SpicaBistro,180.00,11,1111152
+Spica Bistro | Espresso | menum.co/SpicaBistro,150.00,11,1111152
+Spica Bistro | Filtre Kahve | menum.co/SpicaBistro,170.00,11,1111152
+Spica Bistro | Flat White | menum.co/SpicaBistro,210.00,11,1111152
+Spica Bistro | Latte | menum.co/SpicaBistro,210.00,11,1111152
+Spica Bistro | Mocha | menum.co/SpicaBistro,230.00,11,1111152
+Spica Bistro | White Mocha | menum.co/SpicaBistro,230.00,11,1111152
+Spica Bistro | Zebra Mocha | menum.co/SpicaBistro,240.00,11,1111152
+STALK CASUAL KİTCHEN | AMERICANO | stalk2.qr.menulux.com,205.00,11,1111152
+STALK CASUAL KİTCHEN | BALLI SÜT (SICAK İÇECEKLER) | stalk2.qr.menulux.com,200.00,11,1111152
+STALK CASUAL KİTCHEN | BOOST UP (BİTKİ ÇAYI) | stalk2.qr.menulux.com,225.00,11,1111152
+STALK CASUAL KİTCHEN | CAFE LATTE | stalk2.qr.menulux.com,210.00,11,1111152
+STALK CASUAL KİTCHEN | CAFE MOCHA | stalk2.qr.menulux.com,230.00,11,1111152
+STALK CASUAL KİTCHEN | CAPPUCCINO | stalk2.qr.menulux.com,210.00,11,1111152
+STALK CASUAL KİTCHEN | CARAMEL LATTE | stalk2.qr.menulux.com,230.00,11,1111152
+STALK CASUAL KİTCHEN | CARAMEL MACHIATO | stalk2.qr.menulux.com,230.00,11,1111152
+STALK CASUAL KİTCHEN | CHAI TEA LATTE | stalk2.qr.menulux.com,250.00,11,1111152
+STALK CASUAL KİTCHEN | CORTADO | stalk2.qr.menulux.com,210.00,11,1111152
+STALK CASUAL KİTCHEN | D.TÜRK KAHVESİ | stalk2.qr.menulux.com,225.00,11,1111152
+STALK CASUAL KİTCHEN | DEMLEME ÇAY | stalk2.qr.menulux.com,80.00,11,1111152
+STALK CASUAL KİTCHEN | DOUBLE ESPRESSO | stalk2.qr.menulux.com,180.00,11,1111152
+STALK CASUAL KİTCHEN | ESPRESSO MACHIATO | stalk2.qr.menulux.com,185.00,11,1111152
+STALK CASUAL KİTCHEN | FİLTRE KAHVE | stalk2.qr.menulux.com,190.00,11,1111152
+STALK CASUAL KİTCHEN | FİNCAN ÇAY | stalk2.qr.menulux.com,125.00,11,1111152
+STALK CASUAL KİTCHEN | FLAT WHITE | stalk2.qr.menulux.com,230.00,11,1111152
+STALK CASUAL KİTCHEN | IHLAMUR | stalk2.qr.menulux.com,225.00,11,1111152
+STALK CASUAL KİTCHEN | KIŞ ÇAYI | stalk2.qr.menulux.com,225.00,11,1111152
+STALK CASUAL KİTCHEN | LOTUS LATTE | stalk2.qr.menulux.com,240.00,11,1111152
+STALK CASUAL KİTCHEN | MİM PURPLE SKY (BİTKİ ÇAYI) | stalk2.qr.menulux.com,225.00,11,1111152
+STALK CASUAL KİTCHEN | SAHLEP | stalk2.qr.menulux.com,250.00,11,1111152
+STALK CASUAL KİTCHEN | SALEP | stalk2.qr.menulux.com,250.00,11,1111152
+STALK CASUAL KİTCHEN | SICAK BEYAZ ÇİKOLATA (SICAK İÇECEKLER) | stalk2.qr.menulux.com,250.00,11,1111152
+STALK CASUAL KİTCHEN | SICAK ÇİKOLATA | stalk2.qr.menulux.com,250.00,11,1111152
+STALK CASUAL KİTCHEN | SINGLE ESPRESSO | stalk2.qr.menulux.com,150.00,11,1111152
+STALK CASUAL KİTCHEN | SPANISH LATTE | stalk2.qr.menulux.com,240.00,11,1111152
+STALK CASUAL KİTCHEN | STAFF TEA | stalk2.qr.menulux.com,225.00,11,1111152
+STALK CASUAL KİTCHEN | SUMMER SUN (BİTKİ ÇAYI) | stalk2.qr.menulux.com,225.00,11,1111152
+STALK CASUAL KİTCHEN | TÜRK KAHVESİ | stalk2.qr.menulux.com,150.00,11,1111152
+STALK CASUAL KİTCHEN | WHITE CHOCOLATE MOCHA | stalk2.qr.menulux.com,230.00,11,1111152
+STALK CASUAL KİTCHEN | YASEMİNLİ YEŞİL ÇAY | stalk2.qr.menulux.com,225.00,11,1111152
+Sümer Coffee Lounge 1937 | Americano | menum.co/Sumercoffeelounge,160.00,11,1111152
+Sümer Coffee Lounge 1937 | Caffe Latte | menum.co/Sumercoffeelounge,180.00,11,1111152
+Sümer Coffee Lounge 1937 | Caffe Mocha | menum.co/Sumercoffeelounge,190.00,11,1111152
+Sümer Coffee Lounge 1937 | Cappuccino | menum.co/Sumercoffeelounge,180.00,11,1111152
+Sümer Coffee Lounge 1937 | Caramel Macchiato | menum.co/Sumercoffeelounge,190.00,11,1111152
+Sümer Coffee Lounge 1937 | Chai Tea Latte | menum.co/Sumercoffeelounge,180.00,11,1111152
+Sümer Coffee Lounge 1937 | Cortado | menum.co/Sumercoffeelounge,170.00,11,1111152
+Sümer Coffee Lounge 1937 | Crema Blue Latte | menum.co/Sumercoffeelounge,190.00,11,1111152
+Sümer Coffee Lounge 1937 | Damla Sakızlı Sahlep | menum.co/Sumercoffeelounge,180.00,11,1111152
+Sümer Coffee Lounge 1937 | Dibek Kahvesi | menum.co/Sumercoffeelounge,120.00,11,1111152
+Sümer Coffee Lounge 1937 | Double Dibek Kahve | menum.co/Sumercoffeelounge,150.00,11,1111152
+Sümer Coffee Lounge 1937 | Double Espresso | menum.co/Sumercoffeelounge,160.00,11,1111152
+Sümer Coffee Lounge 1937 | Double Menengiç Kahvesi | menum.co/Sumercoffeelounge,150.00,11,1111152
+Sümer Coffee Lounge 1937 | Double Türk Kahvesi | menum.co/Sumercoffeelounge,140.00,11,1111152
+Sümer Coffee Lounge 1937 | Eclipse Latte | menum.co/Sumercoffeelounge,190.00,11,1111152
+Sümer Coffee Lounge 1937 | Espresso | menum.co/Sumercoffeelounge,120.00,11,1111152
+Sümer Coffee Lounge 1937 | Filtre Kahve | menum.co/Sumercoffeelounge,170.00,11,1111152
+Sümer Coffee Lounge 1937 | Fincan Çay | menum.co/Sumercoffeelounge,80.00,11,1111152
+Sümer Coffee Lounge 1937 | Flat White | menum.co/Sumercoffeelounge,190.00,11,1111152
+Sümer Coffee Lounge 1937 | Fuse Tea | menum.co/Sumercoffeelounge,100.00,11,1111152
+Sümer Coffee Lounge 1937 | İngiliz Çayı | menum.co/Sumercoffeelounge,90.00,11,1111152
+Sümer Coffee Lounge 1937 | İrlanda Çayı | menum.co/Sumercoffeelounge,100.00,11,1111152
+Sümer Coffee Lounge 1937 | Kış Çayı | menum.co/Sumercoffeelounge,160.00,11,1111152
+Sümer Coffee Lounge 1937 | Latte Macchiato | menum.co/Sumercoffeelounge,180.00,11,1111152
+Sümer Coffee Lounge 1937 | Lotus Latte | menum.co/Sumercoffeelounge,210.00,11,1111152
+Sümer Coffee Lounge 1937 | Lotus Mocha | menum.co/Sumercoffeelounge,220.00,11,1111152
+Sümer Coffee Lounge 1937 | Marshmallow Latte | menum.co/Sumercoffeelounge,200.00,11,1111152
+Sümer Coffee Lounge 1937 | Menengeç Kahvesi | menum.co/Sumercoffeelounge,120.00,11,1111152
+Sümer Coffee Lounge 1937 | Nutella Latte | menum.co/Sumercoffeelounge,210.00,11,1111152
+Sümer Coffee Lounge 1937 | Nutella Mocha | menum.co/Sumercoffeelounge,220.00,11,1111152
+Sümer Coffee Lounge 1937 | Oreo Latte | menum.co/Sumercoffeelounge,200.00,11,1111152
+Sümer Coffee Lounge 1937 | Pistachio Latte | menum.co/Sumercoffeelounge,200.00,11,1111152
+Sümer Coffee Lounge 1937 | Sahlep | menum.co/Sumercoffeelounge,170.00,11,1111152
+Sümer Coffee Lounge 1937 | Sütlü Double Türk Kahvesi | menum.co/Sumercoffeelounge,160.00,11,1111152
+Sümer Coffee Lounge 1937 | Sütlü Nescafe | menum.co/Sumercoffeelounge,170.00,11,1111152
+Sümer Coffee Lounge 1937 | Sütlü Türk Kahvesi | menum.co/Sumercoffeelounge,120.00,11,1111152
+Sümer Coffee Lounge 1937 | Sıcak Beyaz Çikolata (Türk Kahvesi Çeşitleri) | menum.co/Sumercoffeelounge,170.00,11,1111152
+Sümer Coffee Lounge 1937 | Sıcak Çikolata | menum.co/Sumercoffeelounge,170.00,11,1111152
+Sümer Coffee Lounge 1937 | Tomurcuk Bitki Çayı | menum.co/Sumercoffeelounge,140.00,11,1111152
+Sümer Coffee Lounge 1937 | Türk Kahvesi | menum.co/Sumercoffeelounge,100.00,11,1111152
+Sümer Coffee Lounge 1937 | White Chocolate Mocha | menum.co/Sumercoffeelounge,190.00,11,1111152
+Sümer Coffee Lounge 1937 | White Chocolate Nutella Mocha | menum.co/Sumercoffeelounge,190.00,11,1111152
+Sümer Coffee Lounge 1937 | Çay | menum.co/Sumercoffeelounge,50.00,11,1111152
+TARİHİ ÇINARALTI KAHVALTI & MANGAL | SEMAVERDE ÇAY | menum.co/tarihicinaraltikahvaltimangal,850.00,11,1111152
+The Bullshit Pub URLA | AMERICANO | menum.co/restoran-thebullshitpuburla,180.00,11,1111152
+The Bullshit Pub URLA | ESPRESSO | menum.co/restoran-thebullshitpuburla,130.00,11,1111152
+The Bullshit Pub URLA | FİLTRE KAHVE | menum.co/restoran-thebullshitpuburla,180.00,11,1111152
+The Bullshit Pub URLA | LATTE | menum.co/restoran-thebullshitpuburla,210.00,11,1111152
+The Bullshit Pub URLA | TÜRK KAHVESİ | menum.co/restoran-thebullshitpuburla,150.00,11,1111152
+The Bullshit Pub URLA | ÇAY | menum.co/restoran-thebullshitpuburla,60.00,11,1111152
+The Mediteran Hotel Restaurant | Americano | menum.co/Mediteran-Restaurant,180.00,11,1111152
+The Mediteran Hotel Restaurant | Cafe Latte | menum.co/Mediteran-Restaurant,200.00,11,1111152
+The Mediteran Hotel Restaurant | Cappuccino | menum.co/Mediteran-Restaurant,200.00,11,1111152
+The Mediteran Hotel Restaurant | Cup of the Tea / Fincan Çay | menum.co/Mediteran-Restaurant,100.00,11,1111152
+The Mediteran Hotel Restaurant | Espresso | menum.co/Mediteran-Restaurant,150.00,11,1111152
+The Mediteran Hotel Restaurant | Turkish Coffee / Türk Kahvesi | menum.co/Mediteran-Restaurant,120.00,11,1111152
+Uysal Alabalık | Çay (Demlik) | menum.co/uysal-alabalik,200.00,11,1111152
+Uçak Kardeşler Akaryakıt | BİTKİ ÇAYLARI | menum.co/ucakkardesler,55.00,11,1111152
+Uçak Kardeşler Akaryakıt | BÜYÜK ÇAY | menum.co/ucakkardesler,50.00,11,1111152
+Uçak Kardeşler Akaryakıt | ESPRESSO | menum.co/ucakkardesler,110.00,11,1111152
+Uçak Kardeşler Akaryakıt | FİLTRE KAHVE | menum.co/ucakkardesler,150.00,11,1111152
+Uçak Kardeşler Akaryakıt | FUSE TEA KUTU | menum.co/ucakkardesler,85.00,11,1111152
+Uçak Kardeşler Akaryakıt | KÜÇÜK ÇAY | menum.co/ucakkardesler,30.00,11,1111152
+Uçak Kardeşler Akaryakıt | NESCAFE SADE | menum.co/ucakkardesler,130.00,11,1111152
+Uçak Kardeşler Akaryakıt | NESCAFE SÜTLÜ | menum.co/ucakkardesler,150.00,11,1111152
+Uçak Kardeşler Akaryakıt | SALEP | menum.co/ucakkardesler,100.00,11,1111152
+Uçak Kardeşler Akaryakıt | TÜRK KAHVESİ | menum.co/ucakkardesler,130.00,11,1111152
+Viento Coffee & Sweet | Ada Çayı | menum.co/VientoCoffeeSweet,210.00,11,1111152
+Viento Coffee & Sweet | Americano | menum.co/VientoCoffeeSweet,210.00,11,1111152
+Viento Coffee & Sweet | Ayurveda Herbs (Bitki Çayları) | menum.co/VientoCoffeeSweet,260.00,11,1111152
+Viento Coffee & Sweet | Bardak Çay | menum.co/VientoCoffeeSweet,75.00,11,1111152
+Viento Coffee & Sweet | Caffe Latte | menum.co/VientoCoffeeSweet,230.00,11,1111152
+Viento Coffee & Sweet | Caffe Mocha | menum.co/VientoCoffeeSweet,250.00,11,1111152
+Viento Coffee & Sweet | Cappuccino | menum.co/VientoCoffeeSweet,230.00,11,1111152
+Viento Coffee & Sweet | Caramel Macchiato | menum.co/VientoCoffeeSweet,260.00,11,1111152
+Viento Coffee & Sweet | Chai Tea Latte | menum.co/VientoCoffeeSweet,250.00,11,1111152
+Viento Coffee & Sweet | Coconut Latte | menum.co/VientoCoffeeSweet,300.00,11,1111152
+Viento Coffee & Sweet | Cortado | menum.co/VientoCoffeeSweet,240.00,11,1111152
+Viento Coffee & Sweet | Espresso | menum.co/VientoCoffeeSweet,170.00,11,1111152
+Viento Coffee & Sweet | Filtre Kahve | menum.co/VientoCoffeeSweet,210.00,11,1111152
+Viento Coffee & Sweet | Fincan Çay | menum.co/VientoCoffeeSweet,100.00,11,1111152
+Viento Coffee & Sweet | Flat White | menum.co/VientoCoffeeSweet,245.00,11,1111152
+Viento Coffee & Sweet | Get The Power (Bitki Çayları) | menum.co/VientoCoffeeSweet,260.00,11,1111152
+Viento Coffee & Sweet | Honey Vanilla Latte | menum.co/VientoCoffeeSweet,300.00,11,1111152
+Viento Coffee & Sweet | Huckleberry Friende (Bitki Çayları) | menum.co/VientoCoffeeSweet,260.00,11,1111152
+Viento Coffee & Sweet | Ihlamur | menum.co/VientoCoffeeSweet,210.00,11,1111152
+Viento Coffee & Sweet | Jasmine Pearls (Bitki Çayları) | menum.co/VientoCoffeeSweet,260.00,11,1111152
+Viento Coffee & Sweet | Kafeinsiz Türk Kahvesi | menum.co/VientoCoffeeSweet,180.00,11,1111152
+Viento Coffee & Sweet | Kuşburbu (Bitki Çayları) | menum.co/VientoCoffeeSweet,210.00,11,1111152
+Viento Coffee & Sweet | Mango Latte | menum.co/VientoCoffeeSweet,300.00,11,1111152
+Viento Coffee & Sweet | Morgentau (Bitki Çayları) | menum.co/VientoCoffeeSweet,260.00,11,1111152
+Viento Coffee & Sweet | Orange Vanilla Latte | menum.co/VientoCoffeeSweet,300.00,11,1111152
+Viento Coffee & Sweet | Salep | menum.co/VientoCoffeeSweet,250.00,11,1111152
+Viento Coffee & Sweet | Sıcak Çikolata | menum.co/VientoCoffeeSweet,260.00,11,1111152
+Viento Coffee & Sweet | Tropical Sun (Bitki Çayları) | menum.co/VientoCoffeeSweet,260.00,11,1111152
+Viento Coffee & Sweet | Türk Kahvesi | menum.co/VientoCoffeeSweet,150.00,11,1111152
+Viento Coffee & Sweet | Yeşil Çay | menum.co/VientoCoffeeSweet,210.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Americano | zevahir360.qr.menulux.com,250.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Aromalı Filtre Kahve | zevahir360.qr.menulux.com,275.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Bitki Çayları | zevahir360.qr.menulux.com,230.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | CAFE LATTE AROMALI | zevahir360.qr.menulux.com,260.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | CAFE LATTE | zevahir360.qr.menulux.com,250.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | CAPPUCCİNO | zevahir360.qr.menulux.com,260.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | CARAMEL MACCHİATO | zevahir360.qr.menulux.com,270.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Damla Sakızlı Türk Kahvesi | zevahir360.qr.menulux.com,180.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Demlik Çay | zevahir360.qr.menulux.com,450.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Dibek Kahvesi | zevahir360.qr.menulux.com,180.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Double Espresso | zevahir360.qr.menulux.com,190.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Espresso Macchiato | zevahir360.qr.menulux.com,250.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Espresso | zevahir360.qr.menulux.com,180.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Filtre Kahve | zevahir360.qr.menulux.com,250.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Fincan Çay | zevahir360.qr.menulux.com,80.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Fındıklı Sıcak Çikolata | zevahir360.qr.menulux.com,290.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Kış Çayı | zevahir360.qr.menulux.com,260.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Menengiç Kahvesi | zevahir360.qr.menulux.com,180.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | MOCHA | zevahir360.qr.menulux.com,260.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | NESCAFE SADE | zevahir360.qr.menulux.com,230.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | NESCAFE SÜTLÜ | zevahir360.qr.menulux.com,240.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Salep | zevahir360.qr.menulux.com,260.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Süt (SICAK İÇECEKLER) | zevahir360.qr.menulux.com,170.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Sütlü Filtre Kahve | zevahir360.qr.menulux.com,270.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Sıcak Çikolata | zevahir360.qr.menulux.com,260.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Türk Kahvesi Orta | zevahir360.qr.menulux.com,160.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Türk Kahvesi Sade | zevahir360.qr.menulux.com,160.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Türk Kahvesi Şekerli | zevahir360.qr.menulux.com,160.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | White Choocolate Mocha | zevahir360.qr.menulux.com,280.00,11,1111152
+ZEVAHİR 360 CAFE BİSTRO RESTAURANT | Çay | zevahir360.qr.menulux.com,70.00,11,1111152
+ÖZDERE PİDE | AMERICANO | menum.co/Ozdere-Pide,90.00,11,1111152
+ÖZDERE PİDE | CAPPUCCİNO | menum.co/Ozdere-Pide,100.00,11,1111152
+ÖZDERE PİDE | FLAT WHİTE | menum.co/Ozdere-Pide,100.00,11,1111152
+ÖZDERE PİDE | LATTE MACCHİATO | menum.co/Ozdere-Pide,120.00,11,1111152
+ÖZDERE PİDE | LATTE | menum.co/Ozdere-Pide,100.00,11,1111152
+ÖZDERE PİDE | MOCHA | menum.co/Ozdere-Pide,90.00,11,1111152
+Şölen Börekçisi | Fincan Çay | menum.co/Solen,30.00,11,1111152
+Şölen Börekçisi | Nescafe | menum.co/Solen,40.00,11,1111152
+Şölen Börekçisi | Türk Kahvesi | menum.co/Solen,50.00,11,1111152
+Şölen Börekçisi | Çay | menum.co/Solen,15.00,11,1111152
