@@ -62,6 +62,35 @@ Historical material; not current setup guidance.
 
 What changed in behaviour and documentation, newest first, so a difference from older code can be checked against an intended change. Each entry names its commit; API changes per contract version are also in [FALCON_API_CONTRACT.md §9](FALCON_API_CONTRACT.md#9-changes).
 
+### 2026-10-20 — per-store prices and JSON price data
+
+**Breaking / behaviour changes**
+
+- Databases built before `0707a5c` lack `products.is_store_latest` and return 503 `database_outdated` on `/api/catalog/*` until they are rebuilt with `uv run python scripts/build_database.py`; catalog search now counts only each store's latest offers for an item (`0707a5c`; [DATABASE.md § Catalog columns](DATABASE.md#catalog-columns), [contract §4.12](FALCON_API_CONTRACT.md#412-get-apicatalogsearch)).
+- `/api/catalog/item` returns one offer per store (its cheapest on the store's newest date) with the store's other products in `other_offers`, which `summary` and `lowest_ever` ignore, and the product page lists those other offers under each store row (`0707a5c`; [contract §4.13](FALCON_API_CONTRACT.md#413-get-apicatalogitem), [USER_GUIDE.md § Price comparison shop](USER_GUIDE.md#price-comparison-shop)).
+- Every retailer's prices now come from one JSON file per retailer in `data/prices_json/` (`4703400`, `e86d921`), so `/api/history` `source_file` values look like `Markets_Gurmar.json#2026-10-17` instead of `raw/...csv` paths (`09a0772`; [DATA_CONTRACT.md § Partitioned JSON input](DATA_CONTRACT.md#partitioned-json-input-dataprices_json), [contract §4.3](FALCON_API_CONTRACT.md#43-get-apihistory)).
+- New `scripts/csv_to_json.py` converts and merges upstream scraper CSVs into those JSON files without overwriting existing prices; JSON file stems split on the first `_` only, and month-day file names such as `products10-19.csv` are dated from 2026-02-23 (`0707a5c`; [SETUP.md § 4](SETUP.md#4-take-new-data-from-inflationresearchstudy), [DATABASE.md § JSON fallback](DATABASE.md#json-fallback)).
+- On Windows the API launcher now stays in the foreground as the parent process and stops the server's whole process tree when it exits, instead of returning and leaving Granian workers listening on the port (`f701686`; [GETTING-STARTED.md § 5](GETTING-STARTED.md#5-run-the-api)).
+- New inflation reference files from InflationResearchStudy were committed under `data/inflation/` (`bcf4537`; [DATA_CONTRACT.md § Generated inflation input](DATA_CONTRACT.md#generated-inflation-input-datainflation)).
+
+**Removed**
+
+- The raw price CSVs under `data/raw/`, replaced by the JSON files, including the files the build could not use and the mirror's `EpeyKatfg/series.csv` (committed as `.part001`/`.part002`) and `EpeyKatfg/catalog.csv`; `data/raw/` keeps only reference files (`09a0772`; [DATA_CONTRACT.md § Rules for committed data](DATA_CONTRACT.md#rules-for-committed-data)).
+- Copying upstream CSVs into `data/raw/` as the import method; new scrapes go through `scripts/csv_to_json.py` (`0707a5c`; [SETUP.md § 4.3](SETUP.md#43-convert-new-prices-into-json)).
+- The dropped stores `Communication / Xiaomi` and `Communication / Teknoraks` (raw files `09a0772`, Teknoraks' inflation files `bcf4537`) and the mirror's `Technology.json`, an older copy of Beymen's tech products (`e86d921`) (`DROPPED_RETAILERS`; [DATA_CONTRACT.md § Rules for committed data](DATA_CONTRACT.md#rules-for-committed-data)).
+
+### 2026-10-18 — ucuzu price-comparison shop
+
+**Breaking / behaviour changes**
+
+- Databases built before `f15fb2c` lack the catalog columns `name_key`, `previous_price`, `price_since` and `is_current` (and `idx_products_name_key`) and return 503 `database_outdated` on `/api/catalog/*` until they are rebuilt; the dashboard endpoints keep working (`f15fb2c`; [DATABASE.md § Catalog columns](DATABASE.md#catalog-columns), [contract §2.3](FALCON_API_CONTRACT.md#23-error-codes-and-status)).
+- New routes `GET /api/catalog/groups`, `/api/catalog/search`, `/api/catalog/item` and `/api/catalog/deals` serve the shop from `adapters/sqlite_catalog_repository.py` and `domain/catalog.py` (`f15fb2c`; [contract §4.11](FALCON_API_CONTRACT.md#411-get-apicataloggroups)–[§4.14](FALCON_API_CONTRACT.md#414-get-apicatalogdeals), [API.md](API.md#endpoints)).
+- The ucuzu shop now lives at `/` (`/ara`, `/urun/[key]`, `/firsatlar`, `/alarmlar`, with price alarms in `localStorage` key `price-alarms`), and **the inflation dashboard moved from `/` to `/analiz`**; the site uses white/blue design tokens and the Inter font (`f15fb2c`; [USER_GUIDE.md](USER_GUIDE.md), [frontend/README.md § Routes](../frontend/README.md#routes)).
+
+**Documentation-only**
+
+- New [SETUP.md](SETUP.md), a new-machine walkthrough from scraped data to a running site (`f15fb2c`).
+
 ### 2026-10-17 — docs overhaul and /api/products
 
 **Breaking / behaviour changes**

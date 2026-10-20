@@ -32,3 +32,10 @@ Previous run (docs overhaul): scripts/ralph/archive/2026-10-18-docs-overhaul/
   - Verify each PRD row with `git show --stat`: 907efe4 did not change verify_falcon_api.py; it only ran it without a database in the (since removed) CI.
   - The CONVENTIONS/CONCERNS merge is a4f4ca2 (US-005), not one of the hashes in the source table.
 ---
+
+## 2026-10-20 18:11 - US-006
+- docs/README.md § Change history: `### 2026-10-20 — per-store prices and JSON price data` and `### 2026-10-18 — ucuzu price-comparison shop` above the 2026-10-17 subsection, covering every row of both source tables with commit hashes; rebuild requirement and the `/` → `/analiz` move stated plainly; Removed lists raw price CSVs, the copy-CSVs import and the dropped stores.
+- Files changed: docs/README.md
+- **Learnings for future iterations:**
+  - Trace deleted data with `git log --diff-filter=D -- <path>`: Technology.json went in e86d921, Teknoraks' inflation files in bcf4537, raw Xiaomi/Teknoraks and EpeyKatfg series.csv parts in 09a0772.
+---
