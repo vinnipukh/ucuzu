@@ -50,6 +50,8 @@ Choose a view with the **Explore** tabs (arrow keys, Home and End also move betw
 
 Pick a **Retailer** and a **Product** (both searchable; the lists show the products seen at the loaded retailers in the date window). Shows metric cards for latest price, cheapest price, cheapest date and change since first observation; a **Monthly average price** chart over the product's complete history (independent of the date window); and a **Daily price history** section with a **Show daily chart** toggle (off by default) and the raw observation table for the selected date window. Categories recorded as `Uncategorized` are shown as "—".
 
+> **Changed 2026-10-17:** the product lists load from a lighter request, so they now work for large categories such as Markets; previously loading them could fail with "API response from /api/history was not valid JSON". See [change history](README.md#change-history).
+
 ### 2. Retailer average price chart
 
 Compare price trends across the loaded retailers. Choose which retailers to plot and **Average** or **Median** aggregation. Shows a line chart and the data table.

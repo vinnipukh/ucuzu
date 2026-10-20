@@ -46,3 +46,12 @@ Previous run (docs overhaul): scripts/ralph/archive/2026-10-18-docs-overhaul/
 - **Learnings for future iterations:**
   - Check the "previously" half against the parent commit (`git show <hash>^:<file>`): the old CSV fallback ran only when SQLite was unavailable, and `INFLATION_DATA_ROOT` defaulted to `data/raw`.
 ---
+
+## 2026-10-20 18:13 - US-004
+- "Changed 2026-10-17" notes: frontend/README.md § API URL (same-origin default) and § Dashboard views (pickers use /api/products); docs/USER_GUIDE.md § 1. Product price explorer (note only).
+- Browser check (built-in browser pane, API and Vite started from .claude/launch.json): /analiz with the default Markets category sent /api/products for 23 Markets retailers → 200, then /api/history and /api/product for the picked product → 200; no "not valid JSON" text on the page.
+- Files changed: frontend/README.md, docs/USER_GUIDE.md
+- **Learnings for future iterations:**
+  - .claude/launch.json defines `api` (:8000) and `frontend` (:5173) for the preview tools.
+  - The /analiz console logs "[ECharts] Component title is used but not imported" (TitleComponent missing from the ECharts registration); unrelated to these docs stories, not fixed.
+---

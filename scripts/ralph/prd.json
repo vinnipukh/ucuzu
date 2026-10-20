@@ -86,8 +86,8 @@
         "Verify in browser using dev-browser skill: the Product explorer pickers on /analiz load for the default Markets category with no 'not valid JSON' error. If the skill is unavailable, record this as unverified in notes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Browser check passed in the built-in browser: /api/products for 23 Markets retailers returned 200 and no 'not valid JSON' error. npm run check: 0 errors, 0 warnings."
     },
     {
       "id": "US-007",

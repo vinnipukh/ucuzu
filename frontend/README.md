@@ -18,6 +18,8 @@ Install, run and build commands are in [docs/GETTING-STARTED.md](../docs/GETTING
 - In `npm run dev`, Vite proxies `/api` to `http://localhost:8000` (`vite.config.ts`). `npm run preview` and static hosting have no proxy: serve the build behind a reverse proxy that routes `/api`, or build with `VITE_API_BASE_URL` set to the API's origin. Both setups are described in [GETTING-STARTED.md](../docs/GETTING-STARTED.md#how-the-dashboard-reaches-the-api).
 - Runtime override: the sidebar's API settings change `filters.apiBaseUrl` for the session (empty = same origin).
 
+> **Changed 2026-10-17:** the default API URL is the same origin; previously an empty `VITE_API_BASE_URL` meant `http://localhost:8000`. See [change history](../docs/README.md#change-history).
+
 ## Routes
 
 | URL | File | Purpose | API |
@@ -38,6 +40,8 @@ Install, run and build commands are in [docs/GETTING-STARTED.md](../docs/GETTING
 3. **Price movers** — largest drops from peak and gains since first observation.
 4. **Coverage overview** — products, observations, categories over time.
 5. **EpeyKatfg monthly** — month-over-month Carli, Dutot and TÜİK-weighted inflation series.
+
+> **Changed 2026-10-17:** the Product explorer's retailer and product pickers load from `/api/products`; previously they loaded the full `/api/history`, which failed for large categories with "API response from /api/history was not valid JSON". See [change history](../docs/README.md#change-history).
 
 User-facing behaviour is described in [docs/USER_GUIDE.md](../docs/USER_GUIDE.md).
 
