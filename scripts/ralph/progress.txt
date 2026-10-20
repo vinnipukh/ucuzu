@@ -55,3 +55,12 @@ Previous run (docs overhaul): scripts/ralph/archive/2026-10-18-docs-overhaul/
   - .claude/launch.json defines `api` (:8000) and `frontend` (:5173) for the preview tools.
   - The /analiz console logs "[ECharts] Component title is used but not imported" (TitleComponent missing from the ECharts registration); unrelated to these docs stories, not fixed.
 ---
+
+## 2026-10-20 18:14 - US-007
+- "Changed" notes: DATABASE.md § Catalog columns (2026-10-18 columns, 2026-10-20 is_store_latest, rebuild); DATA_CONTRACT.md § Rules for committed data (JSON only, 2026-10-20); SETUP.md § 4 (csv_to_json import); GETTING-STARTED.md § 5 (Windows launcher); USER_GUIDE.md intro and frontend/README.md § Routes (dashboard at /analiz, 2026-10-18); USER_GUIDE.md § Price comparison shop (one offer per store, 2026-10-20).
+- docs/README.md change history: the /analiz move also cites 5cbbe0a.
+- Files changed: docs/DATABASE.md, docs/DATA_CONTRACT.md, docs/SETUP.md, docs/GETTING-STARTED.md, docs/USER_GUIDE.md, frontend/README.md, docs/README.md
+- **Learnings for future iterations:**
+  - The dashboard file's rename to routes/analiz/ is in 5cbbe0a (titled as a PRD chore), the parent of f15fb2c, whose message describes the move; cite both.
+  - Before 0707a5c only 13 retailers had prices_json files; about 9,955 raw CSVs held the rest.
+---

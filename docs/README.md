@@ -85,7 +85,7 @@ What changed in behaviour and documentation, newest first, so a difference from 
 
 - Databases built before `f15fb2c` lack the catalog columns `name_key`, `previous_price`, `price_since` and `is_current` (and `idx_products_name_key`) and return 503 `database_outdated` on `/api/catalog/*` until they are rebuilt; the dashboard endpoints keep working (`f15fb2c`; [DATABASE.md § Catalog columns](DATABASE.md#catalog-columns), [contract §2.3](FALCON_API_CONTRACT.md#23-error-codes-and-status)).
 - New routes `GET /api/catalog/groups`, `/api/catalog/search`, `/api/catalog/item` and `/api/catalog/deals` serve the shop from `adapters/sqlite_catalog_repository.py` and `domain/catalog.py` (`f15fb2c`; [contract §4.11](FALCON_API_CONTRACT.md#411-get-apicataloggroups)–[§4.14](FALCON_API_CONTRACT.md#414-get-apicatalogdeals), [API.md](API.md#endpoints)).
-- The ucuzu shop now lives at `/` (`/ara`, `/urun/[key]`, `/firsatlar`, `/alarmlar`, with price alarms in `localStorage` key `price-alarms`), and **the inflation dashboard moved from `/` to `/analiz`**; the site uses white/blue design tokens and the Inter font (`f15fb2c`; [USER_GUIDE.md](USER_GUIDE.md), [frontend/README.md § Routes](../frontend/README.md#routes)).
+- The ucuzu shop now lives at `/` (`/ara`, `/urun/[key]`, `/firsatlar`, `/alarmlar`, with price alarms in `localStorage` key `price-alarms`), and **the inflation dashboard moved from `/` to `/analiz`**; the site uses white/blue design tokens and the Inter font (`f15fb2c`; the dashboard file's move to `routes/analiz/` landed in its parent `5cbbe0a`; [USER_GUIDE.md](USER_GUIDE.md), [frontend/README.md § Routes](../frontend/README.md#routes)).
 
 **Documentation-only**
 

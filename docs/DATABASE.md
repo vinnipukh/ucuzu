@@ -109,6 +109,8 @@ These `products` columns serve the price-comparison catalog (`/api/catalog/*`, [
 | `is_current` | `1` when `last_date` is within 7 days of the newest `last_date` of the product's retailer **and** within `CURRENT_WINDOW_DAYS` (45) days of the newest `last_date` in the database; else `0`. Products of retailers that stopped being scraped therefore drop out of the catalog. |
 | `is_store_latest` | `1` when `last_date` is the newest `last_date` among the retailer's products with the same `name_key` (the store's latest prices for that item); else `0`. Catalog search counts only these offers, so an older, cheaper product of the same store does not set an item's price. |
 
+> **Changed 2026-10-18:** `name_key`, `previous_price`, `price_since` and `is_current` were added, and on 2026-10-20 `is_store_latest`; a database built before either change returns 503 `database_outdated` on `/api/catalog/*` until it is rebuilt; previously `products` had none of these columns. See [change history](README.md#change-history).
+
 ### Indexes
 
 | Index | Columns |

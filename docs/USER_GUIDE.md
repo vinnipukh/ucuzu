@@ -7,6 +7,8 @@ The site has two parts:
 - the **ucuzu** price-comparison shop at `/` (Turkish), described in [Price comparison shop](#price-comparison-shop);
 - the **inflation dashboard** at `/analiz` (linked as **Analiz** in the shop header and "Enflasyon analizi" in its footer), described from [Dashboard header](#dashboard-header) on. Its "← ucuzu" link returns to the shop.
 
+> **Changed 2026-10-18:** the dashboard moved to `/analiz` when the shop took over `/`; previously the dashboard was the site root. See [change history](README.md#change-history).
+
 ## Price comparison shop
 
 The same product is matched across stores by its normalized name, so one product page compares every store that sells it. Only current prices are listed: a store's price counts when it was seen within 7 days of that store's newest data and within 45 days of the newest data overall, so stores that are no longer scraped drop out. Rental listings (`HousesRent`) are not part of the shop.
@@ -17,6 +19,8 @@ The same product is matched across stores by its normalized name, so one product
 - **Product page (`/urun/<name>`)** — the cheapest current price and store, the highest current price, the lowest price ever seen and the price gap between stores; one offer per store (its cheapest listing on its newest date), cheapest first, with its latest price change; a store's other listings of the product open under "<store> için N seçenek daha"; offers that are no longer current are folded under "Güncel olmayan … fiyat"; a step chart of each store's price history (1 month, 3 months or all); and similar products.
 - **Deals (`/firsatlar`)** — current offers whose latest price change was a drop, largest first. Filter by category, minimum drop (10–50 %) and period (last 7 or 30 days).
 - **Price alarms (`/alarmlar`)** — on a product page, **Fiyat alarmı kur** sets a target price (default 5 % below the cheapest current price). The alarms page shows each alarm with the current cheapest price and marks those at or below the target. Alarms are stored only in this browser (`localStorage` key `price-alarms`): they are not sent to the server, no notification is sent, and clearing site data or using another browser loses them.
+
+> **Changed 2026-10-20:** the product page shows one offer per store, with the store's other listings of the product folded under it; previously every matching product was its own row, so one store could appear several times. See [change history](README.md#change-history).
 
 ## Dashboard header
 

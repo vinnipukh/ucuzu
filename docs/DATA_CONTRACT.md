@@ -33,6 +33,8 @@ The SQLite file is a serving artifact built from `data/`, not a source of truth.
   | `Communication / Teknoraks` (also `data/inflation/08_Communication/Teknoraks/`) | Scraping stopped in May 2026, and the file names have no year (`technologyProducts5-10-.csv`), so the build skipped them. |
   | `Technology` (`data/prices_json/Technology.json`, mirror only) | An older copy of Beymen's tech products (May to September 2026), already in `Communication / Beymen`. |
 
+> **Changed 2026-10-20:** prices are committed only as one JSON file per retailer in `data/prices_json/`; previously most retailers' prices were committed as scraper CSVs under `data/raw/`. See [change history](README.md#change-history).
+
 ## Large files: `scripts/data_files.py`
 
 Git hosts reject large blobs, so oversized files under `data/` are committed as chunks.

@@ -33,6 +33,8 @@ Install, run and build commands are in [docs/GETTING-STARTED.md](../docs/GETTING
 
 `(shop)` is a SvelteKit layout group: it adds `SiteHeader` and the shop footer without a URL segment. `[key]` is an item's `name_key`, URL-encoded (`itemHref` in `src/lib/catalog.ts`).
 
+> **Changed 2026-10-18:** the dashboard moved from `/` to `/analiz` and the shop took over `/`; previously the dashboard was the site root. See [change history](../docs/README.md#change-history).
+
 ## Dashboard views (`/analiz`)
 
 1. **Product explorer** — retailer/product pickers (`/api/products`), latest/cheapest metrics, full-history monthly average chart (`/api/product`), optional daily chart and raw history (`/api/history`).

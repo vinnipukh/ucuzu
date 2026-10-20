@@ -71,6 +71,8 @@ Check it from another terminal: `curl http://localhost:8000/api/health` should r
 
 The server runs in the foreground; Ctrl+C stops it. On Linux and macOS the launcher replaces itself with the server process. On Windows it stays running as the parent and puts the server and its worker processes in a job that Windows kills when the launcher exits, so stopping the launcher, even by killing it, never leaves workers listening on the port.
 
+> **Changed 2026-10-20:** on Windows the launcher stays in the foreground and stops the server's workers when it exits; previously it returned at once and the workers could keep listening on the port. See [change history](README.md#change-history).
+
 ## 6. Run the frontend
 
 In a second terminal:

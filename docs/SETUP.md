@@ -61,6 +61,8 @@ Notes:
 
 Upstream is large (about 1.3 GB of history; on 2026-10-18 `InflationItems/Datas/` held 10,183 files, 3.4 GB). A partial, sparse, shallow clone downloads only the two data folders. Upstream's price CSVs are not copied into this repository: `scripts/csv_to_json.py` reads them from the clone and merges them into the per-retailer JSON files.
 
+> **Changed 2026-10-20:** new scrapes are imported with `scripts/csv_to_json.py`; previously upstream CSVs were copied into `data/raw/`. See [change history](README.md#change-history).
+
 ### 4.1 Where upstream data goes
 
 | Upstream path | Here | How |
