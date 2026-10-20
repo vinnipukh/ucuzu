@@ -44,5 +44,4 @@ Thumbs.db
 browser-artifacts/
 
 # >>> split data files (managed by scripts/data_files.py; originals rebuilt by `join`)
-/data/raw/EpeyKatfg/series.csv
 # <<< split data files

@@ -21,6 +21,9 @@ from inflation_dashboard.domain.catalog import CATALOG_EXCLUDED_GROUPS, search_t
 
 CATALOG_SORTS = ("relevance", "price_asc", "price_desc", "drop")
 MAX_ITEM_OFFERS = 40
+# Product rows read per item before grouping them by store (one store can list
+# many products under one name, e.g. every repair service for a phone model).
+MAX_ITEM_ROWS = 400
 # Larger "drops" are almost always scraper or unit errors (a 10x price is a 90%
 # "drop"), not discounts.
 MAX_DEAL_DROP_PERCENT = 80.0
@@ -52,7 +55,7 @@ def _retailers(conn: Any) -> dict[int, tuple[str, str, str]]:
     if cached is not None and now - cached[0] <= _CACHE_TTL_SECONDS:
         return cached[1]
     columns = {row[1] for row in conn.execute("PRAGMA table_info(products)")}
-    if not {"name_key", "previous_price", "price_since", "is_current"} <= columns:
+    if not {"name_key", "previous_price", "price_since", "is_current", "is_store_latest"} <= columns:
         raise CatalogSchemaError("Database predates the catalog; run scripts/build_database.py")
     table = {
         retailer_key: (name, *split_retailer(name))
@@ -135,7 +138,8 @@ def search_items(
     """Search catalog items; return ``(items, total)``.
 
     Every normalized query term must occur in the item's ``name_key``. Items
-    aggregate the current offers of the selected group/store: lowest and highest
+    aggregate the current offers of the selected group/store, counting only each
+    store's offers on its newest date for the item (``is_store_latest``): lowest and highest
     price, offer and store counts and the largest current price drop. Each item
     names its cheapest offer (``name``, ``store``, ``category``) and up to three
     stores. ``relevance`` ranks by the number of query terms that match whole
@@ -155,7 +159,12 @@ def search_items(
         keys = _retailer_keys(table, group, store)
         if not keys:
             return [], 0
-        where = [f"p.retailer_key IN ({','.join('?' * len(keys))})", "p.is_current = 1", "p.latest_price > 0"]
+        where = [
+            f"p.retailer_key IN ({','.join('?' * len(keys))})",
+            "p.is_current = 1",
+            "p.is_store_latest = 1",
+            "p.latest_price > 0",
+        ]
         params: list[Any] = list(keys)
         for term in terms:
             where.append("p.name_key LIKE ? ESCAPE '!'")
@@ -185,7 +194,8 @@ def search_items(
             SELECT p.name_key, p.retailer_key, p.product_name, c.name, p.latest_price
             FROM products AS p JOIN categories AS c ON c.category_key = p.category_key
             WHERE p.name_key IN ({','.join('?' * len(page_keys))})
-              AND p.retailer_key IN ({','.join('?' * len(keys))}) AND p.is_current = 1 AND p.latest_price > 0
+              AND p.retailer_key IN ({','.join('?' * len(keys))})
+              AND p.is_current = 1 AND p.is_store_latest = 1 AND p.latest_price > 0
             ORDER BY p.latest_price ASC
             """,
             (*page_keys, *keys),
@@ -225,14 +235,39 @@ def search_items(
     return items, rows[0][-1]
 
 
-def get_item(key: str) -> dict[str, Any] | None:
-    """Return one catalog item with every offer and its price history, or ``None``.
+def _store_offers(offers: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Collapse offers to one per store: the cheapest offer on the store's newest date.
 
-    Offers are current first, then cheapest first (at most ``MAX_ITEM_OFFERS``);
-    each carries ``history`` as ``[[date, price], ...]``. ``summary`` covers the
-    current offers (falling back to all offers when none is current) and the
-    lowest price ever observed for the item, ignoring prices below
-    ``LOWEST_EVER_FLOOR`` of the lowest current price.
+    The store's other offers (other products under the same name, or older ones)
+    move into the chosen offer's ``other_offers``, newest first, then cheapest
+    first. Offers without a price never win over priced ones.
+    """
+    by_store: dict[str, list[dict[str, Any]]] = {}
+    for offer in offers:
+        by_store.setdefault(offer["retailer"], []).append(offer)
+
+    chosen = []
+    for store_offers in by_store.values():
+        # Stable sorts, least significant key first: price, then date, then priced.
+        store_offers.sort(key=lambda o: o["latest_price"] if o["latest_price"] is not None else 0.0)
+        store_offers.sort(key=lambda o: o["last_date"] or "", reverse=True)
+        store_offers.sort(key=lambda o: o["latest_price"] is None)
+        best, *others = store_offers
+        best["other_offers"] = others
+        chosen.append(best)
+    return chosen
+
+
+def get_item(key: str) -> dict[str, Any] | None:
+    """Return one catalog item with one offer per store and its price history, or ``None``.
+
+    Each store shows its latest price: its cheapest offer on its newest date, with
+    the store's other offers in ``other_offers`` (see ``_store_offers``). Offers are
+    current first, then cheapest first (at most ``MAX_ITEM_OFFERS`` stores); each
+    carries ``history`` as ``[[date, price], ...]``. ``summary`` covers the current
+    offers (falling back to all offers when none is current) and the lowest price
+    ever observed for the item, ignoring prices below ``LOWEST_EVER_FLOOR`` of the
+    lowest current price.
     """
     conn = get_reusable_connection()
     try:
@@ -246,32 +281,40 @@ def get_item(key: str) -> dict[str, Any] | None:
             ORDER BY p.is_current DESC, p.latest_price ASC
             LIMIT ?
             """,
-            (key, *excluded, MAX_ITEM_OFFERS),
+            (key, *excluded, MAX_ITEM_ROWS),
         )
         columns = [d[0] for d in cursor.description]
         rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
         if not rows:
             return None
-        product_keys = [row["product_key"] for row in rows]
-        history: dict[int, list[list[Any]]] = {k: [] for k in product_keys}
+        product_keys = {}
+        all_offers = []
+        for row in rows:
+            product_key = row.pop("product_key")
+            offer = _offer(row, table)
+            product_keys[id(offer)] = product_key
+            all_offers.append(offer)
+        offers = _store_offers(all_offers)
+        offers.sort(key=lambda o: o["latest_price"] if o["latest_price"] is not None else float("inf"))
+        offers.sort(key=lambda o: not o["is_current"])
+        offers = offers[:MAX_ITEM_OFFERS]
+
+        # Price history only for the offer shown per store.
+        history: dict[int, list[list[Any]]] = {product_keys[id(o)]: [] for o in offers}
         for product_key, date, price in conn.execute(
             f"""
             SELECT product_key, date, price FROM observations
-            WHERE product_key IN ({','.join('?' * len(product_keys))})
+            WHERE product_key IN ({','.join('?' * len(history))})
             ORDER BY product_key, date
             """,
-            product_keys,
+            list(history),
         ):
             history[product_key].append([date, price])
     finally:
         close_connection(conn)
 
-    offers = []
-    for row in rows:
-        product_key = row.pop("product_key")
-        offer = _offer(row, table)
-        offer["history"] = history[product_key]
-        offers.append(offer)
+    for offer in offers:
+        offer["history"] = history[product_keys[id(offer)]]
 
     current = [o for o in offers if o["is_current"] and o["latest_price"]] or [o for o in offers if o["latest_price"]]
     current_min = min((o["latest_price"] for o in current), default=None)

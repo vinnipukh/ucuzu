@@ -63,7 +63,7 @@ Error objects have exactly two fields, `code` and `message`. Context goes on the
 | other 4xx/5xx | `http_error` | Any other `falcon.HTTPError` raised by Falcon | Falcon's description or title |
 | 500 | `server_error` | Any unhandled exception | Always the fixed string `Internal server error`; the traceback is logged server-side (logger `inflation_dashboard.api`), never sent |
 | 503 | `database_unavailable` | The configured database file is missing or 0 bytes (every endpoint except `/api/health` and `/api/epeykatfg/monthly-inflation`) | `Database not found; run scripts/build_database.py` |
-| 503 | `database_outdated` | `/api/catalog/*` only: the database was built before the catalog columns (`products.name_key`, `previous_price`, `price_since`, `is_current`) existed. The other endpoints keep working; rebuild the database. | `Database predates the catalog; run scripts/build_database.py` |
+| 503 | `database_outdated` | `/api/catalog/*` only: the database was built before the catalog columns (`products.name_key`, `previous_price`, `price_since`, `is_current`, `is_store_latest`) existed. The other endpoints keep working; rebuild the database. | `Database predates the catalog; run scripts/build_database.py` |
 
 The handlers for 404/405/500/503 are registered in `create_app`. Messages are short and safe to show in the UI.
 
@@ -135,7 +135,7 @@ Retailers and the overall date range. No parameters.
 ```json
 {
   "data": {
-    "retailers": ["Alcohol Tobacco / AlkolFiyatlari", "…", "Markets / Gurmar", "…", "Technology", "…"],
+    "retailers": ["Alcohol Tobacco / AlkolFiyatlari", "…", "Markets / Gurmar", "…"],
     "min_date": "2023-09-06T00:00:00",
     "max_date": "2026-10-17T00:00:00"
   },
@@ -457,7 +457,7 @@ Parameters:
 - `sort` (default `relevance`): `relevance` ranks by the number of query terms that match whole words, then store count, then shorter names; `price_asc` / `price_desc` by `min_price`; `drop` by `max_drop_percent` (items without a drop last), then store count. Any other value → 400 `Invalid sort`.
 - `limit` (integer 1–60, default 24), `offset` (integer 0–10000, default 0): out of range or not an integer → 400 `Invalid limit` / `Invalid offset` (not clamped).
 
-Only current offers with `latest_price > 0` in the selected group/store count. For each item, `name`, `store` and `category` come from its cheapest offer; `stores` lists up to three stores, cheapest first; `min_price`/`max_price` span the offers; `max_drop_percent` is the largest offer `drop_percent` (§4.12), `null` if none dropped; `last_date` is the newest offer date. `meta.total` counts every matching item, `meta.count` the items on this page.
+Only current offers with `latest_price > 0` in the selected group/store count, and of those only each store's latest prices for the item (`products.is_store_latest = 1`: offers last seen on the store's newest date for that item; see [DATABASE.md](DATABASE.md#catalog-columns)), matching the per-store prices of §4.12. For each item, `name`, `store` and `category` come from its cheapest offer; `stores` lists up to three stores, cheapest first; `min_price`/`max_price` span the offers; `max_drop_percent` is the largest offer `drop_percent` (§4.12), `null` if none dropped; `last_date` is the newest offer date. `meta.total` counts every matching item, `meta.count` the items on this page.
 
 ```json
 {
@@ -490,15 +490,16 @@ Parameters:
 
 - `key` (`string`, **required**): a `name_key`, as returned in `key` by §4.11. Missing or blank → 400 `key is required`. A key with no products → 404 `not_found` with message `Item not found: <key>` and `meta` `{key}`.
 
-`offers` holds the products with that `name_key` outside `HousesRent`, **including stale ones** (`is_current: false`): current offers first, then cheapest first, at most 40 (`MAX_ITEM_OFFERS`). Each offer is the `products` row plus:
+`offers` holds **one offer per store** for the products with that `name_key` outside `HousesRent`, **including stale ones** (`is_current: false`): current offers first, then cheapest first, at most 40 stores (`MAX_ITEM_OFFERS`; up to 400 products are read, `MAX_ITEM_ROWS`). A store's offer is its latest price: of its products, those with the newest `last_date`, and among them the cheapest (a product without a price never wins over a priced one). Each offer is the `products` row plus:
 
 - `retailer`, `group`, `store`: the retailer label and its split.
 - `previous_price`, `price_since`: the price before the latest change and the first day of the current price (see [DATABASE.md](DATABASE.md#catalog-columns)).
 - `is_current`: a boolean.
 - `drop_percent`: `(previous_price − latest_price) / previous_price × 100`, rounded to 2 decimals, when the latest change was a drop; else `null`.
 - `history`: every observation as `[date, price]` pairs, oldest first.
+- `other_offers`: the store's other products for the item (another product under the same name, such as a different repair service for the same phone, or an older offer), newest `last_date` first, then cheapest first. Same fields, without `history` and `other_offers`; `[]` when the store has only one.
 
-`name`, `group` and `category` come from the cheapest current offer (the first offer if none is current). In `summary`, `min_price`/`max_price` span the current offers with a price (all offers with a price when none is current); `lowest_ever` is the lowest price in any returned offer's history, with its date and store, ignoring prices below 25 % (`LOWEST_EVER_FLOOR`) of the lowest current price (`null` when nothing qualifies); `store_count` counts distinct retailers among the returned offers. `meta` is `{key, offer_count}`.
+`name`, `group` and `category` come from the cheapest current offer (the first offer if none is current). In `summary`, `min_price`/`max_price` span the current offers with a price (all offers with a price when none is current); `lowest_ever` is the lowest price in any returned offer's history, with its date and store, ignoring prices below 25 % (`LOWEST_EVER_FLOOR`) of the lowest current price (`null` when nothing qualifies); `store_count` counts distinct retailers among the returned offers; `offer_count` and `current_offer_count` count the returned (per-store) offers, so `other_offers` are not counted and `lowest_ever` ignores their histories. `meta` is `{key, offer_count}`.
 
 ```json
 {
@@ -1031,6 +1032,8 @@ export interface CatalogOffer {
   is_current: boolean;
   drop_percent: number | null;
   history?: [string, number][]; // `GET /api/catalog/item` only
+  /** `GET /api/catalog/item` only: the store's other offers for the item, without `history`. */
+  other_offers?: CatalogOffer[];
 }
 
 /** `data` of `GET /api/catalog/item`. */

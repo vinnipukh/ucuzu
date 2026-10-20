@@ -58,6 +58,12 @@
     alarmFormOpen = false;
   }
 
+  // A store's offers often share the item's name (e.g. every repair service for
+  // one phone); the product id is then what tells them apart.
+  function offerLabel(offer: CatalogOffer): string {
+    return offer.product_name === data?.name ? offer.product_id : offer.product_name;
+  }
+
   function changeLabel(offer: CatalogOffer): string | null {
     if (!offer.previous_price || offer.latest_price === null || offer.previous_price === offer.latest_price) return null;
     const pct = ((offer.latest_price - offer.previous_price) / offer.previous_price) * 100;
@@ -105,6 +111,25 @@
     };
   });
 </script>
+
+{#snippet otherOffers(offer: CatalogOffer)}
+  {#if offer.other_offers?.length}
+    <details class="variants">
+      <summary>{offer.store} için {offer.other_offers.length} seçenek daha</summary>
+      <ul>
+        {#each offer.other_offers as other (other.product_id)}
+          <li>
+            <span class="variant-name">{offerLabel(other)}</span>
+            <span class="muted">
+              {#if other.last_date !== offer.last_date}son görülme {formatDayTR(other.last_date)}{/if}
+            </span>
+            <span class="variant-price">{formatTL(other.latest_price)}</span>
+          </li>
+        {/each}
+      </ul>
+    </details>
+  {/if}
+{/snippet}
 
 <svelte:head>
   <title>{data ? `${data.name} fiyatları` : 'Ürün'} – ucuzu</title>
@@ -194,7 +219,7 @@
         <li class:cheapest={i === 0}>
           <div class="offer-store">
             <strong>{offer.store}</strong>
-            <span class="muted">{offer.product_name}</span>
+            <span class="muted">{offer.other_offers?.length ? offerLabel(offer) : offer.product_name}</span>
           </div>
           <div class="offer-change">
             {#if changeLabel(offer)}
@@ -208,6 +233,7 @@
             {#if i === 0}<span class="tag">En ucuz</span>{/if}
             <strong>{formatTL(offer.latest_price)}</strong>
           </div>
+          {@render otherOffers(offer)}
         </li>
       {:else}
         <li class="muted">Bu ürün için güncel fiyat yok.</li>
@@ -221,10 +247,11 @@
             <li>
               <div class="offer-store">
                 <strong>{offer.store}</strong>
-                <span class="muted">{offer.product_name}</span>
+                <span class="muted">{offer.other_offers?.length ? offerLabel(offer) : offer.product_name}</span>
               </div>
               <div class="offer-change muted">son görülme {formatDayTR(offer.last_date)}</div>
               <div class="offer-price"><span class="muted">{formatTL(offer.latest_price)}</span></div>
+              {@render otherOffers(offer)}
             </li>
           {/each}
         </ol>
@@ -481,6 +508,37 @@
     font-size: 0.7rem;
     font-weight: 600;
   }
+  .variants {
+    grid-column: 1 / -1;
+    margin-top: -6px;
+    font-size: 0.85rem;
+  }
+  .variants summary {
+    width: fit-content;
+    color: var(--color-accent);
+    cursor: pointer;
+  }
+  .variants ul {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .offers .variants li {
+    display: grid;
+    grid-template-columns: 1fr auto 160px;
+    gap: 16px;
+    padding: 6px 0;
+    border-top: 1px dashed var(--color-border);
+    background: none;
+  }
+  .variant-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .variant-price {
+    text-align: right;
+  }
   .stale {
     margin-top: 12px;
   }
@@ -516,10 +574,12 @@
       aspect-ratio: auto;
       height: 160px;
     }
-    .offers li {
+    .offers li,
+    .offers .variants li {
       grid-template-columns: 1fr auto;
     }
-    .offer-change {
+    .offer-change,
+    .variants li .muted {
       display: none;
     }
   }

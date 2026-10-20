@@ -403,6 +403,8 @@ export interface CatalogOffer {
   is_current: boolean;
   drop_percent: number | null;
   history?: [string, number][]; // `GET /api/catalog/item` only
+  /** `GET /api/catalog/item` only: the store's other offers for the item, without `history`. */
+  other_offers?: CatalogOffer[];
 }
 
 /** `data` of `GET /api/catalog/item`. */

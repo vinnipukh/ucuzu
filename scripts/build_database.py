@@ -73,6 +73,13 @@ DATE_PATTERNS = (
     (re.compile(r"(?<!\d)(\d{2})[-_.](\d{2})[-_.](20\d{2})(?!\d)"), (3, 2, 1)),
     (re.compile(r"(?<!\d)(20\d{2})(\d{2})(\d{2})(?!\d)"), (1, 2, 3)),
 )
+# Some upstream scrapers name files by month and day only (``products10-19.csv``,
+# ``Clothes3-10.csv``). Upstream started on 2026-02-23 (InflationResearchStudy's creation
+# date) and no such file was committed before its name date read as 2026, so a
+# month-day is read as its first occurrence on or after SCRAPE_START. That is
+# unambiguous only for scrapes before 2027-02-23; see docs/DATABASE.md.
+MONTH_DAY_PATTERN = re.compile(r"(?<!\d)(\d{1,2})-(\d{1,2})$")
+SCRAPE_START = date(2026, 2, 23)
 
 UNCATEGORIZED = "Uncategorized"
 # Products last seen longer ago than this (before the newest date in the database)
@@ -103,7 +110,9 @@ CREATE TABLE sources (
 -- name_key (domain.catalog.name_key) matches the same item across retailers;
 -- previous_price/price_since describe the latest price change and is_current marks
 -- products seen within 7 days of their retailer's newest date and within
--- CURRENT_WINDOW_DAYS of the newest date in the database.
+-- CURRENT_WINDOW_DAYS of the newest date in the database. is_store_latest marks
+-- products whose last_date is the newest among the retailer's products with the
+-- same name_key (the store's latest prices for that item).
 CREATE TABLE products (
     product_key INTEGER PRIMARY KEY,
     retailer_key INTEGER NOT NULL REFERENCES retailers,
@@ -120,6 +129,7 @@ CREATE TABLE products (
     previous_price REAL,
     price_since TEXT,
     is_current INTEGER NOT NULL DEFAULT 0,
+    is_store_latest INTEGER NOT NULL DEFAULT 0,
     UNIQUE (retailer_key, product_id)
 );
 -- One row per product per day, clustered so a product's history is one range read.
@@ -169,13 +179,26 @@ JOIN retailers AS r ON r.retailer_key = s.retailer_key;
 
 
 def parse_file_date(name: str) -> str | None:
-    """Return the ISO date embedded in a scraper file name, if any."""
+    """Return the ISO date embedded in a scraper file name, if any.
+
+    Full dates (``DATE_PATTERNS``) win; otherwise a ``<month>-<day>`` stem suffix is
+    dated in the year that puts it within a year from ``SCRAPE_START``.
+    """
     for pattern, (y, m, d) in DATE_PATTERNS:
         for match in pattern.finditer(name):
             try:
                 return date(int(match[y]), int(match[m]), int(match[d])).isoformat()
             except ValueError:
                 continue
+    match = MONTH_DAY_PATTERN.search(Path(name).stem)
+    if match:
+        for year in (SCRAPE_START.year, SCRAPE_START.year + 1):
+            try:
+                day = date(year, int(match[1]), int(match[2]))
+            except ValueError:
+                continue
+            if SCRAPE_START <= day < SCRAPE_START.replace(year=SCRAPE_START.year + 1):
+                return day.isoformat()
     return None
 
 
@@ -197,13 +220,36 @@ def raw_retailer_label(relative_dirs: tuple[str, ...]) -> str | None:
     return f"{group} / {store}"
 
 
+# Partition stems whose plain mapping differs from the retailer label (stem mapping -> label).
+STEM_ALIASES = {
+    "Health / Diagnostic_Surgical_Services": "Health / Diagnostic&Surgical Services",
+}
+
+
 def retailer_from_stem(stem: str) -> str:
-    """Convert a prices_json partition stem into the API's retailer label."""
-    retailer = stem.replace("_", " / ")
-    aliases = {
-        "Health / Diagnostic / Surgical / Services": "Health / Diagnostic&Surgical Services",
-    }
-    return aliases.get(retailer, retailer)
+    """Convert a prices_json partition stem into the API's retailer label.
+
+    The first ``_`` separates group and store (``Markets_Gurmar`` -> ``Markets /
+    Gurmar``); later underscores belong to the store (``Education_Open_Education``
+    -> ``Education / Open_Education``). ``retailer_stem`` is the inverse.
+    """
+    group, sep, store = stem.partition("_")
+    retailer = f"{group} / {store}" if sep else stem
+    return STEM_ALIASES.get(retailer, retailer)
+
+
+def retailer_stem(retailer: str) -> str:
+    """The prices_json partition stem for a retailer label (inverse of ``retailer_from_stem``).
+
+    Raises ``ValueError`` for labels that cannot round-trip: more than one `` / ``,
+    an ``_`` in the group, or a character Windows forbids in file names.
+    """
+    aliased = next((plain for plain, label in STEM_ALIASES.items() if label == retailer), retailer)
+    group, sep, store = aliased.partition(" / ")
+    stem = f"{group}_{store}" if sep else aliased
+    if " / " in store or "_" in group or re.search(r'[\\/:*?"<>|]', stem) or retailer_from_stem(stem) != retailer:
+        raise ValueError(f"Retailer label has no prices_json file name: {retailer!r}")
+    return stem
 
 
 def _header_key(column: object) -> str:
@@ -347,7 +393,8 @@ class Loader:
         Inserts retailers, categories and products, copies the staged rows into
         ``observations`` keeping the last staged row per (product, date), then fills each
         product's first/last date, min/max price, observation count, latest price,
-        latest price change (``previous_price``, ``price_since``) and ``is_current``.
+        latest price change (``previous_price``, ``price_since``), ``is_current`` and
+        ``is_store_latest``.
         """
         conn = self.conn
         conn.executemany("INSERT INTO retailers VALUES (?, ?)", [(k, n) for n, k in self.retailers.items()])
@@ -427,6 +474,19 @@ class Loader:
             """,
             (f"-{CURRENT_WINDOW_DAYS} days",),
         )
+        # One window pass; an UPDATE ... FROM join on (name_key, retailer_key) has no
+        # index at this point and runs for hours.
+        conn.execute(
+            """
+            UPDATE products SET is_store_latest = 1 WHERE product_key IN (
+                SELECT product_key FROM (
+                    SELECT product_key, last_date,
+                           max(last_date) OVER (PARTITION BY name_key, retailer_key) AS newest
+                    FROM products
+                ) WHERE last_date IS newest
+            )
+            """
+        )
         conn.commit()
 
 
@@ -473,6 +533,7 @@ def ingest_json_fallback(loader: Loader, json_dir: Path, covered: set[str]) -> N
     for json_file in sorted(json_dir.glob("*.json")):
         retailer = retailer_from_stem(json_file.stem)
         if retailer in covered:
+            print(f"JSON ignored: {json_file.name} ({retailer} has raw CSVs; fold them in with scripts/csv_to_json.py)")
             continue
         payload = json.loads(json_file.read_text(encoding="utf-8"))
         by_day: dict[str, list[tuple[str, str, str, float]]] = {}

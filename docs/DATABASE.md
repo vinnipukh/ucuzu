@@ -8,19 +8,19 @@ This file owns the database schema, indexes, build pipeline and runtime connecti
 
 If the database file is missing or 0 bytes, `/api/health` still returns 200 with `data.database: "unavailable"`, and every data endpoint returns HTTP 503 with error code `database_unavailable` and message "Database not found; run scripts/build_database.py". The API reads no other data source.
 
-A database built before the catalog columns existed (`products` without `name_key`, `previous_price`, `price_since` or `is_current`) still serves every other endpoint, but the `/api/catalog/*` routes return HTTP 503 with error code `database_outdated` and message "Database predates the catalog; run scripts/build_database.py". Rebuild the database to fix it.
+A database built before the catalog columns existed (`products` without `name_key`, `previous_price`, `price_since`, `is_current` or `is_store_latest`) still serves every other endpoint, but the `/api/catalog/*` routes return HTTP 503 with error code `database_outdated` and message "Database predates the catalog; run scripts/build_database.py". Rebuild the database to fix it.
 
 ## Build pipeline
 
 `scripts/build_database.py` options: `--data-dir` (default `data/`), `--db-path` (default `PRICES_DB_PATH`, else `data/prices.db`) and `--workers` (default CPU count − 1, at least 1).
 
-1. **Join split files.** Runs `data_files.join` so files committed as `.partNNN` chunks (currently `data/raw/EpeyKatfg/series.csv`) are rebuilt first.
+1. **Join split files.** Runs `data_files.join` so files committed as `.partNNN` chunks (none today) are rebuilt first.
 2. **Clean up.** Deletes leftovers of a previous crashed build: `<db>.building` and `<db>.staging`, each with `-wal`, `-shm` and `-journal`.
 3. **Create the target.** Builds into `<db>.building` with `journal_mode=OFF`, `synchronous=OFF` and a 512 MB page cache, and attaches a scratch database `<db>.staging` (journal off) holding an append-only `obs` table, so staging pages never bloat the served file.
 4. **Ingest raw CSVs** in parallel worker processes (see [Raw CSV ingestion](#raw-csv-ingestion)).
 5. **Ingest JSON fallback** for retailers that got no raw rows (see [JSON fallback](#json-fallback)).
 6. **Write tables.** Inserts `retailers`, `categories` and `products` (with each product's `name_key`, see [Catalog columns](#catalog-columns)); copies staged observations into `observations`, keeping the **last staged row** per `(product, date)`; then fills each product's first/last date, min/max price, observation count and latest price.
-7. **Compute price changes** (printed as "Computing price changes..."). Fills `previous_price`, `price_since` and `is_current` on every product (see [Catalog columns](#catalog-columns)).
+7. **Compute price changes** (printed as "Computing price changes..."). Fills `previous_price`, `price_since`, `is_current` and `is_store_latest` on every product (see [Catalog columns](#catalog-columns)).
 8. **Indexes, views, statistics.** Creates the [indexes](#indexes) and [views](#views), runs `ANALYZE`, and switches the file to `journal_mode=WAL` (what the read-only API connections expect).
 9. **Swap in.** Closes the connection, deletes `<db>.staging`, removes any stale `<db>-wal` and `<db>-shm`, and atomically replaces the target with `os.replace(<db>.building, <db>)`.
 
@@ -32,7 +32,11 @@ Changes to the data layout, file formats, retailer folders or schema must update
 
 Every `*.csv` under `data/raw` is considered.
 
-**Date.** The date comes from the file name, first match wins: `YYYY-MM-DD`, `DD-MM-YYYY` or `YYYYMMDD`, with `-`, `_` or `.` as separators in the first two forms; the year must start with `20` and the date must be valid. Files without a full date (for example `technologyProducts5-10-.csv`, `series.csv`) are skipped.
+**Date.** The date comes from the file name, first match wins: `YYYY-MM-DD`, `DD-MM-YYYY` or `YYYYMMDD`, with `-`, `_` or `.` as separators in the first two forms; the year must start with `20` and the date must be valid.
+
+Without a full date, a file stem ending in `<month>-<day>` (one or two digits each, `-` separator: `products10-19.csv`, `products-02-23.csv`, `Clothes3-10.csv`, `sehirhatlari_fares_5-31.csv`) gets the first such date on or after `SCRAPE_START` (2026-02-23), so `3-10` is 2026-03-10 and `1-5` would be 2027-01-05. 2026-02-23 is when the upstream repository InflationResearchStudy was created, and its GitHub history shows no month-day file committed before its name date read as 2026 (checked 2026-10-20 for Kim, Defacto, Antalya, AfeksYapiMarket, Ikea and PublicTransportation). The rule is unambiguous only for scrapes before 2027-02-23: after that a month-day name would be dated a year early, so such scrapers must switch to full dates or the rule must change.
+
+Other files (for example `series.csv`, `cagri_all_products.csv`, or the monthly `health_prices_2026-03.csv`) are skipped. The Health medicine lists are left undated on purpose: they have no day, all eight were uploaded together on 2026-10-16, and the files for 2026-06 to 2026-10 repeat earlier months' prices exactly (06, 07 and 08 equal 03, 09 equals 04, 10 equals 05).
 
 **Retailer label** from the folders between `data/raw` and the file (`raw_retailer_label`):
 
@@ -69,11 +73,11 @@ Rows are then normalized by `build_product_frame` in `inflation_dashboard/domain
 
 ### JSON fallback
 
-`data/prices_json/*.json` partitions are used **only for retailers with no successfully ingested raw CSV**. The retailer comes from the file stem: `_` becomes ` / ` (`Markets_Gurmar` → `Markets / Gurmar`), with one alias: `Health_Diagnostic_Surgical_Services` → `Health / Diagnostic&Surgical Services`.
+`data/prices_json/*.json` partitions are used **only for retailers with no successfully ingested raw CSV**; a partition whose retailer has raw CSVs is skipped with the message `JSON ignored: <file> (…)`. Every retailer comes from JSON today (`data/raw/` has no CSVs): new scrapes are converted into partitions by `scripts/csv_to_json.py` ([DATA_CONTRACT.md](DATA_CONTRACT.md#partitioned-json-input-dataprices_json)). The retailer comes from the file stem (`retailer_from_stem`): the first `_` becomes ` / ` and later underscores stay in the store name (`Markets_Gurmar` → `Markets / Gurmar`, `Transport_motor_bicyle_car` → `Transport / motor_bicyle_car`), with one alias: `Health_Diagnostic_Surgical_Services` → `Health / Diagnostic&Surgical Services`. `retailer_stem` is the inverse; it rejects labels that cannot round-trip (an `_` in the group, more than one ` / `, or a character Windows forbids in file names).
 
 Each partition maps `product_id` to an object. Only `name` (default: the product id), `category` (default `Uncategorized`) and `prices` (`{"YYYY-MM-DD": price}`, `null` prices skipped) are read. Stored fields such as `latest_price`, `min_price` and `max_price` are ignored; the build recomputes them from the observations. Each date becomes one synthetic source row `<file>.json#YYYY-MM-DD`, so the API's newest-N-files (`max_files`) selection still works.
 
-`EpeyKatfg` and `Technology` come only from `prices_json`, because their raw files have no date in the name. Today `HomeGoods` (top level) also comes from JSON.
+`EpeyKatfg` and `HomeGoods` (top level) come from mirror partitions; `EpeyKatfg`'s raw files have no date in the name. Every other partition was written by `scripts/csv_to_json.py`.
 
 ## Schema
 
@@ -86,7 +90,7 @@ Storage is normalized so repeated text is stored once. The schema is defined in 
 | `retailers` | retailer label | `retailer_key`, `name` (unique) |
 | `categories` | category name | `category_key`, `name` (unique) |
 | `sources` | ingested file (JSON: one synthetic row per date) | `source_key`, `file_path` (unique; raw CSVs relative to `data/`, e.g. `raw/01_Food/...`; JSON as `<file>.json#YYYY-MM-DD`), `retailer_key`, `date`, `file_size`, `mtime`, `rows_ingested`, `ingested_at` |
-| `products` | `(retailer_key, product_id)` (unique) | `product_key`, `retailer_key`, `product_id`, `product_name`, `name_key`, `category_key`, `first_date`, `last_date`, `latest_price`, `min_price`, `max_price`, `observations_count`, `previous_price`, `price_since`, `is_current` |
+| `products` | `(retailer_key, product_id)` (unique) | `product_key`, `retailer_key`, `product_id`, `product_name`, `name_key`, `category_key`, `first_date`, `last_date`, `latest_price`, `min_price`, `max_price`, `observations_count`, `previous_price`, `price_since`, `is_current`, `is_store_latest` |
 | `observations` | product per day | `product_key`, `date`, `price`, `category_key` (as observed that day), `source_key` |
 
 `observations` is a `WITHOUT ROWID` table with primary key `(product_key, date)`, so a product's full history is one contiguous range read. A product's name and category in `products` come from its latest observation; renamed products keep a single history.
@@ -101,6 +105,7 @@ These `products` columns serve the price-comparison catalog (`/api/catalog/*`, [
 | `previous_price` | Price on the newest day whose price differs from `latest_price`; `NULL` if the price never changed. |
 | `price_since` | First day of the current price (the day after `previous_price` was last seen), or `first_date` if the price never changed. |
 | `is_current` | `1` when `last_date` is within 7 days of the newest `last_date` of the product's retailer **and** within `CURRENT_WINDOW_DAYS` (45) days of the newest `last_date` in the database; else `0`. Products of retailers that stopped being scraped therefore drop out of the catalog. |
+| `is_store_latest` | `1` when `last_date` is the newest `last_date` among the retailer's products with the same `name_key` (the store's latest prices for that item); else `0`. Catalog search counts only these offers, so an older, cheaper product of the same store does not set an item's price. |
 
 ### Indexes
 

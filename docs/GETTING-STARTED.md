@@ -42,7 +42,7 @@ uv sync --extra dev
 uv run python scripts/data_files.py join
 ```
 
-Files over 85 MB are committed as `.partNNN` chunks. `join` rebuilds the originals (currently `data/raw/EpeyKatfg/series.csv`) and skips any that are already intact. The database build also runs it, so this step is only needed if you want the files before building. Details: [DATA_CONTRACT.md](DATA_CONTRACT.md#large-files-scriptsdata_filespy).
+Files over 85 MB are committed as `.partNNN` chunks. `join` rebuilds the originals (no file is split today) and skips any that are already intact. The database build also runs it, so this step is only needed if you want the files before building. Details: [DATA_CONTRACT.md](DATA_CONTRACT.md#large-files-scriptsdata_filespy).
 
 ## 3. Build the database
 
@@ -68,6 +68,8 @@ uv run python scripts/run_falcon_server.py --engine granian --port 8000
 ```
 
 Check it from another terminal: `curl http://localhost:8000/api/health` should return `{"data": {"status": "ok", "database": "available"}, …}`. Flags (`--workers`, `--threads`, `--sqlite-db`, …) and environment variables are in [CONFIGURATION.md](CONFIGURATION.md). `uv run python scripts/run_falcon_server.py --help` lists them.
+
+The server runs in the foreground; Ctrl+C stops it. On Linux and macOS the launcher replaces itself with the server process. On Windows it stays running as the parent and puts the server and its worker processes in a job that Windows kills when the launcher exits, so stopping the launcher, even by killing it, never leaves workers listening on the port.
 
 ## 6. Run the frontend
 

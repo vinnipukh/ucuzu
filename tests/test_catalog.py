@@ -51,6 +51,12 @@ def catalog_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     _write(raw / "01_Food" / "Gurmar" / "g_2026-01-01.csv", "product_name,price\nSÜTAŞ Süt 1 L,40\nEkmek,10\n")
     _write(raw / "01_Food" / "Gurmar" / "g_2026-01-10.csv", "product_name,price\nSÜTAŞ Süt 1 L,30\nEkmek,10\n")
     _write(raw / "01_Food" / "Onur" / "o_2026-01-10.csv", "product_name,price\nSütaş süt 1l,35\n")
+    # One store, several products under the same name: k3 is cheapest but older.
+    _write(raw / "01_Food" / "Kale" / "k_2026-01-05.csv", "product_id,product_name,price\nk3,Sütaş Süt 1 L,25\n")
+    _write(
+        raw / "01_Food" / "Kale" / "k_2026-01-10.csv",
+        "product_id,product_name,price\nk1,Sütaş Süt 1 L,33\nk2,Sütaş Süt 1 L,31\n",
+    )
     # Seen only long before Onur's newest file: not current.
     _write(raw / "01_Food" / "Onur" / "o_2025-12-01.csv", "product_name,price\nEski Peynir,99\n")
     # A store whose scraping stopped long before the newest date: not current, even at 20.
@@ -93,10 +99,13 @@ def test_search_groups_offers_across_stores(client: testing.TestClient, catalog_
     assert result.json["meta"]["total"] == 1  # housing listings are not in the catalog
     item = result.json["data"][0]
     assert item["key"] == "sütaş süt 1l"
-    assert item["store_count"] == 2
+    assert item["store_count"] == 3
+    # Kale's 25 is an older offer than its newest date: only k1/k2 (33, 31) count.
     assert item["min_price"] == 30.0
     assert item["max_price"] == 35.0
+    assert item["offer_count"] == 4
     assert item["store"] == "Gurmar"
+    assert item["stores"] == ["Gurmar", "Kale", "Onur"]
     assert item["max_drop_percent"] == 25.0
 
 
@@ -112,11 +121,38 @@ def test_item_lists_offers_cheapest_first_with_history(client: testing.TestClien
 
     assert result.status_code == 200
     data = result.json["data"]
-    assert [o["store"] for o in data["offers"]] == ["Gurmar", "Onur", "Sariyer"]
-    assert data["offers"][2]["is_current"] is False
+    assert [o["store"] for o in data["offers"]] == ["Gurmar", "Kale", "Onur", "Sariyer"]
+    assert data["offers"][3]["is_current"] is False
     assert data["offers"][0]["history"] == [["2026-01-01", 40.0], ["2026-01-10", 30.0]]
+    assert data["offers"][0]["other_offers"] == []
     assert data["summary"]["min_price"] == 30.0
+    assert data["summary"]["current_offer_count"] == 3
     assert data["summary"]["lowest_ever"] == {"price": 20.0, "date": "2025-10-01", "store": "Sariyer"}
+
+
+def test_item_shows_each_stores_cheapest_offer_on_its_newest_date(
+    client: testing.TestClient, catalog_db: Path
+) -> None:
+    offers = client.simulate_get("/api/catalog/item", params={"key": "sütaş süt 1l"}).json["data"]["offers"]
+    kale = next(o for o in offers if o["store"] == "Kale")
+
+    # k3 (25) is cheaper but last seen on 2026-01-05, before Kale's newest date.
+    assert (kale["product_id"], kale["latest_price"], kale["last_date"]) == ("k2", 31.0, "2026-01-10")
+    assert kale["history"] == [["2026-01-10", 31.0]]
+    others = [(o["product_id"], o["latest_price"], o["last_date"]) for o in kale["other_offers"]]
+    assert others == [("k1", 33.0, "2026-01-10"), ("k3", 25.0, "2026-01-05")]
+    assert all("history" not in o and "other_offers" not in o for o in kale["other_offers"])
+
+
+def test_store_offers_never_prefers_an_unpriced_offer() -> None:
+    def offer(product_id: str, price: float | None, date: str) -> dict[str, object]:
+        return {"retailer": "Markets / X", "product_id": product_id, "latest_price": price, "last_date": date}
+
+    [best] = sqlite_catalog_repository._store_offers(
+        [offer("a", None, "2026-01-10"), offer("b", 12.0, "2026-01-09"), offer("c", 11.0, "2026-01-09")]
+    )
+    assert best["product_id"] == "c"
+    assert [o["product_id"] for o in best["other_offers"]] == ["b", "a"]
 
 
 def test_item_unknown_key_is_not_found(client: testing.TestClient, catalog_db: Path) -> None:
@@ -131,7 +167,7 @@ def test_deals_and_groups(client: testing.TestClient, catalog_db: Path) -> None:
 
     groups = client.simulate_get("/api/catalog/groups").json["data"]
     assert [g["group"] for g in groups] == ["Markets"]
-    assert {s["store"]: s["offer_count"] for s in groups[0]["stores"]} == {"Gurmar": 2, "Onur": 1}
+    assert {s["store"]: s["offer_count"] for s in groups[0]["stores"]} == {"Gurmar": 2, "Kale": 3, "Onur": 1}
 
 
 def test_outdated_database_returns_503(client: testing.TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

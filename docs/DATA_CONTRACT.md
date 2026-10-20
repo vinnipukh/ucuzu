@@ -6,8 +6,8 @@ This file owns the `data/` layout and the input file formats. How the build turn
 
 | Artifact | Producer (data repository) | Path here | Consumer |
 |---|---|---|---|
-| Raw retailer CSVs | Scrapers, `InflationItems/Datas/` | `data/raw/` | `scripts/build_database.py` only |
-| Partitioned JSON histories | Scraper/ETL code, `InflationItems/prices_json/` | `data/prices_json/` | `scripts/build_database.py` (retailers without raw CSVs) |
+| Retailer price histories (one JSON per retailer) | Upstream scraper CSVs (`InflationItems/Datas/`) converted by `scripts/csv_to_json.py`; a few partitions from the mirror's `InflationItems/prices_json/` | `data/prices_json/` | `scripts/build_database.py` (retailers without raw CSVs) |
+| Leftover scraper CSVs the build skips (undated, empty, no price column) | Scrapers, `InflationItems/Datas/` | `data/raw/` | none today; `scripts/build_database.py` still reads any dated CSV placed here |
 | Generated inflation CSVs | Inflation calculators, `Inflations/Datas/` | `data/inflation/` | `/api/epeykatfg/monthly-inflation` (`EpeyKatfg/monthly_inflation.csv`) |
 | SQLite serving database | `scripts/build_database.py` in this repository | `data/prices.db` (never committed) | Falcon WSGI API |
 
@@ -22,6 +22,14 @@ The SQLite file is a serving artifact built from `data/`, not a source of truth.
 - Large data imports are pushed in batches of about 500 MB, so no single push approaches GitHub's 2 GB limit.
 - Windows cannot create file names containing `\ : * ? " < > |`; such upstream paths are imported with `\` treated as a folder separator and the other characters replaced by `_`.
 - `.gitattributes` stores everything under `data/` byte-for-byte (`-text -diff`): no line-ending conversion.
+- **New prices are committed as JSON, not CSV.** `scripts/csv_to_json.py` merges upstream scraper CSVs into `data/prices_json/<Group>_<Store>.json` ([SETUP.md](SETUP.md#43-convert-new-prices-into-json)). Since 2026-10-20 every retailer's prices come from JSON: converting a retailer deletes its ingested CSVs. The CSVs the build could not use (undated, empty, unreadable or without a price column, and the mirror's `EpeyKatfg/series.csv`) were deleted on 2026-10-20, so `data/raw/` has no CSVs; git history still has them.
+- **Dropped stores** are deliberately left out of this repository even though upstream still has them. `csv_to_json.py` skips their prices (`DROPPED_RETAILERS`); delete their inflation files again after copying `Inflations/Datas` ([SETUP.md](SETUP.md#43-convert-new-prices-into-json)):
+
+  | Store | Reason |
+  |---|---|
+  | `Communication / Xiaomi` | Scraping stopped in May 2026. |
+  | `Communication / Teknoraks` (also `data/inflation/08_Communication/Teknoraks/`) | Scraping stopped in May 2026, and the file names have no year (`technologyProducts5-10-.csv`), so the build skipped them. |
+  | `Technology` (`data/prices_json/Technology.json`, mirror only) | An older copy of Beymen's tech products (May to September 2026), already in `Communication / Beymen`. |
 
 ## Large files: `scripts/data_files.py`
 
@@ -35,19 +43,19 @@ Git hosts reject large blobs, so oversized files under `data/` are committed as 
 
 All commands accept `--data-dir PATH` (default `data/`).
 
-The managed block in `.gitignore` is delimited by `# >>> split data files (managed by scripts/data_files.py; originals rebuilt by \`join\`)` and `# <<< split data files`; `split` rewrites it, so add other ignore rules outside it. The file currently split is `data/raw/EpeyKatfg/series.csv` (two parts).
+The managed block in `.gitignore` is delimited by `# >>> split data files (managed by scripts/data_files.py; originals rebuilt by \`join\`)` and `# <<< split data files`; `split` rewrites it, so add other ignore rules outside it. No file is split today (`data/raw/EpeyKatfg/series.csv` was, until it was deleted on 2026-10-20).
 
 ## Raw CSV input (`data/raw/`)
 
 - **Layout:** TÜİK COICOP folders (`01_Food/<store>/…`, `03_Clothing/<store>/…`, `04_Housing/<region>/<city>/…`, …) plus a few non-TÜİK top-level folders such as `EpeyKatfg/`. The folder path determines the retailer label; the rules are in [DATABASE.md](DATABASE.md#raw-csv-ingestion).
-- **File name:** must contain a full date (`YYYY-MM-DD`, `DD-MM-YYYY` or `YYYYMMDD`; `-`, `_` or `.` separators). Undated files are skipped.
+- **File name:** must contain a full date (`YYYY-MM-DD`, `DD-MM-YYYY` or `YYYYMMDD`; `-`, `_` or `.` separators) or end in `<month>-<day>` (`products10-19.csv`), which is dated within a year from 2026-02-23 ([DATABASE.md](DATABASE.md#raw-csv-ingestion)). Other files are skipped. Scrapers should write full dates: month-day names become ambiguous from 2027-02-23.
 - **Delimiter:** comma, semicolon or tab (whichever is most frequent in the header line).
 - **Encoding:** UTF-8 (with or without BOM), falling back to cp1254.
 - **Columns:** schemas are scraper-specific. A file needs a price column and, ideally, a product id, name and category column. Accepted spellings are the domain's canonical columns (`inflation_dashboard/domain/prices.py`) plus the header aliases listed in [DATABASE.md](DATABASE.md#raw-csv-ingestion).
 
 ## Partitioned JSON input (`data/prices_json/`)
 
-One file per retailer; the file stem gives the label (`Markets_Gurmar.json` → `Markets / Gurmar`, `_` → ` / `). Shape:
+One file per retailer; the file stem gives the label: the first `_` becomes ` / ` and later underscores belong to the store (`Markets_Gurmar.json` → `Markets / Gurmar`, `Education_Open_Education.json` → `Education / Open_Education`). Files written by `scripts/csv_to_json.py` hold one product per line, sorted by product id, so diffs show changed products. Shape:
 
 ```json
 {
@@ -65,7 +73,9 @@ One file per retailer; the file stem gives the label (`Markets_Gurmar.json` → 
 }
 ```
 
-The build reads only `name` (defaults to the product id), `category` (defaults to `Uncategorized`) and `prices` (`null` prices are skipped). `latest_price`, `min_price` and `max_price` are ignored and recomputed from the observations. A partition is used only when its retailer has no successfully ingested raw CSV.
+The build reads only `name` (defaults to the product id), `category` (defaults to `Uncategorized`) and `prices` (`null` prices are skipped). `latest_price`, `min_price` and `max_price` are ignored and recomputed from the observations. A partition is used only when its retailer has no successfully ingested raw CSV; otherwise the build prints `JSON ignored: <file>`.
+
+`csv_to_json.py` reads CSVs with the build's own parser and keeps its rules, so a database built from the JSON matches one built from the CSVs: the last row for a product and date wins (files in path order), and `name`/`category` come from the product's newest row. One difference: a CSV can give a product a different category on different days, while JSON stores one, so `observations.category_key` of converted retailers is the latest category on every day.
 
 ## Generated inflation input (`data/inflation/`)
 
@@ -77,7 +87,7 @@ Other files under `data/inflation/` are committed for reference and are not read
 
 ## Updating the data
 
-The checklist (copy, `data_files.py check`/`split`, push batches, rebuild, verify) is in [DEVELOPMENT.md](DEVELOPMENT.md). Step-by-step commands for importing from InflationResearchStudy are in [SETUP.md](SETUP.md#4-take-new-csvs-from-inflationresearchstudy).
+The checklist (convert with `csv_to_json.py`, `data_files.py check`/`split`, push batches, rebuild, verify) is in [DEVELOPMENT.md](DEVELOPMENT.md). Step-by-step commands for importing from InflationResearchStudy are in [SETUP.md](SETUP.md#4-take-new-data-from-inflationresearchstudy).
 
 ## Troubleshooting
 

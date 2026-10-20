@@ -1,15 +1,15 @@
-# Setup Guide: from CSVs to a running ucuzu
+# Setup Guide: from scraped data to a running ucuzu
 
-A start-to-finish walkthrough for a new machine. It covers installing the app, building the SQLite database from the committed CSVs and pulling new CSVs from the upstream data repository [`urazkagangunes/InflationResearchStudy`](https://github.com/urazkagangunes/InflationResearchStudy). Command details and options stay in their owning docs: [GETTING-STARTED.md](GETTING-STARTED.md) (install, run, verify), [DATABASE.md](DATABASE.md) (build pipeline) and [DATA_CONTRACT.md](DATA_CONTRACT.md) (data layout).
+A start-to-finish walkthrough for a new machine. It covers installing the app, building the SQLite database from the committed data and taking new scrapes from the upstream data repository [`urazkagangunes/InflationResearchStudy`](https://github.com/urazkagangunes/InflationResearchStudy). Command details and options stay in their owning docs: [GETTING-STARTED.md](GETTING-STARTED.md) (install, run, verify), [DATABASE.md](DATABASE.md) (build pipeline) and [DATA_CONTRACT.md](DATA_CONTRACT.md) (data layout).
 
 ```text
-InflationResearchStudy (upstream)        this repository                      running app
-InflationItems/Datas/  ──copy new──▶  data/raw/        ─┐
-Inflations/Datas/      ──copy new──▶  data/inflation/   ├─ build_database.py ─▶ data/prices.db ─▶ Falcon API :8000 ─▶ SvelteKit SPA :5173
-(mirror only)                         data/prices_json/ ─┘
+InflationResearchStudy (upstream)                          this repository                      running app
+InflationItems/Datas/ (CSVs) ──csv_to_json.py──▶  data/prices_json/ (one JSON per retailer) ─┐
+                                                  data/raw/ (no CSVs today)                  ├─ build_database.py ─▶ data/prices.db ─▶ API :8000 ─▶ SPA :5173
+Inflations/Datas/            ──copy new──────▶    data/inflation/ (reference)                ─┘
 ```
 
-The CSVs are committed to this repository, so a fresh clone can build the database without visiting upstream. Section 4 is only needed to bring in newer scrapes.
+Prices are committed as one JSON file per retailer, each with every product's full price history. Upstream scrapes arrive as CSVs; `scripts/csv_to_json.py` merges them into those JSON files, so no new price CSVs are committed. `data/raw/` has no CSVs any more (the unusable leftovers were deleted on 2026-10-20). A fresh clone builds the database without visiting upstream; section 4 is only needed to bring in newer scrapes.
 
 ## 1. Prerequisites
 
@@ -27,7 +27,7 @@ uv sync --extra dev
 cd frontend && npm install && cd ..
 ```
 
-## 3. Build the database from the committed CSVs
+## 3. Build the database from the committed data
 
 ```bash
 uv run python scripts/data_files.py join     # rebuild files committed as .partNNN chunks
@@ -37,8 +37,8 @@ uv run python scripts/build_database.py      # writes data/prices.db
 What the build does (full pipeline: [DATABASE.md](DATABASE.md#build-pipeline)):
 
 1. Joins split files (`join` again, so the first command is optional).
-2. Reads every dated CSV under `data/raw/` in parallel. The folder path gives the retailer (`01_Food/Migros/…` → `Markets / Migros`); the file name gives the date. Files without a full date in the name are skipped.
-3. Fills in retailers that have no raw CSVs from `data/prices_json/`.
+2. Reads any dated CSV under `data/raw/` in parallel (today there are none). The folder path gives the retailer (`01_Food/Migros/…` → `Markets / Migros`); the file name gives the date.
+3. Reads every retailer that has no raw CSVs from its `data/prices_json/<Group>_<Store>.json` file (most retailers). A JSON file whose retailer still has raw CSVs is ignored, and the build says so (`JSON ignored: …`).
 4. Writes the tables, then the price-comparison columns the shop needs (`name_key`, `previous_price`, `price_since`, `is_current`), indexes and views.
 5. Swaps the finished file in atomically, so a failed build never leaves a half-written `data/prices.db`.
 
@@ -57,19 +57,19 @@ Notes:
 - **Build somewhere else:** `--db-path path/to/other.db`, then start the API with `PRICES_DB_PATH=path/to/other.db`.
 - **An older database** (built before the shop existed) still serves `/analiz`, but the shop's `/api/catalog/*` routes answer 503 `database_outdated` until you rebuild.
 
-## 4. Take new CSVs from InflationResearchStudy
+## 4. Take new data from InflationResearchStudy
 
-Upstream is large (about 1.3 GB of history; on 2026-10-18 `InflationItems/Datas/` held 10,183 files, 3.4 GB). A partial, sparse, shallow clone downloads only the two data folders.
+Upstream is large (about 1.3 GB of history; on 2026-10-18 `InflationItems/Datas/` held 10,183 files, 3.4 GB). A partial, sparse, shallow clone downloads only the two data folders. Upstream's price CSVs are not copied into this repository: `scripts/csv_to_json.py` reads them from the clone and merges them into the per-retailer JSON files.
 
-### 4.1 Where upstream folders go
+### 4.1 Where upstream data goes
 
-| Upstream path | Here | Used by |
+| Upstream path | Here | How |
 |---|---|---|
-| `InflationItems/Datas/<NN_Group>/…` | `data/raw/<NN_Group>/…` | the database build |
-| `Inflations/Datas/<NN_Group>/…` | `data/inflation/<NN_Group>/…` | reference only; the API reads just `data/inflation/EpeyKatfg/monthly_inflation.csv` |
-| — | `data/prices_json/`, `data/raw/EpeyKatfg/`, `data/inflation/EpeyKatfg/` | come from the mirror [`vinnipukh/inflationstudymirror`](https://github.com/vinnipukh/inflationstudymirror), not upstream; leave them alone |
+| `InflationItems/Datas/<NN_Group>/…` (price CSVs) | `data/prices_json/<Group>_<Store>.json` | converted and merged by `scripts/csv_to_json.py`; read by the database build |
+| `Inflations/Datas/<NN_Group>/…` | `data/inflation/<NN_Group>/…` | copied (new files only); reference only, the API reads just `data/inflation/EpeyKatfg/monthly_inflation.csv` |
+| — | `data/prices_json/EpeyKatfg.json`, `HomeGoods.json`, `data/raw/EpeyKatfg/`, `data/inflation/EpeyKatfg/` | come from the mirror [`vinnipukh/inflationstudymirror`](https://github.com/vinnipukh/inflationstudymirror), not upstream; leave them alone |
 
-When a file exists both here and upstream, **keep the copy here**: it may come from the mirror, which wins on conflicts ([DATA_CONTRACT.md](DATA_CONTRACT.md#ownership)). So the import adds new files only and never overwrites.
+When this repository already has a price, **it is kept**: it may come from the mirror, which wins on conflicts ([DATA_CONTRACT.md](DATA_CONTRACT.md#ownership)). So the import adds new products and dates only and never overwrites.
 
 ### 4.2 Clone the data folders
 
@@ -92,30 +92,40 @@ cd ../cimri-clone
 
 To refresh later: `git -C ../InflationResearchStudy pull --depth 1`, then repeat 4.3.
 
-### 4.3 Copy new files only
+### 4.3 Convert new prices into JSON
 
-Git Bash, Linux or macOS (`-n` = never overwrite):
+Preview first, then convert:
 
 ```bash
-cp -rn ../InflationResearchStudy/InflationItems/Datas/. data/raw/
+uv run python scripts/csv_to_json.py --source ../InflationResearchStudy/InflationItems/Datas --dry-run
+uv run python scripts/csv_to_json.py --source ../InflationResearchStudy/InflationItems/Datas
+```
+
+For every upstream retailer it prints one line, for example `wrote Markets_Migros.json: 21,034 products, 135 dates; … 4,812 new from --source`. What it does:
+
+- Reads the upstream CSVs with the database build's own reader, so folder names, date formats and header aliases follow [Raw CSV ingestion](DATABASE.md#raw-csv-ingestion). Files the build would skip (no date, no price column, empty) are skipped and counted.
+- Adds each new product and date to `data/prices_json/<Group>_<Store>.json`, creating the file for a new store. Prices this repository already has are kept; differing upstream prices are counted as `conflicting prices ignored`. A product's name and category follow its newest scrape.
+- Folds in and deletes that retailer's remaining CSVs under `data/raw/`, which take priority over upstream. Otherwise the build would ignore the JSON file while the CSVs exist.
+- Skips the stores this repository has dropped (`DROPPED_RETAILERS` in the script: Xiaomi, Teknoraks; see [DATA_CONTRACT.md](DATA_CONTRACT.md#rules-for-committed-data)).
+
+Limit the import with `--retailer "Markets / Migros"` (repeatable) or `--retailers-file`. Without `--source`, the same script converts this repository's own `data/raw/` CSVs for the named retailers and deletes them.
+
+Copy new inflation reference files (new files only), then remove the dropped store:
+
+```bash
 cp -rn ../InflationResearchStudy/Inflations/Datas/. data/inflation/
+rm -rf data/inflation/08_Communication/Teknoraks
 ```
 
-PowerShell (`/XC /XN /XO` = skip files that already exist):
+PowerShell: `robocopy ..\InflationResearchStudy\Inflations\Datas data\inflation /E /XC /XN /XO` (skips files that already exist).
 
-```powershell
-robocopy ..\InflationResearchStudy\InflationItems\Datas data\raw /E /XC /XN /XO
-robocopy ..\InflationResearchStudy\Inflations\Datas data\inflation /E /XC /XN /XO
-```
-
-See what arrived:
+See what changed:
 
 ```bash
-git status --short data/ | wc -l          # new or changed files
 git status --short data/ | head -20
 ```
 
-`git status` should list only new (`??`) files. A modified (`M`) file means something overwrote an existing one; restore it with `git checkout -- <path>`.
+Expect modified (`M`) or new (`??`) files under `data/prices_json/`, new (`??`) files under `data/inflation/`, and deleted (`D`) CSVs under `data/raw/` for retailers that were folded in. A modified file under `data/inflation/` means something overwrote an existing one; restore it with `git checkout -- <path>`.
 
 ### 4.4 Check file sizes
 
@@ -126,7 +136,7 @@ uv run python scripts/data_files.py check    # exit 1 lists oversized files
 uv run python scripts/data_files.py split    # commit them as 80 MB .partNNN chunks instead
 ```
 
-`split` keeps the original on disk and lists it in the managed block of `.gitignore`; `join` (and the build) rebuild it. Details: [Large files](DATA_CONTRACT.md#large-files-scriptsdata_filespy).
+`split` keeps the original on disk and lists it in the managed block of `.gitignore`; `join` (and the build) rebuild it. `csv_to_json.py` joins split JSON files before merging, so run `split` again after every import. Details: [Large files](DATA_CONTRACT.md#large-files-scriptsdata_filespy).
 
 ### 4.5 Rebuild and check
 
@@ -136,16 +146,16 @@ uv run pytest
 uv run python scripts/verify_falcon_api.py
 ```
 
-Compare the build summary with the previous one: retailer and product counts should grow, and the skip counts should not jump. A new store folder that is skipped as `undated or unlabelled` or `no price column` needs a folder rule or a header alias in `scripts/build_database.py` (with a test in `tests/test_build_database.py`); see the schema/data layout checklist in [DEVELOPMENT.md](DEVELOPMENT.md).
+Compare the build summary with the previous one: retailer and product counts should grow, and no `JSON ignored:` line should appear. A new store that `csv_to_json.py` skipped as `undated or unlabelled` or `no price column` needs a folder rule or a header alias in `scripts/build_database.py` (with a test in `tests/test_build_database.py`); see the schema/data layout checklist in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ### 4.6 Commit in batches
 
-Pushes must stay well under GitHub's 2 GB limit, so commit and push about 500 MB at a time, for example one TÜİK folder per commit:
+Pushes must stay well under GitHub's 2 GB limit, so commit and push about 500 MB at a time:
 
 ```bash
-du -sh data/raw/*/ | sort -h                 # pick folders that add up to ~500 MB
-git add data/raw/01_Food
-git commit -m "data: import 01_Food from InflationResearchStudy <commit>"
+git add -A data/raw                          # CSVs removed by the conversion
+git add data/prices_json/Markets_*.json      # pick JSON files that add up to ~500 MB (du -ch …)
+git commit -m "data: import Markets from InflationResearchStudy <commit>"
 git push
 ```
 

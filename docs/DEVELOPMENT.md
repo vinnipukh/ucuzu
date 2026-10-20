@@ -32,14 +32,14 @@ Changing tables, indexes, views, retailer labelling, accepted file formats, head
 
 ## Data update
 
-Copying new scraper output into `data/raw`, `data/prices_json` or `data/inflation`:
+Bringing new scraper output into `data/prices_json` or `data/inflation`:
 
-- [ ] Copy the files (new files only; commands in [SETUP.md](SETUP.md#4-take-new-csvs-from-inflationresearchstudy)) and record the source commits of the data repository in the commit message.
+- [ ] Convert new price CSVs into the per-retailer JSON files with `scripts/csv_to_json.py --source …` (never copy price CSVs into `data/raw`), and copy new inflation files only (commands in [SETUP.md](SETUP.md#4-take-new-data-from-inflationresearchstudy)). Record the source commits of the data repository in the commit message.
 - [ ] `uv run python scripts/data_files.py check`. No committed file may exceed **85 MB**.
 - [ ] For each oversized file, either `uv run python scripts/data_files.py split` (commits 80 MB `.partNNN` chunks and lists the original in the managed `.gitignore` block) or add it to `.gitignore`.
 - [ ] Never commit `*.db`, `*.db-wal`, `*.db-shm`, `.env`, cookies or browser profiles.
 - [ ] Commit and push in batches of about **500 MB**, so no single push approaches GitHub's 2 GB limit.
-- [ ] Rebuild the database and check the build summary's skip counts for new retailers.
+- [ ] Rebuild the database and check the build summary: no `JSON ignored:` lines, and the converter's skip counts for new retailers.
 - [ ] If the new data needs a new folder rule or header alias, follow the schema/data layout checklist above.
 
 ## Frontend change

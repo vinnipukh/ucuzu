@@ -25,6 +25,17 @@ import data_files  # noqa: E402
         ("technologyProducts5-10-.csv", None),
         ("catalog.csv", None),
         ("bad_2026-13-45.csv", None),
+        # Month-day names: the first occurrence on or after SCRAPE_START (2026-02-23).
+        ("products10-19.csv", "2026-10-19"),
+        ("products-02-23.csv", "2026-02-23"),
+        ("Clothes3-10.csv", "2026-03-10"),
+        ("sehirhatlari_fares_5-31.csv", "2026-05-31"),
+        ("HomeGoods1-5.csv", "2027-01-05"),
+        ("products2-22.csv", "2027-02-22"),
+        ("products2-29.csv", None),
+        ("products13-1.csv", None),
+        ("health_prices_2026-03.csv", None),
+        ("products10-19-2.csv", None),
     ],
 )
 def test_parse_file_date(name: str, expected: str | None) -> None:
@@ -142,7 +153,9 @@ def test_build_dedupes_days_and_keeps_latest_name(tmp_path: Path) -> None:
 def test_build_stores_catalog_columns(tmp_path: Path) -> None:
     raw = tmp_path / "raw" / "01_Food" / "Kim"
     raw.mkdir(parents=True)
-    (raw / "kim_2026-01-01.csv").write_text("product_id,name,price\n7,ÇAY 500 G,10\n8,Su,5\n", encoding="utf-8")
+    (raw / "kim_2026-01-01.csv").write_text(
+        "product_id,name,price\n7,ÇAY 500 G,10\n8,Su,5\n9,Çay 500 g,9\n", encoding="utf-8"
+    )
     (raw / "kim_2026-01-02.csv").write_text("product_id,name,price\n7,ÇAY 500 G,10\n", encoding="utf-8")
     (raw / "kim_2026-01-03.csv").write_text("product_id,name,price\n7,ÇAY 500 G,8\n", encoding="utf-8")
     db_path = tmp_path / "prices.db"
@@ -151,12 +164,17 @@ def test_build_stores_catalog_columns(tmp_path: Path) -> None:
 
     with sqlite3.connect(db_path) as conn:
         rows = conn.execute(
-            "SELECT product_id, name_key, latest_price, previous_price, price_since, is_current "
+            "SELECT product_id, name_key, latest_price, previous_price, price_since, is_current, is_store_latest "
             "FROM products ORDER BY product_id"
         ).fetchall()
         indexes = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'index'")}
     # The price changed on 01-03 (10 -> 8); Su was last seen two days before Kim's newest file.
-    assert rows == [("7", "çay 500g", 8.0, 10.0, "2026-01-03", 1), ("8", "su", 5.0, None, "2026-01-01", 1)]
+    # Product 9 shares 7's name_key but was last seen earlier, so it is not Kim's latest price for it.
+    assert rows == [
+        ("7", "çay 500g", 8.0, 10.0, "2026-01-03", 1, 1),
+        ("8", "su", 5.0, None, "2026-01-01", 1, 1),
+        ("9", "çay 500g", 9.0, None, "2026-01-01", 1, 0),
+    ]
     assert "idx_products_name_key" in indexes
 
 
