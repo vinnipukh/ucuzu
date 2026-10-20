@@ -64,3 +64,12 @@ Previous run (docs overhaul): scripts/ralph/archive/2026-10-18-docs-overhaul/
   - The dashboard file's rename to routes/analiz/ is in 5cbbe0a (titled as a PRD chore), the parent of f15fb2c, whose message describes the move; cite both.
   - Before 0707a5c only 13 retailers had prices_json files; about 9,955 raw CSVs held the rest.
 ---
+
+## 2026-10-20 18:15 - US-005
+- AGENTS.md: pointer to docs/README.md#change-history next to the known-issues pointer.
+- docs/DEVELOPMENT.md: change-history checklist items in API endpoint change (plus contract §9 and version bump), Schema or data layout change, Data update (only when layout or import method changes) and Configuration change.
+- docs/README.md Work plans: prd-change-history.md marked done.
+- Files changed: AGENTS.md, docs/DEVELOPMENT.md, docs/README.md
+- **Learnings for future iterations:**
+  - All seven stories done; the run was executed inline rather than through ralph.sh.
+---

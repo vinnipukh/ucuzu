@@ -46,7 +46,7 @@ Dated material: findings reflect the code at the time they were written.
 
 Plans for agent-driven work; they describe intended changes, not current behaviour.
 
-- [../tasks/](../tasks/) — PRDs: `prd-documentation-overhaul.md` (done, except the deferred US-018) and `prd-change-history.md` (planned).
+- [../tasks/](../tasks/) — PRDs: `prd-documentation-overhaul.md` (done, except the deferred US-018) and `prd-change-history.md` (done).
 - [../scripts/ralph/](../scripts/ralph/CLAUDE.md) — instructions, `prd.json` and progress log for the Ralph agent loop.
 
 ## Archive

@@ -2,7 +2,7 @@
 
 Instructions for coding agents working in the ucuzu / Inflation Study Dashboard repository (price-comparison shop at `/`, inflation dashboard at `/analiz`). Documentation index: [docs/README.md](docs/README.md).
 
-Known code defects are listed in [docs/ARCHITECTURE.md#known-issues](docs/ARCHITECTURE.md#known-issues); do not assume documented behaviour that is listed there.
+Known code defects are listed in [docs/ARCHITECTURE.md#known-issues](docs/ARCHITECTURE.md#known-issues); do not assume documented behaviour that is listed there. Recent behaviour changes are listed in [docs/README.md#change-history](docs/README.md#change-history).
 
 ## Repository boundary
 

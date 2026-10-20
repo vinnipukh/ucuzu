@@ -18,6 +18,7 @@ Adding, removing or changing a route, parameter, response field, error code or h
 - [ ] `scripts/verify_falcon_api.py`: route list, response-key tokens and endpoint smoke checks.
 - [ ] Tests in `tests/` for new behaviour (`tests/test_api.py` uses `falcon.testing.TestClient`).
 - [ ] Run `uv run python scripts/verify_falcon_api.py` with a built database.
+- [ ] Add an entry to the change history in [docs/README.md](README.md#change-history) and to §9 of [FALCON_API_CONTRACT.md](FALCON_API_CONTRACT.md#9-changes) (bump its version).
 
 ## Schema or data layout change
 
@@ -29,6 +30,7 @@ Changing tables, indexes, views, retailer labelling, accepted file formats, head
 - [ ] [DATA_CONTRACT.md](DATA_CONTRACT.md): input layout and formats.
 - [ ] `inflation_dashboard/adapters/sqlite_price_repository.py` if the views it queries change.
 - [ ] Rebuild the database and run `uv run python scripts/verify_falcon_api.py` and `uv run python scripts/test_sqlite_adapter.py` against it.
+- [ ] Add an entry to the change history in [docs/README.md](README.md#change-history).
 
 ## Data update
 
@@ -41,6 +43,7 @@ Bringing new scraper output into `data/prices_json` or `data/inflation`:
 - [ ] Commit and push in batches of about **500 MB**, so no single push approaches GitHub's 2 GB limit.
 - [ ] Rebuild the database and check the build summary: no `JSON ignored:` lines, and the converter's skip counts for new retailers.
 - [ ] If the new data needs a new folder rule or header alias, follow the schema/data layout checklist above.
+- [ ] If the data layout or the import method changed, add an entry to the change history in [docs/README.md](README.md#change-history).
 
 ## Frontend change
 
@@ -56,6 +59,7 @@ Bringing new scraper output into `data/prices_json` or `data/inflation`:
 - [ ] [CONFIGURATION.md](CONFIGURATION.md): variable or flag row (default, read by, effect).
 - [ ] `.env.example` or `frontend/.env.example`.
 - [ ] `scripts/run_falcon_server.py --help` text if a launcher flag changed.
+- [ ] Add an entry to the change history in [docs/README.md](README.md#change-history).
 
 ## Known code defects
 
