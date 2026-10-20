@@ -15,3 +15,12 @@ Previous run (docs overhaul): scripts/ralph/archive/2026-10-18-docs-overhaul/
 - The user runs the API on :8000 and Vite on :5173; don't stop them without asking.
 - Browser checks: the dev-browser skill is not installed; record UI checks as unverified in the story notes.
 ---
+
+## 2026-10-20 18:09 - US-002
+- Contract version 2.4.0; endpoint sections renumbered (§4.7a→§4.7 … catalog §4.11–§4.14) in one regex pass so numbers cannot chain; DATABASE.md § Catalog columns link updated.
+- New `## 9. Changes` with 2.4.0, 2.3.0, 2.2.0 and 2.1.0 entries, each citing its commit and linking to its section.
+- Files changed: docs/FALCON_API_CONTRACT.md, docs/DATABASE.md
+- **Learnings for future iterations:**
+  - §9 links to docs/README.md#change-history, which exists only after US-001.
+  - The 2.1.0 default retailers kept their values (ccbe59e only removed a duplicate definition); don't describe it as a behaviour change.
+---

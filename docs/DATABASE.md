@@ -97,7 +97,7 @@ Storage is normalized so repeated text is stored once. The schema is defined in 
 
 ### Catalog columns
 
-These `products` columns serve the price-comparison catalog (`/api/catalog/*`, [FALCON_API_CONTRACT.md §4.10–§4.13](FALCON_API_CONTRACT.md#410-get-apicataloggroups)):
+These `products` columns serve the price-comparison catalog (`/api/catalog/*`, [FALCON_API_CONTRACT.md §4.11–§4.14](FALCON_API_CONTRACT.md#411-get-apicataloggroups)):
 
 | Column | Meaning |
 |---|---|

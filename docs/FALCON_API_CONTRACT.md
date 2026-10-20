@@ -2,7 +2,7 @@
 
 **Target Frontend:** Svelte 5 / SvelteKit SPA (`frontend/`)  
 **API Backend:** Falcon WSGI application (`inflation_dashboard/api/falcon_app.py`)  
-**Specification Version:** 2.1.0  
+**Specification Version:** 2.4.0  
 **Last Updated:** 2026-10-20  
 **Status:** Authoritative. [API.md](API.md) is a summary; this file wins on any difference.
 
@@ -306,7 +306,7 @@ Parameters: the common filters, plus `category_limit` (integer ≥ 1, default 20
 
 `skipped_files` is a list of `{file, reason}` objects. With the SQLite adapter it is always empty and `skipped_file_count` is 0; files that failed to parse are reported by the database build instead.
 
-### 4.7a `GET /api/products`
+### 4.7 `GET /api/products`
 
 Distinct product names per retailer, for product pickers. The SPA's Product explorer uses it instead of downloading the full history (which can exceed the browser's maximum string size for a large category).
 
@@ -328,7 +328,7 @@ Parameters:
 }
 ```
 
-### 4.7 `GET /api/products/search`
+### 4.8 `GET /api/products/search`
 
 Product autocomplete over the `product_prices` view. Not used by the SPA.
 
@@ -362,7 +362,7 @@ Results are ordered by `observations_count` descending, then `product_name`. If 
 }
 ```
 
-### 4.8 `GET /api/product`
+### 4.9 `GET /api/product`
 
 One product's summary and its complete price history (not limited by any date filter).
 
@@ -406,7 +406,7 @@ Lookup: the key is matched against `product_id`, then against `product_name`. Wi
 - `price_history` maps `YYYY-MM-DD` to price; `history` is the same data as a date-sorted array. In `history`, `date` is a plain date (not a datetime), `category` is the product's current category and `source_file` is always `""`.
 - `summary.cheapest_date` is the first date at `min_price`; `change_since_first_pct` compares `latest_price` with the first observed price (`0.0` when there is no first price).
 
-### 4.9 `GET /api/epeykatfg/monthly-inflation`
+### 4.10 `GET /api/epeykatfg/monthly-inflation`
 
 The EpeyKatfg month-over-month inflation artifact (`EPEYKATFG_MONTHLY_CSV`, default `data/inflation/EpeyKatfg/monthly_inflation.csv`). Does not need the database.
 
@@ -415,11 +415,11 @@ The EpeyKatfg month-over-month inflation artifact (`EPEYKATFG_MONTHLY_CSV`, defa
 - `meta`: `count` (rows), `columns` (header), `source` and `notes` (fixed description strings).
 - A missing or header-less file returns 200 with `data: []`, `count: 0`, `columns: []`.
 
-### 4.10 `GET /api/catalog/groups`
+### 4.11 `GET /api/catalog/groups`
 
 Groups of the price-comparison catalog and their stores, for the shop's navigation. No parameters.
 
-The four catalog endpoints (§4.10–§4.13) read the `products` table through `inflation_dashboard/adapters/sqlite_catalog_repository.py`:
+The four catalog endpoints (§4.11–§4.14) read the `products` table through `inflation_dashboard/adapters/sqlite_catalog_repository.py`:
 
 - A retailer label `Group / Store` is split into its group and store (`Markets / Migros` → `Markets`, `Migros`); a label without ` / ` (`EpeyKatfg`) is its own group and store.
 - The `HousesRent` group (rental listings, `CATALOG_EXCLUDED_GROUPS`) is never part of the catalog.
@@ -446,7 +446,7 @@ The four catalog endpoints (§4.10–§4.13) read the `products` table through `
 }
 ```
 
-### 4.11 `GET /api/catalog/search`
+### 4.12 `GET /api/catalog/search`
 
 Searches catalog items. An **item** is every product that shares one `products.name_key` (the Turkish-aware normalized product name from `inflation_dashboard/domain/catalog.py`), so one item groups the same product across stores; each product is one store's **offer**.
 
@@ -457,7 +457,7 @@ Parameters:
 - `sort` (default `relevance`): `relevance` ranks by the number of query terms that match whole words, then store count, then shorter names; `price_asc` / `price_desc` by `min_price`; `drop` by `max_drop_percent` (items without a drop last), then store count. Any other value → 400 `Invalid sort`.
 - `limit` (integer 1–60, default 24), `offset` (integer 0–10000, default 0): out of range or not an integer → 400 `Invalid limit` / `Invalid offset` (not clamped).
 
-Only current offers with `latest_price > 0` in the selected group/store count, and of those only each store's latest prices for the item (`products.is_store_latest = 1`: offers last seen on the store's newest date for that item; see [DATABASE.md](DATABASE.md#catalog-columns)), matching the per-store prices of §4.12. For each item, `name`, `store` and `category` come from its cheapest offer; `stores` lists up to three stores, cheapest first; `min_price`/`max_price` span the offers; `max_drop_percent` is the largest offer `drop_percent` (§4.12), `null` if none dropped; `last_date` is the newest offer date. `meta.total` counts every matching item (`0` when `offset` is past the last match), `meta.count` the items on this page.
+Only current offers with `latest_price > 0` in the selected group/store count, and of those only each store's latest prices for the item (`products.is_store_latest = 1`: offers last seen on the store's newest date for that item; see [DATABASE.md](DATABASE.md#catalog-columns)), matching the per-store prices of §4.13. For each item, `name`, `store` and `category` come from its cheapest offer; `stores` lists up to three stores, cheapest first; `min_price`/`max_price` span the offers; `max_drop_percent` is the largest offer `drop_percent` (§4.13), `null` if none dropped; `last_date` is the newest offer date. `meta.total` counts every matching item (`0` when `offset` is past the last match), `meta.count` the items on this page.
 
 ```json
 {
@@ -482,13 +482,13 @@ Only current offers with `latest_price > 0` in the selected group/store count, a
 }
 ```
 
-### 4.12 `GET /api/catalog/item`
+### 4.13 `GET /api/catalog/item`
 
 One item's offers in every store, each with its full price history.
 
 Parameters:
 
-- `key` (`string`, **required**): a `name_key`, as returned in `key` by §4.11. Missing or blank → 400 `key is required`. A key with no products → 404 `not_found` with message `Item not found: <key>` and `meta` `{key}`.
+- `key` (`string`, **required**): a `name_key`, as returned in `key` by §4.12. Missing or blank → 400 `key is required`. A key with no products → 404 `not_found` with message `Item not found: <key>` and `meta` `{key}`.
 
 `offers` holds **one offer per store** for the products with that `name_key` outside `HousesRent`, **including stale ones** (`is_current: false`): current offers first, then cheapest first, at most 40 stores (`MAX_ITEM_OFFERS`; up to 400 products are read, `MAX_ITEM_ROWS`). A store's offer is its latest price: of its products, those with the newest `last_date`, and among them the cheapest (a product without a price never wins over a priced one). Each offer is the `products` row plus:
 
@@ -568,20 +568,20 @@ Parameters:
 
 BizimMarket's older listing (last seen 2026-04-10, with a `1.0` scraper error in its history) appears only under `other_offers`, so neither its price nor its history affects `summary`. The 25 % floor drops such scraper errors from the offers that are read.
 
-### 4.13 `GET /api/catalog/deals`
+### 4.14 `GET /api/catalog/deals`
 
 Current offers whose latest price change was a drop, largest drop first (ties: more observations first).
 
 Parameters:
 
-- `group`, `store` (`string`, optional, exact match; blank is ignored): as in §4.11.
+- `group`, `store` (`string`, optional, exact match; blank is ignored): as in §4.12.
 - `min_drop` (integer 1–80, default 5): minimum `drop_percent`.
 - `days` (integer 1–365, default 30): the drop must have happened within this many days of the offer's last observation (`price_since` on or after `last_date` − `days`).
 - `limit` (integer 1–60, default 24).
 
 Out of range or not an integer → 400 `Invalid <name>` (not clamped). Drops above 80 % (`MAX_DEAL_DROP_PERCENT`, also the `min_drop` maximum) are ignored as likely scraper or unit errors.
 
-`data` is a list of offers shaped as in §4.12 **without** `history` and `other_offers`. `meta` echoes `group`, `store`, `min_drop`, `days`, `limit` and adds `count`.
+`data` is a list of offers shaped as in §4.13 **without** `history` and `other_offers`. `meta` echoes `group`, `store`, `min_drop`, `days`, `limit` and adds `count`.
 
 ```json
 {
@@ -635,14 +635,14 @@ The client types are not a complete or exact model of the server. Known differen
 
 | Client type | Server behaviour |
 |---|---|
-| *(none)* `ProductSearchResult`, `ProductSearchMeta`, `ProductHistoryRecord` | No client types exist for `/api/products/search` because the SPA never calls it. The response shape is in §4.7. (`/api/products`, §4.7a, does have client types.) |
+| *(none)* `ProductSearchResult`, `ProductSearchMeta`, `ProductHistoryRecord` | No client types exist for `/api/products/search` because the SPA never calls it. The response shape is in §4.8. (`/api/products`, §4.7, does have client types.) |
 | `InventoryMeta.warnings` | Never sent: `/api/inventory` meta has only `file_count` and `inventory_file_count`. Listed under [Known issues](ARCHITECTURE.md#known-issues). |
 | `ProductDetailMeta` fields `string \| null` | On a 200 response `product_id` and `retailer` are always strings; `null` only appears in the 404 error meta, which has a different shape. |
 | `ApiError.meta?` | Never sent: error objects are `{code, message}`; context is on the envelope `meta`. |
 | `HealthData` | Has no `database` field; the server also sends `database: "available" \| "unavailable"`. |
 | `ProductDetailData.history: ProductHistoryPoint[]` | Product-detail history dates are plain `YYYY-MM-DD` and `source_file` is `""`, unlike `/api/history` product mode. |
 | `CommonFilterMeta.warnings?`, `history_row_count?`, `skipped_file_count?` | Optional in the type, but always sent by the four filter endpoints. |
-| *(none)* `meta` types for `/api/catalog/groups`, `/api/catalog/item`, `/api/catalog/deals` | Only `/api/catalog/search` has a `meta` type (`CatalogSearchMeta`); the SPA does not read the other catalog `meta` objects. Their shapes are in §4.10, §4.12 and §4.13. |
+| *(none)* `meta` types for `/api/catalog/groups`, `/api/catalog/item`, `/api/catalog/deals` | Only `/api/catalog/search` has a `meta` type (`CatalogSearchMeta`); the SPA does not read the other catalog `meta` objects. Their shapes are in §4.11, §4.13 and §4.14. |
 | `CatalogOffer.history?` | Sent by `/api/catalog/item` only; `/api/catalog/deals` offers have no `history`. |
 | `CatalogOffer.other_offers?` | Always sent on `/api/catalog/item` offers (`[]` when the store has one product); never on deals, and the nested offers carry neither `history` nor `other_offers`. |
 
@@ -1115,3 +1115,33 @@ See [TESTING.md](TESTING.md).
 2. **Deterministic Envelopes:** All endpoints must always return `{ "data", "meta", "errors" }`.
 3. **CORS Headers:** `Access-Control-Allow-Origin` must be present on responses (including errors) and preflight requests.
 4. **Boundary Isolation:** Handlers and adapters must respect domain boundaries and never import browser presentation code.
+
+---
+
+## 9. Changes
+
+Client-visible changes per contract version, newest first. The repository-wide change history is in [docs/README.md](README.md#change-history).
+
+### 2.4.0 (2026-10-20)
+
+- `/api/catalog/item` returns one offer per store (its cheapest on the store's newest date) and puts the store's other products in a new `other_offers` field; `summary` and `lowest_ever` ignore `other_offers`, so `store_count` now equals `offer_count` (`0707a5c`, [§4.13](#413-get-apicatalogitem)).
+- `/api/catalog/search` counts only each store's latest offers for an item (`products.is_store_latest`) (`0707a5c`, [§4.12](#412-get-apicatalogsearch)).
+- `database_outdated` also covers databases built without `products.is_store_latest`; rebuild them (`0707a5c`, [§2.3](#23-error-codes-and-status)).
+- `/api/history` `source_file` values are JSON partition names such as `Markets_Gurmar.json#2026-10-17`, since every retailer's prices now come from `data/prices_json/` (previously `raw/...csv` paths) (`09a0772`, [§4.3](#43-get-apihistory)).
+
+### 2.3.0 (2026-10-18)
+
+- New price-comparison routes `GET /api/catalog/groups`, `/api/catalog/search`, `/api/catalog/item` and `/api/catalog/deals` (`f15fb2c`, [§4.11](#411-get-apicataloggroups)–[§4.14](#414-get-apicatalogdeals)).
+- New error 503 `database_outdated` on `/api/catalog/*` when the database predates the catalog columns (`f15fb2c`, [§2.3](#23-error-codes-and-status)).
+
+### 2.2.0 (2026-10-18)
+
+- New `GET /api/products`: product names per retailer for pickers, used by the Product explorer instead of the full `/api/history` (`4a04e27`, [§4.7](#47-get-apiproducts)).
+
+### 2.1.0 (2026-10-17)
+
+- `/api/health` adds `data.database` (`"available"` or `"unavailable"`) (`99680ca`, [§4.1](#41-get-apihealth)).
+- A missing or empty database returns 503 `database_unavailable` on data endpoints; there is no CSV fallback any more (`99680ca`, [§2.3](#23-error-codes-and-status)).
+- The uncapped-history warning reads `all_history requested; history load is uncapped` (previously `… CSV load is uncapped`) (`99680ca`, [Warnings](#warnings-metawarnings)).
+- Unknown routes (404), wrong methods (405), other Falcon errors and unhandled exceptions (500) return the `{data, meta, errors}` envelope with codes `not_found`, `method_not_allowed`, `http_error` and `server_error`; the `server_error` message is always `Internal server error`, and exception text is no longer sent (`7ef73ed`, [§2.3](#23-error-codes-and-status)).
+- The default retailers (`Markets / Gurmar`, `ClothingStores / Vakko`, `HomeGoods`) are defined once, in `api/filters.py`; their values did not change (`ccbe59e`, [§3](#3-common-filter-parameters)).
