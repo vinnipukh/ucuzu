@@ -57,3 +57,37 @@ Historical material; not current setup guidance.
 - [archive/monorepo/](archive/monorepo/README.md) — original monorepo documentation.
 - [archive/planning/](archive/planning/README.md) — Streamlit-era planning, phases and roadmap.
 - [archive/static-inflation-report.html](archive/static-inflation-report.html) — early static inflation report page.
+
+## Change history
+
+What changed in behaviour and documentation, newest first, so a difference from older code can be checked against an intended change. Each entry names its commit; API changes per contract version are also in [FALCON_API_CONTRACT.md §9](FALCON_API_CONTRACT.md#9-changes).
+
+### 2026-10-17 — docs overhaul and /api/products
+
+**Breaking / behaviour changes**
+
+- A missing or empty database now returns HTTP 503 `database_unavailable` on every data endpoint, and `/api/health` reports it in `data.database`, because the runtime CSV fallback was removed (`99680ca`; [DATABASE.md § Purpose](DATABASE.md#purpose), [contract §2.3](FALCON_API_CONTRACT.md#23-error-codes-and-status), [§4.1](FALCON_API_CONTRACT.md#41-get-apihealth)).
+- The uncapped-history warning now reads `all_history requested; history load is uncapped` instead of `all_history requested; CSV load is uncapped` (`99680ca`; [contract § Warnings](FALCON_API_CONTRACT.md#warnings-metawarnings)).
+- Unknown routes, wrong methods, other Falcon errors and unhandled exceptions now return the `{data, meta, errors}` envelope (`not_found`, `method_not_allowed`, `http_error`, `server_error`), and `server_error` always says `Internal server error` instead of the exception text (`7ef73ed`; [contract §2.3](FALCON_API_CONTRACT.md#23-error-codes-and-status)).
+- The launcher's `--sqlite-db` now defaults to `PRICES_DB_PATH`, then `data/prices.db`, instead of always overwriting `PRICES_DB_PATH` (`82609c3`; [CONFIGURATION.md § Launcher flags](CONFIGURATION.md#launcher-flags)).
+- An empty or unset `VITE_API_BASE_URL` now means same-origin `/api` instead of `http://localhost:8000`, and the sidebar's placeholder reads "same origin (/api)" (`2c0c56a`; [CONFIGURATION.md § Frontend](CONFIGURATION.md#frontend), [frontend/README.md § API URL](../frontend/README.md#api-url)).
+- New `GET /api/products` lists product names per retailer; the Product explorer's pickers use it instead of the full `/api/history` (about 580 MB → 4 MB for Markets), product-mode `/api/history` requests only the selected retailer, and `filters._parse_date_param` is now `parse_date_param` (`4a04e27`; [contract §4.7](FALCON_API_CONTRACT.md#47-get-apiproducts), [API.md](API.md#endpoints), [USER_GUIDE.md § 1](USER_GUIDE.md#1-product-price-explorer)).
+- The default retailers (`Markets / Gurmar`, `ClothingStores / Vakko`, `HomeGoods`) are defined only in `inflation_dashboard/api/filters.py`; their values did not change (`ccbe59e`; [contract §3](FALCON_API_CONTRACT.md#3-common-filter-parameters)).
+- The frontend declares Node.js `>=22.12` in `frontend/package.json` `engines` and pins Node 24 in `frontend/.nvmrc`; the same commit fixed the CI of the time (pytest added, Node 24, the nonexistent `verify_redis_store.py` step dropped, `verify_falcon_api.py` run in its no-database mode) before CI was removed (`907efe4`; [GETTING-STARTED.md § Prerequisites](GETTING-STARTED.md#prerequisites)).
+- `.gitignore` also ignores the build's `*.db.staging*` scratch files (`637841c`; [DATABASE.md § Purpose](DATABASE.md#purpose)).
+
+**Removed**
+
+- The launcher flag `--no-sqlite-readonly` and the never-read exports `SQLITE_DB_PATH`, `SQLITE_READ_ONLY`, `SQLITE_JOURNAL_MODE`, `SQLITE_SYNCHRONOUS` and `SQLITE_URI`; request connections are always read-only (`e3401ac`; [CONFIGURATION.md § Launcher flags](CONFIGURATION.md#launcher-flags)).
+- The runtime CSV reader `inflation_dashboard/adapters/csv_price_repository.py` and its variable `INFLATION_DATA_ROOT`; the SQLite database is the only data source (`99680ca`; [CONFIGURATION.md § API and data variables](CONFIGURATION.md#api-and-data-variables)).
+- The unused constant `SUPPORTED_RETAILERS` (`ccbe59e`).
+- GitHub Actions CI (`.github/workflows/ci.yml`); there is no CI any more, so the checks run locally (`03423c5`; [TESTING.md § No continuous integration](TESTING.md#no-continuous-integration)).
+- `docs/SEPARATION.md` from the top level: it moved to [archive/SEPARATION.md](archive/SEPARATION.md) (`f5d0bbd`).
+- The content of `docs/CONVENTIONS.md` and `docs/CONCERNS.md`: it moved to [ARCHITECTURE.md § Conventions](ARCHITECTURE.md#conventions) and [§ Operational notes](ARCHITECTURE.md#operational-notes), and the old files are pointers (`a4f4ca2`).
+
+**Documentation-only**
+
+- The docs were restructured so each topic has one owning file: this index, [GETTING-STARTED.md](GETTING-STARTED.md) as the only setup page, [API.md](API.md) reduced to a summary, and the other docs corrected against the code (US-001–US-013, `f5d0bbd` … `80bd7dc`, `e1588bf`).
+- Docstrings and TSDoc were added to the API layer, domain, application, adapters, scripts and frontend library, with no behaviour change (US-014–US-017, `7292db1`, `e12098f`, `9c13189`, `3aa2ee4`).
+- [AGENTS.md](../AGENTS.md) was aligned with GETTING-STARTED and points at the known issues (US-019, `eea8f71`).
+- US-018 (Svelte `@component` blocks) was deferred and is not part of this change.

@@ -24,3 +24,11 @@ Previous run (docs overhaul): scripts/ralph/archive/2026-10-18-docs-overhaul/
   - §9 links to docs/README.md#change-history, which exists only after US-001.
   - The 2.1.0 default retailers kept their values (ccbe59e only removed a duplicate definition); don't describe it as a behaviour change.
 ---
+
+## 2026-10-20 18:11 - US-001
+- docs/README.md: `## Change history` after `## Archive`, intro pointing to contract §9, and the `### 2026-10-17 — docs overhaul and /api/products` subsection (Breaking / behaviour changes, Removed, Documentation-only) covering every row of the 2026-10-17 source table, each with its commit hash; US-018 marked deferred.
+- Files changed: docs/README.md
+- **Learnings for future iterations:**
+  - Verify each PRD row with `git show --stat`: 907efe4 did not change verify_falcon_api.py; it only ran it without a database in the (since removed) CI.
+  - The CONVENTIONS/CONCERNS merge is a4f4ca2 (US-005), not one of the hashes in the source table.
+---

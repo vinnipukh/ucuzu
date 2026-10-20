@@ -35,8 +35,8 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Links checked with the link checker; npm run check: 0 errors, 0 warnings."
     },
     {
       "id": "US-006",
