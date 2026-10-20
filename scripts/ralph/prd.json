@@ -1,16 +1,33 @@
 {
   "project": "Inflation Study Dashboard",
   "branchName": "ralph/change-history",
-  "description": "Change history for the docs overhaul and /api/products, added as sections in existing docs (no CHANGELOG.md). Full spec and the commit-to-doc source table: tasks/prd-change-history.md (read it before each story). Docs-only: no code changes. Typecheck = `cd frontend && npm run check`. One commit per story: `docs: US-0XX - <title>`. Never write tests that check docs against code.",
+  "description": "Change history for the docs overhaul and /api/products (2026-10-17), the ucuzu shop (2026-10-18) and per-store prices with the JSON price data pipeline (2026-10-20), added as sections in existing docs (no CHANGELOG.md). Full spec and the commit-to-doc source tables: tasks/prd-change-history.md (read it before each story). The docs already describe current behaviour; only add history. Docs-only: no code changes. Typecheck = `cd frontend && npm run check`. One commit per story: `docs: US-0XX - <title>`. Never write tests that check docs against code.",
   "userStories": [
     {
-      "id": "US-001",
-      "title": "Change-history summary in the docs index",
-      "description": "As a developer returning to the repo, I want one list of what changed on this branch so that I know which differences from the old code are intended.",
+      "id": "US-002",
+      "title": "API contract version, renumbering and changes section",
+      "description": "As an API consumer, I want the contract to say what changed between versions so that I can update a client.",
       "acceptanceCriteria": [
-        "docs/README.md gets a `## Change history` section at the end with a `### 2026-10-17 — docs overhaul and /api/products` subsection",
-        "The subsection has three groups in this order: Breaking / behaviour changes, Removed, Documentation-only",
-        "Every row of the 'Source of truth' table in tasks/prd-change-history.md is covered; each bullet is one sentence, names its commit hash (checked with `git show <hash>`) and links to the owning doc section with a relative markdown link",
+        "docs/FALCON_API_CONTRACT.md header: Specification Version `2.4.0`, Last Updated set to the date of this change",
+        "Endpoint sections are renumbered in order: `/api/products` (§4.7a) becomes §4.7; `/api/products/search`, `/api/product`, `/api/epeykatfg/monthly-inflation` become §4.8–§4.10; `/api/catalog/groups`, `/search`, `/item`, `/deals` become §4.11–§4.14",
+        "Every in-file § reference (including the §6.1 table and the '§4.10–§4.13' range in the catalog intro) and every inbound reference from other docs uses the new numbers and anchors; find them with `grep -rnE \"§ ?4\\.|#4[0-9]+a?-get\" docs frontend/README.md AGENTS.md` (skip docs/archive/). Today this includes docs/DATABASE.md § Catalog columns (`§4.10–§4.13`, `#410-get-apicataloggroups`)",
+        "A new `## 9. Changes` section lists per version, newest first, the client-visible changes, each linking to its section: 2.4.0 (2026-10-20, 0707a5c, 09a0772: one offer per store with `other_offers` on /api/catalog/item; search counts only `is_store_latest` offers; `database_outdated` also covers databases without `is_store_latest`; /api/history `source_file` values are JSON partition names); 2.3.0 (2026-10-18, f15fb2c: the four /api/catalog/* routes; 503 `database_outdated`); 2.2.0 (4a04e27: new /api/products); 2.1.0 (docs overhaul: /api/health `data.database`; 503 `database_unavailable`; envelopes for 404/405/500; fixed `server_error` message `Internal server error`; warning text `all_history requested; history load is uncapped`; default retailers Gurmar/Vakko/HomeGoods)",
+        "No endpoint behaviour text changes other than the section numbers",
+        "§6.2 is still identical to frontend/src/lib/types/api.ts (diff command in progress.txt)",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-001",
+      "title": "Change-history summary for the docs overhaul",
+      "description": "As a developer returning to the repo, I want one list of what the docs overhaul changed so that I know which differences from the old code are intended.",
+      "acceptanceCriteria": [
+        "docs/README.md gets a `## Change history` section at the end (after `## Archive`) with a one-line intro: entries are newest first, and FALCON_API_CONTRACT.md §9 lists API changes per version",
+        "It has a `### 2026-10-17 — docs overhaul and /api/products` subsection with three groups in this order: Breaking / behaviour changes, Removed, Documentation-only",
+        "Every row of the 2026-10-17 'Source of truth' table in tasks/prd-change-history.md is covered; each bullet is one sentence, names its commit hash (checked with `git show <hash>`) and links to the owning doc section with a relative markdown link",
         "Links into FALCON_API_CONTRACT.md use the section numbers after the US-002 renumbering",
         "'Removed' names exactly: `--no-sqlite-readonly`, `SQLITE_DB_PATH`, `SQLITE_READ_ONLY`, `SQLITE_JOURNAL_MODE`, `SQLITE_SYNCHRONOUS`, `SQLITE_URI`, `INFLATION_DATA_ROOT`, `inflation_dashboard/adapters/csv_price_repository.py`, `SUPPORTED_RETAILERS`, `.github/workflows/ci.yml` (GitHub Actions CI, removed in 03423c5; there is no CI any more), `docs/SEPARATION.md` (moved to docs/archive/), `docs/CONVENTIONS.md`/`docs/CONCERNS.md` content (moved to ARCHITECTURE.md)",
         "States that US-018 (Svelte @component blocks) was deferred and is not part of this change",
@@ -22,25 +39,25 @@
       "notes": ""
     },
     {
-      "id": "US-002",
-      "title": "API contract version, renumbering and changes section",
-      "description": "As an API consumer, I want the contract to say what changed between versions so that I can update a client.",
+      "id": "US-006",
+      "title": "Change-history summary for the shop and the JSON price data",
+      "description": "As a developer who knew the repository before the shop existed, I want the change history to cover the shop and the new data pipeline so that I know why the database, routes and data/ look different.",
       "acceptanceCriteria": [
-        "docs/FALCON_API_CONTRACT.md header: Specification Version `2.2.0`, Last Updated set to the date of this change",
-        "Endpoint sections are renumbered in order: `/api/products` (currently §4.7a) becomes §4.7, and `/api/products/search`, `/api/product`, `/api/epeykatfg/monthly-inflation` become §4.8, §4.9, §4.10",
-        "Every in-file § reference (e.g. 'The response shape is in §4.7', '§4.7a') and every inbound reference from other docs (grep `4.7`, `4.8`, `4.9` in docs/ and frontend/README.md) uses the new numbers",
-        "A new `## 9. Changes` section lists per version (2.2.0, then 2.1.0) the client-visible changes: new `/api/products`; `/api/health` `data.database`; 503 `database_unavailable`; envelopes for 404/405/500; fixed `server_error` message `Internal server error`; warning text `all_history requested; history load is uncapped`; default retailers Gurmar/Vakko/HomeGoods. Each item links to its section",
-        "No endpoint behaviour text changes other than the section numbers",
-        "§6.2 is still identical to frontend/src/lib/types/api.ts (diff command in progress.txt)",
+        "docs/README.md § Change history gets two subsections above the 2026-10-17 one, newest first: `### 2026-10-20 — per-store prices and JSON price data` and `### 2026-10-18 — ucuzu price-comparison shop`",
+        "Each uses the same three groups as US-001 (omit a group that would be empty)",
+        "Every row of the 2026-10-18 and 2026-10-20 'Source of truth' tables in tasks/prd-change-history.md is covered, one sentence per bullet, with its commit hash (checked with `git show <hash>`) and a relative link to the owning doc section",
+        "Breaking / behaviour changes says plainly that a database built before f15fb2c or before 0707a5c must be rebuilt (`uv run python scripts/build_database.py`), and that the dashboard moved from `/` to `/analiz`",
+        "'Removed' names: the raw price CSVs under data/raw/ (09a0772; prices now come from data/prices_json/), copying upstream CSVs into data/raw/ as the import method (replaced by scripts/csv_to_json.py), and the dropped stores `Communication / Xiaomi`, `Communication / Teknoraks` and the mirror's `Technology.json`",
+        "Every relative link and anchor in the new subsections resolves (checked by hand)",
         "Typecheck passes"
       ],
-      "priority": 1,
+      "priority": 3,
       "passes": false,
       "notes": ""
     },
     {
       "id": "US-003",
-      "title": "'Changed' notes in configuration and data docs",
+      "title": "'Changed' notes in configuration and data docs (2026-10-17)",
       "description": "As an operator upgrading an existing deployment, I want each changed variable or flag flagged where it is documented so that I don't keep using a removed one.",
       "acceptanceCriteria": [
         "Notes use the exact form `> **Changed 2026-10-17:** <what changed>; previously <old behaviour>. See [change history](README.md#change-history).` (adjust the relative path per file)",
@@ -52,23 +69,42 @@
         "Each note is one or two sentences; no existing current-behaviour text is rewritten",
         "Typecheck passes"
       ],
-      "priority": 3,
+      "priority": 4,
       "passes": false,
       "notes": ""
     },
     {
       "id": "US-004",
-      "title": "'Changed' notes in frontend and user docs",
-      "description": "As a frontend developer, I want the frontend docs to flag the changed defaults and the new product-list request so that I understand why the code differs from older branches.",
+      "title": "'Changed' notes in frontend and user docs (2026-10-17)",
+      "description": "As a frontend developer, I want the frontend docs to flag the changed defaults and the new product-list request so that I understand why the code differs from older versions.",
       "acceptanceCriteria": [
         "Notes use the same `> **Changed 2026-10-17:** …` form as US-003 and link to docs/README.md#change-history",
         "frontend/README.md § API URL: note that the default changed to same origin (previously `http://localhost:8000`)",
-        "frontend/README.md § Views: note that the Product explorer pickers now use `/api/products` (previously the full `/api/history`, which failed for large categories with 'API response from /api/history was not valid JSON')",
+        "frontend/README.md § Dashboard views (`/analiz`): note that the Product explorer pickers now use `/api/products` (previously the full `/api/history`, which failed for large categories with 'API response from /api/history was not valid JSON')",
         "docs/USER_GUIDE.md § 1. Product price explorer: add only the 'Changed' note; do not change the behaviour text",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill: the Product explorer pickers load for the default Markets category with no 'not valid JSON' error. If the skill is unavailable, record this as unverified in notes"
+        "Verify in browser using dev-browser skill: the Product explorer pickers on /analiz load for the default Markets category with no 'not valid JSON' error. If the skill is unavailable, record this as unverified in notes"
       ],
-      "priority": 4,
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "'Changed' notes for the shop and the JSON price data (2026-10-18, 2026-10-20)",
+      "description": "As an operator or developer upgrading from before the shop, I want the owning docs to flag the rebuild, the moved dashboard and the new data import so that I don't follow old habits.",
+      "acceptanceCriteria": [
+        "Notes use the US-003 form with the commit's date (`> **Changed 2026-10-18:** …` or `> **Changed 2026-10-20:** …`) and link to docs/README.md#change-history",
+        "docs/DATABASE.md § Catalog columns: the catalog columns were added on 2026-10-18 and `is_store_latest` on 2026-10-20; a database built before either returns 503 `database_outdated` on /api/catalog/* until it is rebuilt",
+        "docs/DATA_CONTRACT.md § Rules for committed data: since 2026-10-20 prices are committed only as JSON (previously as scraper CSVs under data/raw/)",
+        "docs/SETUP.md § 4: new scrapes are imported with scripts/csv_to_json.py (previously copied into data/raw/ as CSVs)",
+        "docs/GETTING-STARTED.md § 5. Run the API: the Windows launcher now stays in the foreground and stops the server's workers when it exits (previously workers could keep listening on the port)",
+        "docs/USER_GUIDE.md (intro) and frontend/README.md § Routes: the dashboard moved from `/` to `/analiz` on 2026-10-18 (previously it was the site root)",
+        "docs/USER_GUIDE.md § Price comparison shop: the product page shows one offer per store with the store's other listings folded under it (previously one row per product)",
+        "Each note is one or two sentences; no existing current-behaviour text is rewritten",
+        "Typecheck passes"
+      ],
+      "priority": 6,
       "passes": false,
       "notes": ""
     },
@@ -78,11 +114,11 @@
       "description": "As an AI agent starting in this repo, I want AGENTS.md and DEVELOPMENT.md to point at the change history so that I check it before assuming old behaviour.",
       "acceptanceCriteria": [
         "AGENTS.md: one line next to the existing known-issues pointer: 'Recent behaviour changes are listed in [docs/README.md#change-history](docs/README.md#change-history).'",
-        "docs/DEVELOPMENT.md: a checklist item in **API endpoint change**: 'Add an entry to the change history in docs/README.md and to §9 of FALCON_API_CONTRACT.md'",
-        "docs/DEVELOPMENT.md: a checklist item in **Configuration change**: 'Add an entry to the change history in docs/README.md'",
+        "docs/DEVELOPMENT.md: a checklist item in **API endpoint change**: 'Add an entry to the change history in docs/README.md and to §9 of FALCON_API_CONTRACT.md (bump its version)'",
+        "docs/DEVELOPMENT.md: a checklist item in **Schema or data layout change**, **Data update** (only when the layout or import method changes) and **Configuration change**: 'Add an entry to the change history in docs/README.md'",
         "Typecheck passes"
       ],
-      "priority": 5,
+      "priority": 7,
       "passes": false,
       "notes": ""
     }
