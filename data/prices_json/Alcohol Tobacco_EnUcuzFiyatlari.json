@@ -1,0 +1,22 @@
+{
+"Amsterdam | 50 cl Kutu": {"name": "Amsterdam | 50 cl Kutu", "category": "Uncategorized", "latest_price": 95.0, "min_price": 95.0, "max_price": 95.0, "prices": {"2026-10-17": 95.0, "2026-10-18": 95.0}},
+"Beck's | 50 cl Kutu": {"name": "Beck's | 50 cl Kutu", "category": "Uncategorized", "latest_price": 80.0, "min_price": 80.0, "max_price": 80.0, "prices": {"2026-10-17": 80.0, "2026-10-18": 80.0}},
+"Bomonti | 50 cl Şişe": {"name": "Bomonti | 50 cl Şişe", "category": "Uncategorized", "latest_price": 70.0, "min_price": 70.0, "max_price": 70.0, "prices": {"2026-10-17": 70.0, "2026-10-18": 70.0}},
+"Bremen | 50 cl Şişe": {"name": "Bremen | 50 cl Şişe", "category": "Uncategorized", "latest_price": 60.0, "min_price": 60.0, "max_price": 60.0, "prices": {"2026-10-17": 60.0, "2026-10-18": 60.0}},
+"Bud | 50 cl Şişe": {"name": "Bud | 50 cl Şişe", "category": "Uncategorized", "latest_price": 70.0, "min_price": 70.0, "max_price": 70.0, "prices": {"2026-10-17": 70.0, "2026-10-18": 70.0}},
+"Carlsberg | 50 cl Kutu": {"name": "Carlsberg | 50 cl Kutu", "category": "Uncategorized", "latest_price": 80.0, "min_price": 80.0, "max_price": 80.0, "prices": {"2026-10-17": 80.0, "2026-10-18": 80.0}},
+"Corona | 35,5 cl Şişe": {"name": "Corona | 35,5 cl Şişe", "category": "Uncategorized", "latest_price": 90.0, "min_price": 90.0, "max_price": 90.0, "prices": {"2026-10-17": 90.0, "2026-10-18": 90.0}},
+"Efes Malt | 50 cl Kutu": {"name": "Efes Malt | 50 cl Kutu", "category": "Uncategorized", "latest_price": 66.0, "min_price": 66.0, "max_price": 66.0, "prices": {"2026-10-17": 66.0, "2026-10-18": 66.0}},
+"Erdinger | 33 cl Şişe": {"name": "Erdinger | 33 cl Şişe", "category": "Uncategorized", "latest_price": 100.0, "min_price": 100.0, "max_price": 100.0, "prices": {"2026-10-17": 100.0, "2026-10-18": 100.0}},
+"Frederik | 35 cl Şişe": {"name": "Frederik | 35 cl Şişe", "category": "Uncategorized", "latest_price": 85.0, "min_price": 85.0, "max_price": 85.0, "prices": {"2026-10-17": 85.0, "2026-10-18": 85.0}},
+"Guinness | 44 cl Kutu": {"name": "Guinness | 44 cl Kutu", "category": "Uncategorized", "latest_price": 83.0, "min_price": 83.0, "max_price": 83.0, "prices": {"2026-10-17": 83.0, "2026-10-18": 83.0}},
+"Marmara Gold | 1 Litre Şişe": {"name": "Marmara Gold | 1 Litre Şişe", "category": "Uncategorized", "latest_price": 116.0, "min_price": 116.0, "max_price": 116.0, "prices": {"2026-10-17": 116.0, "2026-10-18": 116.0}},
+"Miller | 33 cl Şişe": {"name": "Miller | 33 cl Şişe", "category": "Uncategorized", "latest_price": 70.0, "min_price": 70.0, "max_price": 70.0, "prices": {"2026-10-17": 70.0, "2026-10-18": 70.0}},
+"Miller | 50 cl Kutu": {"name": "Miller | 50 cl Kutu", "category": "Uncategorized", "latest_price": 90.0, "min_price": 90.0, "max_price": 90.0, "prices": {"2026-10-17": 90.0, "2026-10-18": 90.0}},
+"Skol | 1 Litre Şişe": {"name": "Skol | 1 Litre Şişe", "category": "Uncategorized", "latest_price": 90.0, "min_price": 90.0, "max_price": 90.0, "prices": {"2026-10-17": 90.0, "2026-10-18": 90.0}},
+"Sol | 33 cl Şişe": {"name": "Sol | 33 cl Şişe", "category": "Uncategorized", "latest_price": 63.0, "min_price": 63.0, "max_price": 63.0, "prices": {"2026-10-17": 63.0, "2026-10-18": 63.0}},
+"Tuborg Amber | 50 cl Şişe": {"name": "Tuborg Amber | 50 cl Şişe", "category": "Uncategorized", "latest_price": 70.0, "min_price": 70.0, "max_price": 70.0, "prices": {"2026-10-17": 70.0, "2026-10-18": 70.0}},
+"Tuborg Gold | 50 cl Kutu": {"name": "Tuborg Gold | 50 cl Kutu", "category": "Uncategorized", "latest_price": 70.0, "min_price": 70.0, "max_price": 70.0, "prices": {"2026-10-17": 70.0, "2026-10-18": 70.0}},
+"Tuborg Kırmızı | 50 cl Kutu": {"name": "Tuborg Kırmızı | 50 cl Kutu", "category": "Uncategorized", "latest_price": 85.0, "min_price": 85.0, "max_price": 85.0, "prices": {"2026-10-17": 85.0, "2026-10-18": 85.0}},
+"Varım | 50 cl Kutu": {"name": "Varım | 50 cl Kutu", "category": "Uncategorized", "latest_price": 50.0, "min_price": 50.0, "max_price": 50.0, "prices": {"2026-10-17": 50.0, "2026-10-18": 50.0}}
+}

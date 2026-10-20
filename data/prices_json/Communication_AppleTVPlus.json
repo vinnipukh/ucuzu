@@ -1,0 +1,4 @@
+{
+"apple-tv-aylik": {"name": "Apple TV+ aylık", "category": "Uncategorized", "latest_price": 49.99, "min_price": 49.99, "max_price": 89.99, "prices": {"2026-10-09": 89.99, "2026-10-10": 89.99, "2026-10-11": 89.99, "2026-10-12": 89.99, "2026-10-13": 89.99, "2026-10-17": 49.99, "2026-10-18": 49.99}},
+"icloud-plus-50gb-apple-tv": {"name": "iCloud+ 50 GB (Apple TV dahil) aylık", "category": "Uncategorized", "latest_price": 49.99, "min_price": 49.99, "max_price": 49.99, "prices": {"2026-10-16": 49.99}}
+}
