@@ -15,6 +15,8 @@ The data repository is `vinnipukh/inflationstudymirror` (mirror) with upstream `
 
 The SQLite file is a serving artifact built from `data/`, not a source of truth. The API never reads `data/raw` or `data/prices_json` at runtime; `scripts/build_database.py` is the only reader of those folders.
 
+> **Changed 2026-10-17:** `data/raw` is no longer read at runtime; previously the API's CSV fallback could read it when the database was missing. See [change history](README.md#change-history).
+
 ## Rules for committed data
 
 - `data/raw/`, `data/prices_json/` and `data/inflation/` are committed. `*.db`, `*.db-wal`, `*.db-shm` and build scratch files are never committed. `scripts/build_database.py` must always rebuild `data/prices.db` from the committed data alone.

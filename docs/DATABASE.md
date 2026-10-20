@@ -8,6 +8,8 @@ This file owns the database schema, indexes, build pipeline and runtime connecti
 
 If the database file is missing or 0 bytes, `/api/health` still returns 200 with `data.database: "unavailable"`, and every data endpoint returns HTTP 503 with error code `database_unavailable` and message "Database not found; run scripts/build_database.py". The API reads no other data source.
 
+> **Changed 2026-10-17:** the runtime CSV fallback was removed, so a missing database returns 503; previously the API fell back to reading CSVs, which found no files in the committed `data/` layout. See [change history](README.md#change-history).
+
 A database built before the catalog columns existed (`products` without `name_key`, `previous_price`, `price_since`, `is_current` or `is_store_latest`) still serves every other endpoint, but the `/api/catalog/*` routes return HTTP 503 with error code `database_outdated` and message "Database predates the catalog; run scripts/build_database.py". Rebuild the database to fix it.
 
 ## Build pipeline

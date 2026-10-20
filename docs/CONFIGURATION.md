@@ -21,6 +21,8 @@ This file owns every environment variable and launcher flag. Commands for instal
 | `SQLITE_CACHE_SIZE` | `-128000` (negative = KiB, so 128 MiB) | `inflation_dashboard/adapters/sqlite_price_repository.py:57` | `PRAGMA cache_size` per connection (one reusable read-only connection per worker thread). |
 | `SQLITE_MMAP_SIZE` | `1073741824` (1 GiB) | `inflation_dashboard/adapters/sqlite_price_repository.py:58` | `PRAGMA mmap_size` per connection. |
 
+> **Changed 2026-10-17:** `INFLATION_DATA_ROOT` was removed with the runtime CSV fallback; previously it selected the raw CSV fallback root (default `data/raw`). See [change history](README.md#change-history).
+
 ## Launcher variables
 
 `scripts/run_falcon_server.py` reads these only as defaults for its flags; a flag on the command line wins.
@@ -50,6 +52,8 @@ From `uv run python scripts/run_falcon_server.py --help`:
 | `--log-level LEVEL` | `info` | One of `critical`, `error`, `warning`, `warn`, `info`, `debug`; passed to Granian/Gunicorn. |
 | `--dry-run` | off | Print the banner and the server command without starting it. |
 
+> **Changed 2026-10-17:** `--sqlite-db` defaults to `PRICES_DB_PATH`, and `--no-sqlite-readonly` and the exports `SQLITE_DB_PATH`, `SQLITE_READ_ONLY`, `SQLITE_JOURNAL_MODE`, `SQLITE_SYNCHRONOUS` and `SQLITE_URI` were removed; previously the launcher always overwrote `PRICES_DB_PATH` with its own default and exported those never-read variables. See [change history](README.md#change-history).
+
 At startup the launcher opens the database read-write once to switch it to WAL mode if needed, then exports `PRICES_DB_PATH`, `SQLITE_BUSY_TIMEOUT`, `SQLITE_CACHE_SIZE` and `SQLITE_MMAP_SIZE` (current values or defaults) and prepends the repository root to `PYTHONPATH`. Request connections are always read-only (`mode=ro`). See [DATABASE.md](DATABASE.md).
 
 When the WSGI app is served without the launcher (for example `granian --interface wsgi --factory inflation_dashboard.api.falcon_app:create_app`), set the variables above directly.
@@ -59,6 +63,8 @@ When the WSGI app is served without the launcher (for example `granian --interfa
 | Variable | Default | Read by | Effect |
 |---|---|---|---|
 | `VITE_API_BASE_URL` | empty | `frontend/src/lib/stores/filters.svelte.ts:3` (build time) | API origin baked into the build. **Empty or unset means same-origin `/api/...`**: the Vite dev proxy forwards `/api` to `http://localhost:8000` in `npm run dev`, and in production a reverse proxy must route `/api` to Falcon. A full URL (trailing slashes removed) points the SPA at another origin; then allow the SPA origin in `FALCON_CORS_ORIGINS`. Users can override the URL at runtime in the sidebar's API settings. |
+
+> **Changed 2026-10-17:** an empty or unset `VITE_API_BASE_URL` means same-origin `/api`; previously it meant `http://localhost:8000`. See [change history](README.md#change-history).
 
 ## Secrets
 

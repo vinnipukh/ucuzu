@@ -39,3 +39,10 @@ Previous run (docs overhaul): scripts/ralph/archive/2026-10-18-docs-overhaul/
 - **Learnings for future iterations:**
   - Trace deleted data with `git log --diff-filter=D -- <path>`: Technology.json went in e86d921, Teknoraks' inflation files in bcf4537, raw Xiaomi/Teknoraks and EpeyKatfg series.csv parts in 09a0772.
 ---
+
+## 2026-10-20 18:12 - US-003
+- "Changed 2026-10-17" notes: CONFIGURATION.md § Launcher flags (`--sqlite-db` default, removed flag and exports), § API and data variables (`INFLATION_DATA_ROOT`), § Frontend (`VITE_API_BASE_URL` same origin); DATABASE.md § Purpose (CSV fallback removed); DATA_CONTRACT.md § Ownership (`data/raw` not read at runtime).
+- Files changed: docs/CONFIGURATION.md, docs/DATABASE.md, docs/DATA_CONTRACT.md
+- **Learnings for future iterations:**
+  - Check the "previously" half against the parent commit (`git show <hash>^:<file>`): the old CSV fallback ran only when SQLite was unavailable, and `INFLATION_DATA_ROOT` defaulted to `data/raw`.
+---
