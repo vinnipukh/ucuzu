@@ -24,7 +24,7 @@ Install, run and build commands are in [docs/GETTING-STARTED.md](../docs/GETTING
 |---|---|---|---|
 | `/` | `routes/(shop)/+page.svelte` | Shop home: deal rail, popular items of the four largest groups, popular stores | `/api/catalog/deals`, `/api/catalog/search`, `/api/catalog/groups` |
 | `/ara` | `routes/(shop)/ara/+page.svelte` | Search with group/store filters, sort and paging; URL params `q`, `group`, `store`, `sort`, `sayfa` (page, 24 items each) | `/api/catalog/search` |
-| `/urun/[key]` | `routes/(shop)/urun/[key]/+page.svelte` | Item comparison: offers cheapest first, stale offers collapsed, per-store price-history chart (1 month / 3 months / all), similar items, price alarm form | `/api/catalog/item`, `/api/catalog/search` |
+| `/urun/[key]` | `routes/(shop)/urun/[key]/+page.svelte` | Item comparison: one offer per store, cheapest first (the store's `other_offers` expandable under it), stale offers collapsed, per-store price-history chart (1 month / 3 months / all), similar items, price alarm form | `/api/catalog/item`, `/api/catalog/search` |
 | `/firsatlar` | `routes/(shop)/firsatlar/+page.svelte` | Deals: filter by group, minimum drop and period | `/api/catalog/deals` |
 | `/alarmlar` | `routes/(shop)/alarmlar/+page.svelte` | Price alarms with each item's current lowest price | `/api/catalog/item` |
 | `/analiz` | `routes/analiz/+page.svelte` | Inflation dashboard (the five views below) | see below |

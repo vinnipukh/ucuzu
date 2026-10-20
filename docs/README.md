@@ -6,7 +6,7 @@ Each topic has one owning document; other files link to it instead of repeating 
 
 - [Project README](../README.md) — pitch, quickstart and links.
 - [Getting Started](GETTING-STARTED.md) — install, build-database, run and verify commands.
-- [Setup Guide](SETUP.md) — new-machine walkthrough: building the database from CSVs and importing new CSVs from InflationResearchStudy.
+- [Setup Guide](SETUP.md) — new-machine walkthrough: building the database and converting new scrapes from InflationResearchStudy into the per-retailer JSON files.
 - [Architecture](ARCHITECTURE.md) — source layout, layer boundaries, request flow and known issues.
 - [Agent rules](../AGENTS.md) — hard rules for coding agents: repository boundary, data rules, change policy.
 
@@ -19,7 +19,7 @@ Each topic has one owning document; other files link to it instead of repeating 
 
 ## Data and configuration
 
-- [Data Contract](DATA_CONTRACT.md) — `data/` layout and file formats.
+- [Data Contract](DATA_CONTRACT.md) — `data/` layout and file formats ([data/README.md](../data/README.md) is a short pointer).
 - [Database](DATABASE.md) — schema, indexes, build pipeline and runtime connection mode.
 - [Configuration](CONFIGURATION.md) — every environment variable and launcher flag.
 
@@ -41,6 +41,13 @@ Dated material: findings reflect the code at the time they were written.
 - [research/falcon-benchmarks-case-studies.md](research/falcon-benchmarks-case-studies.md) — published Falcon benchmarks and production case studies.
 - [benchmarks/](benchmarks/) — raw load-test results (Granian vs Gunicorn, health and mixed workloads).
 - [db_benchmark_results.json](db_benchmark_results.json) — raw SQLite connection-strategy benchmark results.
+
+## Work plans
+
+Plans for agent-driven work; they describe intended changes, not current behaviour.
+
+- [../tasks/](../tasks/) — PRDs: `prd-documentation-overhaul.md` (done, except the deferred US-018) and `prd-change-history.md` (planned).
+- [../scripts/ralph/](../scripts/ralph/CLAUDE.md) — instructions, `prd.json` and progress log for the Ralph agent loop.
 
 ## Archive
 

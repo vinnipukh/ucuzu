@@ -1,6 +1,6 @@
 # Getting Started
 
-This page owns the install, build, run and verify commands. It takes you from `git clone` to a running API, shop and dashboard. [SETUP.md](SETUP.md) is a longer walkthrough of the same steps that also covers importing new CSVs from the upstream data repository.
+This page owns the install, build, run and verify commands. It takes you from `git clone` to a running API, shop and dashboard. [SETUP.md](SETUP.md) is a longer walkthrough of the same steps that also covers importing new scrapes from the upstream data repository.
 
 ## Prerequisites
 
@@ -8,7 +8,7 @@ This page owns the install, build, run and verify commands. It takes you from `g
 - **[uv](https://docs.astral.sh/uv/)** for Python dependencies and commands.
 - **Node.js 24 LTS** recommended (`frontend/.nvmrc`); **≥ 22.12** is the minimum (`engines` in `frontend/package.json`; Vite 8 needs `^20.19 || >=22.12`, and Node 20 is end-of-life).
 - **npm** (ships with Node.js).
-- About 10 GB of free disk: the scraper data committed under `data/` (`raw/`, `prices_json/`, `inflation/`) takes about 6 GB checked out (plus the Git history), and the built database about 1.5 GB.
+- About 8 GB of free disk: the data committed under `data/` (`prices_json/`, `inflation/`, `raw/`) takes about 3 GB checked out, plus about 1 GB of Git history; the built database takes about 1.6 GB, and the build needs scratch space next to it.
 
 No other repository or data download is needed: everything the API serves is built from the committed `data/` tree.
 
@@ -29,8 +29,8 @@ The steps below explain each line. Run them from the repository root.
 ## 1. Clone and install
 
 ```bash
-git clone https://github.com/vinnipukh/cimri-clone.git
-cd cimri-clone
+git clone https://github.com/vinnipukh/ucuzu.git
+cd ucuzu
 uv sync --extra dev
 ```
 
@@ -50,7 +50,7 @@ Files over 85 MB are committed as `.partNNN` chunks. `join` rebuilds the origina
 uv run python scripts/build_database.py
 ```
 
-Builds `data/prices.db` (about 1.5 GB) from `data/raw` and `data/prices_json`, including the price-comparison columns the shop needs. It takes several minutes (about 5 on an 8-core machine) and uses all CPU cores but one (`--workers` to change). The database is never committed; rebuild it after pulling new data. Options and pipeline: [DATABASE.md](DATABASE.md). On Windows, stop the API first: an open database cannot be replaced.
+Builds `data/prices.db` (about 1.6 GB) from the per-retailer JSON files in `data/prices_json` (and any dated CSVs under `data/raw`, none today), including the price-comparison columns the shop needs. It takes several minutes (about 5 on an 8-core machine) and uses all CPU cores but one (`--workers` to change). The database is never committed; rebuild it after pulling new data. Options and pipeline: [DATABASE.md](DATABASE.md). On Windows, stop the API first: an open database cannot be replaced.
 
 ## 4. Run the tests
 
@@ -98,7 +98,7 @@ Users can also change the API URL at runtime in the sidebar's API settings.
 server {
     listen 80;
     server_name dashboard.example.org;
-    root /srv/cimri-clone/frontend/build;
+    root /srv/ucuzu/frontend/build;
 
     location /api/ {
         proxy_pass http://127.0.0.1:8000;

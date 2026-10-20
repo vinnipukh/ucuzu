@@ -7,12 +7,12 @@ Price tracking for Turkish retailers, in two parts that share one Falcon (WSGI) 
 
 The frontend is a Svelte 5 / SvelteKit single-page app. The data covers about 200 retailers across food, cosmetics, home goods, clothing, building supplies, electronics, housing rent and more.
 
-Repository: [github.com/vinnipukh/cimri-clone](https://github.com/vinnipukh/cimri-clone) (the project was previously referred to as `inflationstudymirror-web`).
+Repository: [github.com/vinnipukh/ucuzu](https://github.com/vinnipukh/ucuzu) (previously `cimri-clone`, and before that `inflationstudymirror-web`).
 
 Scrapers, inflation calculators and TÜİK methodology live in the separate data repository [`vinnipukh/inflationstudymirror`](https://github.com/vinnipukh/inflationstudymirror) (mirror of the upstream [`urazkagangunes/InflationResearchStudy`](https://github.com/urazkagangunes/InflationResearchStudy)). Their output is committed here under `data/`.
 
 ```text
-data/ (committed CSV + JSON) → scripts/build_database.py → data/prices.db → Falcon API → Svelte SPA (shop + dashboard)
+data/ (committed per-retailer price JSON) → scripts/build_database.py → data/prices.db → Falcon API → Svelte SPA (shop + dashboard)
 ```
 
 ## Quickstart
@@ -26,12 +26,12 @@ uv run python scripts/run_falcon_server.py --engine granian --port 8000
 cd frontend && npm install && npm run dev
 ```
 
-Run the last command in a second terminal, then open `http://localhost:5173` (shop) or `http://localhost:5173/analiz` (dashboard). The full guide, including tests and production deployment, is [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md). For a new machine, including importing new CSVs from the upstream data repository, follow [docs/SETUP.md](docs/SETUP.md).
+Run the last command in a second terminal, then open `http://localhost:5173` (shop) or `http://localhost:5173/analiz` (dashboard). The full guide, including tests and production deployment, is [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md). For a new machine, including converting new scrapes from the upstream data repository into JSON, follow [docs/SETUP.md](docs/SETUP.md).
 
 ## ucuzu shop
 
 - **Search** (`/ara`) — every word must appear in the product name; filter by category and store, sort by relevance, price or largest drop.
-- **Product page** (`/urun/<name>`) — products with the same normalized name are compared across stores: cheapest current price, every store's offer, price history per store, lowest price seen.
+- **Product page** (`/urun/<name>`) — products with the same normalized name are compared across stores: cheapest current price, one offer per store (its other listings folded under it), price history per store, lowest price seen.
 - **Deals** (`/firsatlar`) — current offers whose latest price change was a drop.
 - **Price alarms** (`/alarmlar`) — a target price per product, stored in your browser.
 
@@ -50,7 +50,7 @@ See the [User Guide](docs/USER_GUIDE.md).
 ## Documentation
 
 - [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) — install, build the database, run and verify.
-- [docs/SETUP.md](docs/SETUP.md) — new-machine walkthrough: database from CSVs, importing CSVs from InflationResearchStudy.
+- [docs/SETUP.md](docs/SETUP.md) — new-machine walkthrough: building the database, importing new scrapes from InflationResearchStudy.
 - [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — using the shop and the dashboard.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — source layout, layer boundaries, request flow, known issues.
 - [docs/FALCON_API_CONTRACT.md](docs/FALCON_API_CONTRACT.md) — authoritative HTTP API reference.

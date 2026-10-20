@@ -16,13 +16,13 @@ Prices are committed as one JSON file per retailer, each with every product's fu
 - Python ≥ 3.14 and [uv](https://docs.astral.sh/uv/)
 - Node.js 24 (≥ 22.12) with npm
 - Git
-- About 10 GB free disk: about 6 GB of data, about 1.5 GB for the database and its build scratch files, plus a temporary upstream clone if you do section 4
+- About 8 GB free disk: about 3 GB of data plus about 1 GB of Git history, about 1.6 GB for the database plus its build scratch files, and a temporary upstream clone if you do section 4
 
 ## 2. Install
 
 ```bash
-git clone https://github.com/vinnipukh/cimri-clone.git
-cd cimri-clone
+git clone https://github.com/vinnipukh/ucuzu.git
+cd ucuzu
 uv sync --extra dev
 cd frontend && npm install && cd ..
 ```
@@ -39,13 +39,13 @@ What the build does (full pipeline: [DATABASE.md](DATABASE.md#build-pipeline)):
 1. Joins split files (`join` again, so the first command is optional).
 2. Reads any dated CSV under `data/raw/` in parallel (today there are none). The folder path gives the retailer (`01_Food/Migros/…` → `Markets / Migros`); the file name gives the date.
 3. Reads every retailer that has no raw CSVs from its `data/prices_json/<Group>_<Store>.json` file (most retailers). A JSON file whose retailer still has raw CSVs is ignored, and the build says so (`JSON ignored: …`).
-4. Writes the tables, then the price-comparison columns the shop needs (`name_key`, `previous_price`, `price_since`, `is_current`), indexes and views.
+4. Writes the tables, then the price-comparison columns the shop needs (`name_key`, `previous_price`, `price_since`, `is_current`, `is_store_latest`), indexes and views.
 5. Swaps the finished file in atomically, so a failed build never leaves a half-written `data/prices.db`.
 
 It takes about 5 minutes on an 8-core machine and ends with a summary line like:
 
 ```text
-Built …/data/prices.db (1,518 MB): 199 retailers, 928,649 products, 33,551,148 observations in 270s
+Built …/data/prices.db (1,603 MB): 199 retailers, 928,649 products, 33,551,148 observations in 270s
 ```
 
 Above that line it prints how many files were skipped, by reason. A large count for `no price column` or `undated or unlabelled` usually means a scraper changed its output; see [Raw CSV ingestion](DATABASE.md#raw-csv-ingestion) for the accepted folder names, date formats and column aliases.
@@ -83,7 +83,7 @@ cd InflationResearchStudy
 git sparse-checkout set --cone InflationItems/Datas Inflations/Datas
 git -c core.protectNTFS=false checkout
 git log -1 --format='%H %cs'        # note this commit for the commit message
-cd ../cimri-clone
+cd ../ucuzu
 ```
 
 - `--filter=blob:none` and the sparse checkout download only the files you check out; `--depth 1` skips history.

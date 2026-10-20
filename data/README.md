@@ -1,14 +1,16 @@
 # Data
 
-This directory is committed. It holds scraper output copied from the `inflationstudymirror` data repository (and its upstream, `urazkagangunes/InflationResearchStudy`). The SQLite database built from it is **not** committed.
+This directory is committed. It holds scraper output from the `inflationstudymirror` data repository (and its upstream, `urazkagangunes/InflationResearchStudy`). The SQLite database built from it is **not** committed.
 
 ```text
 data/
-  raw/            scraped price CSVs, grouped by TÜİK COICOP folder (01_Food/Gurmar/...)
-  prices_json/    partitioned JSON price histories (used only for retailers without raw CSVs)
+  prices_json/    one JSON price history per retailer (<Group>_<Store>.json): the source of every retailer's prices
+  raw/            scraper reference files (URL lists, notes, caches) in TÜİK COICOP folders; no price CSVs
   inflation/      generated inflation artifacts (EpeyKatfg/monthly_inflation.csv, ...)
   prices.db       built locally, ignored by Git
 ```
+
+New upstream scrapes are merged into `prices_json/` with `scripts/csv_to_json.py`; price CSVs are not committed (see `docs/SETUP.md`, section 4).
 
 Build the database:
 

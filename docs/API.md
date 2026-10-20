@@ -4,7 +4,7 @@ Short overview of the Falcon REST API in `inflation_dashboard/api/`. **[FALCON_A
 
 ## Envelope
 
-Every response, success or error, is a JSON object `{"data": …, "meta": {…}, "errors": […]}`. `data` holds the payload and is `null` on errors. `meta` reflects the applied filters, row and file counts, and `warnings` on success, or the rejected parameters on error. `errors` is empty on success and holds one `{code, message}` object on failure (400 `invalid_filter`, 404 `not_found`, 405 `method_not_allowed`, 500 `server_error`, 503 `database_unavailable`, and 503 `database_outdated` on `/api/catalog/*` when the database predates the catalog columns).
+Every response, success or error, is a JSON object `{"data": …, "meta": {…}, "errors": […]}`. `data` holds the payload and is `null` on errors. `meta` reflects the applied filters, row and file counts, and `warnings` on success, or the rejected parameters on error. `errors` is empty on success and holds one `{code, message}` object on failure (400 `invalid_filter`, 404 `not_found`, 405 `method_not_allowed`, other 4xx/5xx `http_error`, 500 `server_error`, 503 `database_unavailable`, and 503 `database_outdated` on `/api/catalog/*` when the database predates the catalog columns).
 
 ## Endpoints
 
@@ -16,7 +16,7 @@ All routes are `GET`. "Common filters" are `retailer` (repeatable), `start_date`
 | GET | `/api/inventory` | Retailer list and overall date range | — |
 | GET | `/api/history` | Filtered observations, or one product's series with a summary | common filters, `product_name`, `product_retailer` |
 | GET | `/api/retailer-averages` | Average or median price per retailer per date | common filters, `aggregation` (`Average`/`Median`) |
-| GET | `/api/movers` | Biggest drops from peak and biggest gains | common filters, `scope_retailer`, `limit` (5–30) |
+| GET | `/api/movers` | Biggest drops from peak and biggest gains | common filters, `scope_retailer`, `limit` (5–30; alias `mover_count`) |
 | GET | `/api/coverage` | Observation counts over time and per category | common filters, `category_limit` |
 | GET | `/api/products` | Product names per retailer for pickers (used by the Product explorer) | `retailer` (repeatable, required), `start_date`, `end_date` |
 | GET | `/api/products/search` | Product autocomplete (not used by the SPA) | `q`, `retailer`, `category`, `limit` (1–100) |

@@ -6,8 +6,8 @@ This file owns the `data/` layout and the input file formats. How the build turn
 
 | Artifact | Producer (data repository) | Path here | Consumer |
 |---|---|---|---|
-| Retailer price histories (one JSON per retailer) | Upstream scraper CSVs (`InflationItems/Datas/`) converted by `scripts/csv_to_json.py`; a few partitions from the mirror's `InflationItems/prices_json/` | `data/prices_json/` | `scripts/build_database.py` (retailers without raw CSVs) |
-| Leftover scraper CSVs the build skips (undated, empty, no price column) | Scrapers, `InflationItems/Datas/` | `data/raw/` | none today; `scripts/build_database.py` still reads any dated CSV placed here |
+| Retailer price histories (one JSON per retailer) | Upstream scraper CSVs (`InflationItems/Datas/`) converted by `scripts/csv_to_json.py`; a few partitions from the mirror's `InflationItems/prices_json/` | `data/prices_json/` | `scripts/build_database.py` (every retailer today) |
+| Scraper reference files (URL lists, notes, caches; no price CSVs since 2026-10-20) | Scrapers, `InflationItems/Datas/`; `EpeyKatfg/` from the mirror | `data/raw/` | none today; `scripts/build_database.py` still reads any dated CSV placed here |
 | Generated inflation CSVs | Inflation calculators, `Inflations/Datas/` | `data/inflation/` | `/api/epeykatfg/monthly-inflation` (`EpeyKatfg/monthly_inflation.csv`) |
 | SQLite serving database | `scripts/build_database.py` in this repository | `data/prices.db` (never committed) | Falcon WSGI API |
 

@@ -13,9 +13,9 @@ This file owns every environment variable and launcher flag. Commands for instal
 
 | Variable | Default | Read by | Effect |
 |---|---|---|---|
-| `PRICES_DB_PATH` | `data/prices.db` (repository root) | `inflation_dashboard/adapters/sqlite_price_repository.py:36`; `scripts/run_falcon_server.py:266`; `scripts/build_database.py:508` | SQLite database the API serves from, and the default output of the database build. If the file is missing or 0 bytes, data endpoints return 503 `database_unavailable`. |
+| `PRICES_DB_PATH` | `data/prices.db` (repository root) | `inflation_dashboard/adapters/sqlite_price_repository.py:36`; `scripts/run_falcon_server.py:364`; `scripts/build_database.py:616` | SQLite database the API serves from, and the default output of the database build. If the file is missing or 0 bytes, data endpoints return 503 `database_unavailable`. |
 | `EPEYKATFG_MONTHLY_CSV` | `data/inflation/EpeyKatfg/monthly_inflation.csv` | `inflation_dashboard/application/epeykatfg_monthly.py:20` | CSV served by `/api/epeykatfg/monthly-inflation`. `~` is expanded. |
-| `FALCON_CORS_ORIGINS` | `*` | `inflation_dashboard/api/falcon_app.py:83`; `scripts/run_falcon_server.py:261` | Allowed browser origins, comma-separated. `*` (alone) allows any origin. Only needed when the SPA calls the API from another origin. |
+| `FALCON_CORS_ORIGINS` | `*` | `inflation_dashboard/api/falcon_app.py:83`; `scripts/run_falcon_server.py:359` | Allowed browser origins, comma-separated. `*` (alone) allows any origin. Only needed when the SPA calls the API from another origin. |
 | `FALCON_TIMING_LOG` | unset (off) | `inflation_dashboard/api/falcon_app.py:42` | `1`, `true`, `yes` or `on` (case-insensitive) logs one INFO line per request (method, path, status, duration, cache hit) on the logger `inflation_dashboard.api.timing`. The line appears only if the hosting process shows INFO logs. |
 | `SQLITE_BUSY_TIMEOUT` | `5000` (ms) | `inflation_dashboard/adapters/sqlite_price_repository.py:56` | `PRAGMA busy_timeout` on every connection. |
 | `SQLITE_CACHE_SIZE` | `-128000` (negative = KiB, so 128 MiB) | `inflation_dashboard/adapters/sqlite_price_repository.py:57` | `PRAGMA cache_size` per connection (one reusable read-only connection per worker thread). |
@@ -27,11 +27,11 @@ This file owns every environment variable and launcher flag. Commands for instal
 
 | Variable | Default | Read by | Effect |
 |---|---|---|---|
-| `HOST` | `127.0.0.1` | `scripts/run_falcon_server.py:232` | Bind address (`--host`). |
-| `PORT` | `8000` | `scripts/run_falcon_server.py:238` | Listen port (`--port`). |
-| `WEB_CONCURRENCY` | CPU count, clamped to 1–8 (`scripts/run_falcon_server.py:219`) | `scripts/run_falcon_server.py:244` | Worker processes (`--workers`). |
-| `SERVER_THREADS` | `8` | `scripts/run_falcon_server.py:250` | Threads per worker (`--threads`). |
-| `SERVER_BACKLOG` | `2048` | `scripts/run_falcon_server.py:256` | Socket backlog (`--backlog`). |
+| `HOST` | `127.0.0.1` | `scripts/run_falcon_server.py:330` | Bind address (`--host`). |
+| `PORT` | `8000` | `scripts/run_falcon_server.py:336` | Listen port (`--port`). |
+| `WEB_CONCURRENCY` | CPU count, clamped to 1–8 (`scripts/run_falcon_server.py:317`) | `scripts/run_falcon_server.py:342` | Worker processes (`--workers`). |
+| `SERVER_THREADS` | `8` | `scripts/run_falcon_server.py:348` | Threads per worker (`--threads`). |
+| `SERVER_BACKLOG` | `2048` | `scripts/run_falcon_server.py:354` | Socket backlog (`--backlog`). |
 
 ## Launcher flags
 

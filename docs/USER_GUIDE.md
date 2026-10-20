@@ -5,22 +5,20 @@ How to use the site. To start it, follow [GETTING-STARTED.md](GETTING-STARTED.md
 The site has two parts:
 
 - the **ucuzu** price-comparison shop at `/` (Turkish), described in [Price comparison shop](#price-comparison-shop);
-- the **inflation dashboard** at `/analiz` (linked as **Analiz** in the shop header and "Enflasyon analizi" in its footer), described from [Header](#header) on. Its "← ucuzu" link returns to the shop.
+- the **inflation dashboard** at `/analiz` (linked as **Analiz** in the shop header and "Enflasyon analizi" in its footer), described from [Dashboard header](#dashboard-header) on. Its "← ucuzu" link returns to the shop.
 
 ## Price comparison shop
 
-The same product is matched across stores by its normalized name, so one product page compares every store that sells it. Only current prices are listed: a store's price counts when it was seen within 7 days of that store's newest data. Rental listings (`HousesRent`) are not part of the shop.
+The same product is matched across stores by its normalized name, so one product page compares every store that sells it. Only current prices are listed: a store's price counts when it was seen within 7 days of that store's newest data and within 45 days of the newest data overall, so stores that are no longer scraped drop out. Rental listings (`HousesRent`) are not part of the shop.
 
 - **Header** — the search box (searches `/ara`), a category menu, links to **Fırsatlar** (deals), **Fiyat Alarmı** (price alarms, with a count) and **Analiz** (the dashboard), and a light/dark toggle.
 - **Home (`/`)** — shortcut tiles, recent price drops, popular products of the largest categories and the stores with the most products.
 - **Search (`/ara`)** — every word typed must appear in the product name (Turkish letters, case and units such as `1 L`/`1l` are normalized). Filter by category and store, sort by **Önerilen** (relevance), **En düşük fiyat**, **En yüksek fiyat** or **En çok düşen** (largest drop), and page through results (24 per page). The URL keeps the state (`q`, `group`, `store`, `sort`, `sayfa`), so searches can be bookmarked.
-- **Product page (`/urun/<name>`)** — the cheapest current price and store, the highest current price, the lowest price ever seen and the price gap between stores; every store's offer, cheapest first, with its latest price change; offers that are no longer current are folded under "Güncel olmayan … fiyat"; a step chart of each store's price history (1 month, 3 months or all); and similar products.
+- **Product page (`/urun/<name>`)** — the cheapest current price and store, the highest current price, the lowest price ever seen and the price gap between stores; one offer per store (its cheapest listing on its newest date), cheapest first, with its latest price change; a store's other listings of the product open under "<store> için N seçenek daha"; offers that are no longer current are folded under "Güncel olmayan … fiyat"; a step chart of each store's price history (1 month, 3 months or all); and similar products.
 - **Deals (`/firsatlar`)** — current offers whose latest price change was a drop, largest first. Filter by category, minimum drop (10–50 %) and period (last 7 or 30 days).
 - **Price alarms (`/alarmlar`)** — on a product page, **Fiyat alarmı kur** sets a target price (default 5 % below the cheapest current price). The alarms page shows each alarm with the current cheapest price and marks those at or below the target. Alarms are stored only in this browser (`localStorage` key `price-alarms`): they are not sent to the server, no notification is sent, and clearing site data or using another browser loses them.
 
-## Header
-
-## Header
+## Dashboard header
 
 - **API status** — `API connected`, `Checking API…`, or `API unreachable — retry` (click to check again).
 - **Theme toggle** — shows the current mode: **Auto**, **Light** or **Dark**. On a first visit the mode is Auto, which follows the operating system's light/dark setting. Clicking switches to the opposite of the current look (Light ↔ Dark) and remembers the choice in the browser; the button does not return to Auto (clear the site's stored data to get Auto back).

@@ -10,10 +10,11 @@ No database, server or network needed; the suite runs in a few seconds.
 |---|---|
 | `tests/test_prices.py` | `inflation_dashboard/domain/prices.py`: date parsing, price coercion, column detection, product frames |
 | `tests/test_use_cases.py` | `inflation_dashboard/application/use_cases.py`: history, averages, movers, coverage calculations |
-| `tests/test_build_database.py` | `scripts/build_database.py` (file-name dates, retailer labels, header aliases, small end-to-end builds) and `scripts/data_files.py` split/join |
+| `tests/test_build_database.py` | `scripts/build_database.py` (file-name dates, retailer labels, header aliases, small end-to-end builds, day deduplication, catalog columns) and `scripts/data_files.py` split/join |
+| `tests/test_csv_to_json.py` | `scripts/csv_to_json.py`: converted JSON builds the same database as the CSVs, `--source` adds new prices without overwriting and folds in remaining raw CSVs, `--dry-run` changes nothing, unknown retailers are an error; `retailer_stem` round-trip and rejected labels |
 | `tests/test_run_falcon_server.py` | Launcher database path precedence: `--sqlite-db` > `PRICES_DB_PATH` > `data/prices.db` |
 | `tests/test_api.py` | Falcon `TestClient`: 503 `database_unavailable` (missing or empty database) on data endpoints and `/api/health` reporting it; 404 `not_found` and 405 `method_not_allowed` envelopes; 500 `server_error` with a fixed message and no exception text; CORS header on error responses; `/api/products` grouping, date window and 400s against a tiny database built with `build_database.build` |
-| `tests/test_catalog.py` | `inflation_dashboard/domain/catalog.py` (`name_key`, `search_terms`, `split_retailer`); the build's `name_key`, `previous_price`, `price_since` and `is_current` columns; `/api/catalog/*` against a tiny built database: cross-store search, stale offers excluded, bad `sort` (400), item offers and history, unknown item (404), deals and groups, and 503 `database_outdated` on a database without the catalog columns |
+| `tests/test_catalog.py` | `inflation_dashboard/domain/catalog.py` (`name_key`, `search_terms`, `split_retailer`); the build's `name_key`, `previous_price`, `price_since` and `is_current` columns; `/api/catalog/*` against a tiny built database: cross-store search, stale offers excluded, bad `sort` (400), item offers and history, one offer per store (its cheapest on the store's newest date, never an unpriced one), unknown item (404), deals and groups, and 503 `database_outdated` on a database without the catalog columns |
 
 `tests/conftest.py` provides small in-memory history fixtures.
 
@@ -25,7 +26,7 @@ Runs in-process with Falcon's `TestClient` (no port). It checks:
 - that all fourteen routes are registered and the response-key tokens exist in `resources.py`;
 - endpoint smoke tests, depending on the database:
   - **with a built database:** every data endpoint returns a JSON-native envelope with the expected keys, plus product search, monthly inflation, an unknown product name in `/api/history` (200 with an empty summary), an unknown retailer (400 `invalid_filter`) and the catalog routes (groups, a search, the first hit's item, deals, and a bad `sort` returning 400);
-  - **without a database:** inventory, history, product search, product detail and catalog search return 503 `database_unavailable`, and the monthly inflation endpoint still works.
+  - **without a database:** inventory, history, `/api/products`, product search, product detail and catalog search return 503 `database_unavailable`, and the monthly inflation endpoint still works.
 
 ## Frontend
 
@@ -73,7 +74,7 @@ Shop (`/`):
 
 1. The home page shows the deal rail, a popular-products rail per category and the popular stores.
 2. Search from the header (try `süt` and `SÜT 1 L`): results match; the category and store filters, sort and paging change the URL; the back button restores the previous search.
-3. Open a product: offers are cheapest first with the cheapest highlighted, the price-history chart switches between 1 month, 3 months and all, and stale offers sit under "Güncel olmayan … fiyat".
+3. Open a product: one offer per store, cheapest first with the cheapest highlighted (a store's other listings open under "<store> için N seçenek daha"), the price-history chart switches between 1 month, 3 months and all, and stale offers sit under "Güncel olmayan … fiyat".
 4. Set a price alarm above the current price: the header's alarm count goes up and `/alarmlar` marks it **Hedefe ulaştı**. Reload: the alarm is still there. Remove it.
 5. `/firsatlar`: the category chips and the minimum-drop and period selects reload the list.
 6. At phone width (about 390 px) no page scrolls sideways.

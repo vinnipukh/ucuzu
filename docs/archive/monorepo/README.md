@@ -1,5 +1,7 @@
 # Documentation Index
 
+> **Historical:** the documentation index of the original monorepo, kept for reference; not current setup guidance. Several links point to files that were not carried over into this repository. Current documentation: [docs/README.md](../../README.md).
+
 Welcome to the **Inflation Study Mirror** documentation. This directory is the unified technical knowledge base and reference manual for the entire repository.
 
 ---

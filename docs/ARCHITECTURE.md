@@ -4,11 +4,11 @@ This file owns the source layout, layer boundaries, request flow, coding convent
 
 ## System boundary
 
-This repository contains the serving and presentation tiers. Scrapers, inflation calculators and TÜİK methodology live in the separate data repository; their **output** is committed here under `data/` (`raw/`, `prices_json/`, `inflation/`). See [DATA_CONTRACT.md](DATA_CONTRACT.md).
+This repository contains the serving and presentation tiers. Scrapers, inflation calculators and TÜİK methodology live in the separate data repository; their **output** is committed here under `data/` (`prices_json/` price histories, `inflation/` artifacts, and reference files in `raw/`). See [DATA_CONTRACT.md](DATA_CONTRACT.md).
 
 ```mermaid
 flowchart LR
-    Data[data/ committed\nraw CSV + prices_json + inflation artifacts]
+    Data[data/ committed\nprices_json + inflation artifacts]
     Builder[scripts/build_database.py]
     DB[(data/prices.db\nbuilt locally, never committed)]
     API[Falcon WSGI API]
@@ -39,6 +39,7 @@ inflation_dashboard/
 scripts/
   run_falcon_server.py             launcher (Granian / Gunicorn / Waitress)
   build_database.py                builds data/prices.db from data/
+  csv_to_json.py                   merges scraper CSVs into the per-retailer data/prices_json files
   data_files.py                    split/join/check files over the 85 MB limit
   verify_falcon_api.py             in-process API smoke and boundary checks
   test_sqlite_adapter.py, test_new_endpoints.py, benchmark_*.py   manual tooling
@@ -79,7 +80,7 @@ frontend/src/
 4. On a miss, filter endpoints parse and validate the common filters (cached per query signature), then load the matching history frame from SQLite (cached per filter signature) via `sqlite_price_repository.load_price_history_from_db`.
 5. Application use cases compute the response tables in pandas; `api/serialization.py` converts them to JSON-native values inside the envelope; the bytes are cached and sent.
 6. `/api/products` (product names per retailer, used by the Product explorer's pickers) queries the `products` table, and `/api/products/search` and `/api/product` query the `product_prices` view, through the adapter directly. `/api/epeykatfg/monthly-inflation` reads the monthly inflation CSV.
-7. `/api/catalog/*` (the shop) calls `adapters/sqlite_catalog_repository.py`, which reads the `products`, `categories`, `retailers` and `observations` tables over the same read-only connections. Items are products that share `products.name_key` (`domain/catalog.py`); only current offers (`is_current`) are listed.
+7. `/api/catalog/*` (the shop) calls `adapters/sqlite_catalog_repository.py`, which reads the `products`, `categories`, `retailers` and `observations` tables over the same read-only connections. Items are products that share `products.name_key` (`domain/catalog.py`); only current offers (`is_current`) are listed. Search counts only each store's latest offers (`is_store_latest`), and an item lists one offer per store (the cheapest on the store's newest date) with the store's other offers under `other_offers`.
 8. Errors: filter validation returns 400 `invalid_filter`; a missing or empty database returns 503 `database_unavailable`, and a database built before the catalog columns returns 503 `database_outdated` on `/api/catalog/*`; unknown routes, wrong methods and unhandled exceptions are rendered as envelopes by the error handlers in `create_app`. The SQLite database is the only data path.
 
 ## Conventions

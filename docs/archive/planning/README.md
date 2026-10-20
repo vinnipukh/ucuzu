@@ -1,5 +1,7 @@
 # Project Planning, Requirements & Phase History
 
+> **Historical:** Streamlit-era planning material from the monorepo; not current setup guidance. Current documentation: [docs/README.md](../../README.md).
+
 This directory contains the project requirements, architecture decisions, multi-phase roadmap, and execution logs for the **Inflation Study Mirror** dashboard and scraper modernization.
 
 ---

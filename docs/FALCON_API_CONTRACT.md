@@ -3,7 +3,7 @@
 **Target Frontend:** Svelte 5 / SvelteKit SPA (`frontend/`)  
 **API Backend:** Falcon WSGI application (`inflation_dashboard/api/falcon_app.py`)  
 **Specification Version:** 2.1.0  
-**Last Updated:** 2026-10-17  
+**Last Updated:** 2026-10-20  
 **Status:** Authoritative. [API.md](API.md) is a summary; this file wins on any difference.
 
 ---
@@ -14,7 +14,7 @@
 - **Base URL:** the SPA calls same-origin `/api/...` unless `VITE_API_BASE_URL` was set at build time.
 - **Content-Type:** `application/json`, UTF-8.
 - **Serialization:** `orjson`. `NaN`, `Infinity`, `NaT` and pandas/numpy scalars are converted to JSON-native values (`null` for missing) before encoding.
-- **CORS:** `falcon.CORSMiddleware` with `FALCON_CORS_ORIGINS` (default `*`). It adds `Access-Control-Allow-Origin` to every response, including errors. Preflight `OPTIONS` returns `200` with `Access-Control-Allow-Methods: GET`, `Access-Control-Allow-Headers: *` and `Access-Control-Max-Age: 86400`. No headers are exposed (`ETag` is not readable cross-origin from JavaScript, but the browser cache still uses it).
+- **CORS:** `falcon.CORSMiddleware` with `FALCON_CORS_ORIGINS` (default `*`). It adds `Access-Control-Allow-Origin` (`*`, or the request's origin when `FALCON_CORS_ORIGINS` is a list) to every response, including errors, whose request carries an allowed `Origin` header; requests without `Origin` get no CORS headers. Preflight `OPTIONS` returns `200` with `Access-Control-Allow-Methods: GET`, `Access-Control-Allow-Headers` echoing `Access-Control-Request-Headers` (`*` when absent) and `Access-Control-Max-Age: 86400`. No headers are exposed (`ETag` is not readable cross-origin from JavaScript, but the browser cache still uses it).
 - **Data source:** the read-only SQLite database built by `scripts/build_database.py` (see [DATABASE.md](DATABASE.md)); `/api/epeykatfg/monthly-inflation` reads a CSV artifact (see [DATA_CONTRACT.md](DATA_CONTRACT.md)). Architecture and layer rules are in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
@@ -59,7 +59,7 @@ Error objects have exactly two fields, `code` and `message`. Context goes on the
 |---|---|---|---|
 | 400 | `invalid_filter` | Any query-parameter validation failure (sections 3–4) | Names the parameter, e.g. `Invalid limit`, `Unknown retailer: X`, `Invalid date range` |
 | 404 | `not_found` | Unknown route, `/api/product` found no product, or `/api/catalog/item` found no item | `Product not found: <key>` for products; `Item not found: <key>` for catalog items; Falcon's description or title for routes |
-| 405 | `method_not_allowed` | A method other than `GET`/`OPTIONS` on a known route (the `Allow` header lists `GET`) | Falcon's description or title |
+| 405 | `method_not_allowed` | A method other than `GET`/`OPTIONS` on a known route (the `Allow` header is `GET, OPTIONS`) | Falcon's description or title |
 | other 4xx/5xx | `http_error` | Any other `falcon.HTTPError` raised by Falcon | Falcon's description or title |
 | 500 | `server_error` | Any unhandled exception | Always the fixed string `Internal server error`; the traceback is logged server-side (logger `inflation_dashboard.api`), never sent |
 | 503 | `database_unavailable` | The configured database file is missing or 0 bytes (every endpoint except `/api/health` and `/api/epeykatfg/monthly-inflation`) | `Database not found; run scripts/build_database.py` |
@@ -175,7 +175,7 @@ Parameters: the common filters, plus
         "product_name": "1000 Cc Cam Kavanoz",
         "category": "Uncategorized",
         "price": 19.99,
-        "source_file": "raw/01_Food/Gurmar/gurmar_prices_2026-10-17.csv"
+        "source_file": "Markets_Gurmar.json#2026-10-17"
       }
     ]
   },
@@ -191,7 +191,7 @@ Parameters: the common filters, plus
 }
 ```
 
-Rows are ordered by retailer, product name, date. `source_file` is relative to `data/` (`<file>.json#YYYY-MM-DD` for JSON-sourced retailers).
+Rows are ordered by retailer, product name, date. `source_file` is the JSON partition's file name and date (`Markets_Gurmar.json#2026-10-17`, a file in `data/prices_json/`), which is every retailer today; a retailer built from raw CSVs would show the CSV's path relative to `data/` (`raw/01_Food/...`).
 
 **Product mode**
 
@@ -199,8 +199,8 @@ Rows are ordered by retailer, product name, date. `source_file` is relative to `
 {
   "data": {
     "history": [
-      {"date": "2026-10-16T00:00:00", "price": 1349.9, "category": "Uncategorized", "source_file": "raw/01_Food/Gurmar/gurmar_prices_2026-10-16.csv"},
-      {"date": "2026-10-17T00:00:00", "price": 1349.9, "category": "Uncategorized", "source_file": "raw/01_Food/Gurmar/gurmar_prices_2026-10-17.csv"}
+      {"date": "2026-10-16T00:00:00", "price": 1349.9, "category": "Uncategorized", "source_file": "Markets_Gurmar.json#2026-10-16"},
+      {"date": "2026-10-17T00:00:00", "price": 1349.9, "category": "Uncategorized", "source_file": "Markets_Gurmar.json#2026-10-17"}
     ],
     "summary": {
       "latest_price": 1349.9,
@@ -371,7 +371,7 @@ Parameters:
 - `product_id` (`string`) or `product_name` (`string`): one is required (400 `product_id or product_name is required`). **When `product_id` is given, `product_name` is ignored.**
 - `retailer` (`string`, optional).
 
-Lookup: the key is matched against `product_id`, then against `product_name`. With `retailer`, only that retailer is searched; without it, the match with the most observations wins. No match (or a database error during lookup) returns 404 `not_found` with message `Product not found: <key>` and `meta` `{product_id, product_name, retailer}` echoing the request.
+Lookup: the key is matched against `product_id`, then against `product_name`. With `retailer`, only that retailer is searched (if several of its products share the `product_name`, which one is returned is arbitrary); without it, the match with the most observations wins. No match (or a database error during lookup) returns 404 `not_found` with message `Product not found: <key>` and `meta` `{product_id, product_name, retailer}` echoing the request.
 
 ```json
 {
@@ -426,7 +426,7 @@ The four catalog endpoints (§4.10–§4.13) read the `products` table through `
 - Groups, search and deals count only current offers (`products.is_current = 1`, see [DATABASE.md](DATABASE.md#catalog-columns)).
 - They are cached and compressed like the other endpoints (§5), return 503 `database_unavailable` without a database and 503 `database_outdated` when the database was built before the catalog columns existed (§2.3).
 
-`data` lists groups with at least one current offer, largest `offer_count` first (ties by name); each group's `stores` are sorted the same way and list only stores with current offers. `last_date` is the newest `last_date` of any product of the group or store, current or not. `meta.count` is the number of groups.
+`data` lists groups with at least one current offer, largest `offer_count` first (ties by name); each group's `stores` are sorted the same way and list only stores with current offers. `last_date` is the newest `last_date` of any product (current or not) of the store, and for a group, of its listed stores. `meta.count` is the number of groups.
 
 ```json
 {
@@ -457,7 +457,7 @@ Parameters:
 - `sort` (default `relevance`): `relevance` ranks by the number of query terms that match whole words, then store count, then shorter names; `price_asc` / `price_desc` by `min_price`; `drop` by `max_drop_percent` (items without a drop last), then store count. Any other value → 400 `Invalid sort`.
 - `limit` (integer 1–60, default 24), `offset` (integer 0–10000, default 0): out of range or not an integer → 400 `Invalid limit` / `Invalid offset` (not clamped).
 
-Only current offers with `latest_price > 0` in the selected group/store count, and of those only each store's latest prices for the item (`products.is_store_latest = 1`: offers last seen on the store's newest date for that item; see [DATABASE.md](DATABASE.md#catalog-columns)), matching the per-store prices of §4.12. For each item, `name`, `store` and `category` come from its cheapest offer; `stores` lists up to three stores, cheapest first; `min_price`/`max_price` span the offers; `max_drop_percent` is the largest offer `drop_percent` (§4.12), `null` if none dropped; `last_date` is the newest offer date. `meta.total` counts every matching item, `meta.count` the items on this page.
+Only current offers with `latest_price > 0` in the selected group/store count, and of those only each store's latest prices for the item (`products.is_store_latest = 1`: offers last seen on the store's newest date for that item; see [DATABASE.md](DATABASE.md#catalog-columns)), matching the per-store prices of §4.12. For each item, `name`, `store` and `category` come from its cheapest offer; `stores` lists up to three stores, cheapest first; `min_price`/`max_price` span the offers; `max_drop_percent` is the largest offer `drop_percent` (§4.12), `null` if none dropped; `last_date` is the newest offer date. `meta.total` counts every matching item (`0` when `offset` is past the last match), `meta.count` the items on this page.
 
 ```json
 {
@@ -499,7 +499,7 @@ Parameters:
 - `history`: every observation as `[date, price]` pairs, oldest first.
 - `other_offers`: the store's other products for the item (another product under the same name, such as a different repair service for the same phone, or an older offer), newest `last_date` first, then cheapest first. Same fields, without `history` and `other_offers`; `[]` when the store has only one.
 
-`name`, `group` and `category` come from the cheapest current offer (the first offer if none is current). In `summary`, `min_price`/`max_price` span the current offers with a price (all offers with a price when none is current); `lowest_ever` is the lowest price in any returned offer's history, with its date and store, ignoring prices below 25 % (`LOWEST_EVER_FLOOR`) of the lowest current price (`null` when nothing qualifies); `store_count` counts distinct retailers among the returned offers; `offer_count` and `current_offer_count` count the returned (per-store) offers, so `other_offers` are not counted and `lowest_ever` ignores their histories. `meta` is `{key, offer_count}`.
+`name`, `group` and `category` come from the cheapest current offer with a price (else the cheapest priced offer, else the first offer). In `summary`, `min_price`/`max_price` span the current offers with a price (all offers with a price when none is current); `lowest_ever` is the lowest price in any returned offer's history, with its date and store, ignoring prices below 25 % (`LOWEST_EVER_FLOOR`) of the lowest current price (`null` when nothing qualifies); `store_count` counts distinct retailers among the returned offers, which equals `offer_count` now that there is one offer per store; `offer_count` and `current_offer_count` count the returned (per-store) offers, so `other_offers` are not counted and `lowest_ever` ignores their histories. `meta` is `{key, offer_count}`.
 
 ```json
 {
@@ -507,45 +507,66 @@ Parameters:
     "key": "içim yarım yağlı süt 1l",
     "name": "İçim Yarım Yağlı Süt 1 L",
     "group": "Markets",
-    "category": "Süt, Kahvaltılık",
+    "category": "Kazandıran Ürünler > Süt ve Süt Ürünleri",
     "offers": [
       {
-        "retailer": "Markets / Hapeloglu",
+        "retailer": "Markets / BizimMarket",
         "group": "Markets",
-        "store": "Hapeloglu",
-        "product_id": "1528",
+        "store": "BizimMarket",
+        "product_id": "13488",
         "product_name": "İçim Yarım Yağlı Süt 1 L",
         "name_key": "içim yarım yağlı süt 1l",
-        "category": "Süt, Kahvaltılık",
-        "latest_price": 55.0,
-        "previous_price": 49.5,
-        "price_since": "2026-10-09",
-        "first_date": "2026-05-31",
-        "last_date": "2026-10-09",
-        "min_price": 49.5,
-        "max_price": 55.0,
-        "observations_count": 14,
+        "category": "Kazandıran Ürünler > Süt ve Süt Ürünleri",
+        "latest_price": 54.5,
+        "previous_price": 59.5,
+        "price_since": "2026-10-19",
+        "first_date": "2026-10-05",
+        "last_date": "2026-10-19",
+        "min_price": 54.5,
+        "max_price": 59.5,
+        "observations_count": 6,
         "is_current": true,
-        "drop_percent": null,
-        "history": [["2026-05-31", 55.0], ["2026-06-01", 55.0], "…", ["2026-10-09", 55.0]]
+        "drop_percent": 8.4,
+        "other_offers": [
+          {
+            "retailer": "Markets / BizimMarket",
+            "group": "Markets",
+            "store": "BizimMarket",
+            "product_id": "İçim Yarım Yağlı Süt 1 L",
+            "product_name": "İçim Yarım Yağlı Süt 1 L",
+            "name_key": "içim yarım yağlı süt 1l",
+            "category": "Uncategorized",
+            "latest_price": 43.9,
+            "previous_price": 52.5,
+            "price_since": "2026-04-10",
+            "first_date": "2026-03-14",
+            "last_date": "2026-04-10",
+            "min_price": 1.0,
+            "max_price": 52.5,
+            "observations_count": 22,
+            "is_current": false,
+            "drop_percent": 16.38
+          }
+        ],
+        "history": [["2026-10-05", 59.5], ["2026-10-06", 59.5], "…", ["2026-10-19", 54.5]]
       }
     ],
     "summary": {
-      "offer_count": 7,
+      "offer_count": 5,
       "current_offer_count": 5,
       "store_count": 5,
-      "min_price": 55.0,
+      "min_price": 54.5,
       "max_price": 59.75,
-      "lowest_ever": {"price": 43.9, "date": "2026-03-19", "store": "BizimMarket"},
-      "last_date": "2026-10-17"
+      "lowest_ever": {"price": 49.5, "date": "2026-10-02", "store": "Hapeloglu"},
+      "last_date": "2026-10-19"
     }
   },
-  "meta": {"key": "içim yarım yağlı süt 1l", "offer_count": 7},
+  "meta": {"key": "içim yarım yağlı süt 1l", "offer_count": 5},
   "errors": []
 }
 ```
 
-The 25 % floor drops scraper errors: this item's history also holds a `1.0` price, which is not reported.
+BizimMarket's older listing (last seen 2026-04-10, with a `1.0` scraper error in its history) appears only under `other_offers`, so neither its price nor its history affects `summary`. The 25 % floor drops such scraper errors from the offers that are read.
 
 ### 4.13 `GET /api/catalog/deals`
 
@@ -560,7 +581,7 @@ Parameters:
 
 Out of range or not an integer → 400 `Invalid <name>` (not clamped). Drops above 80 % (`MAX_DEAL_DROP_PERCENT`, also the `min_drop` maximum) are ignored as likely scraper or unit errors.
 
-`data` is a list of offers shaped as in §4.12 **without** `history`. `meta` echoes `group`, `store`, `min_drop`, `days`, `limit` and adds `count`.
+`data` is a list of offers shaped as in §4.12 **without** `history` and `other_offers`. `meta` echoes `group`, `store`, `min_drop`, `days`, `limit` and adds `count`.
 
 ```json
 {
@@ -623,6 +644,7 @@ The client types are not a complete or exact model of the server. Known differen
 | `CommonFilterMeta.warnings?`, `history_row_count?`, `skipped_file_count?` | Optional in the type, but always sent by the four filter endpoints. |
 | *(none)* `meta` types for `/api/catalog/groups`, `/api/catalog/item`, `/api/catalog/deals` | Only `/api/catalog/search` has a `meta` type (`CatalogSearchMeta`); the SPA does not read the other catalog `meta` objects. Their shapes are in §4.10, §4.12 and §4.13. |
 | `CatalogOffer.history?` | Sent by `/api/catalog/item` only; `/api/catalog/deals` offers have no `history`. |
+| `CatalogOffer.other_offers?` | Always sent on `/api/catalog/item` offers (`[]` when the store has one product); never on deals, and the nested offers carry neither `history` nor `other_offers`. |
 
 ### 6.2 `api.ts`
 
@@ -1066,7 +1088,7 @@ The SPA makes every request through `fetchApi`; no other module calls `fetch` fo
 
 - **Base URL:** read at request time from `filters.apiBaseUrl` in `frontend/src/lib/stores/filters.svelte.ts`. It starts as `DEFAULT_API_BASE_URL`, which is the build-time `VITE_API_BASE_URL` (trimmed, trailing slashes removed) or `''` when unset. The sidebar's API settings can change it at runtime.
 - **URL building:** `<base><endpoint>?<query>`. With an empty base the URL is relative (`/api/...`), so requests go to the page's own origin. `buildQueryParams` skips `undefined`, `null` and `''`, repeats array values (`retailer=A&retailer=B`) and stringifies booleans.
-- **Return value:** `{data, meta}` from the envelope (`errors` is dropped on success).
+- **Return value:** the parsed envelope, typed as `{data, meta}` (`errors` is still present at runtime but not part of the type).
 - **Errors:** every failure throws `ApiErrorResponse` (`status`, `code`, `message`, `meta`):
 
 | Situation | `status` | `code` | `meta` |
