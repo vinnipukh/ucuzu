@@ -16,7 +16,6 @@ import argparse
 import importlib.util
 import os
 from pathlib import Path
-import signal
 import sqlite3
 import subprocess
 import sys
@@ -177,6 +176,105 @@ def build_command(
     return cmd
 
 
+def kill_children_on_exit() -> None:
+    """Put this process in a Windows job that kills its whole process tree when it exits.
+
+    Child processes (the server and its ``multiprocessing`` workers, which hold the
+    listening socket) inherit the job, so closing it, which happens when this process
+    exits for any reason, stops them all. Without it, killing the launcher alone
+    leaves the workers listening.
+    """
+    import ctypes
+    from ctypes import wintypes
+
+    class IoCounters(ctypes.Structure):
+        _fields_ = [(name, ctypes.c_ulonglong) for name in (
+            "ReadOperationCount", "WriteOperationCount", "OtherOperationCount",
+            "ReadTransferCount", "WriteTransferCount", "OtherTransferCount",
+        )]
+
+    class BasicLimitInformation(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", ctypes.c_int64),
+            ("PerJobUserTimeLimit", ctypes.c_int64),
+            ("LimitFlags", wintypes.DWORD),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", wintypes.DWORD),
+            ("Affinity", ctypes.c_size_t),
+            ("PriorityClass", wintypes.DWORD),
+            ("SchedulingClass", wintypes.DWORD),
+        ]
+
+    class ExtendedLimitInformation(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", BasicLimitInformation),
+            ("IoInfo", IoCounters),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+    job_object_extended_limit_information = 9
+    job_object_limit_kill_on_job_close = 0x2000
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+    kernel32.SetInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
+    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+
+    # The handle is deliberately never closed: it closes when this process exits.
+    job = kernel32.CreateJobObjectW(None, None)
+    info = ExtendedLimitInformation()
+    info.BasicLimitInformation.LimitFlags = job_object_limit_kill_on_job_close
+    if not (
+        job
+        and kernel32.SetInformationJobObject(
+            job, job_object_extended_limit_information, ctypes.byref(info), ctypes.sizeof(info)
+        )
+        and kernel32.AssignProcessToJobObject(job, kernel32.GetCurrentProcess())
+    ):
+        print(
+            f"[WARN] Could not create a kill-on-exit job (error {ctypes.get_last_error()}); "
+            "server workers may outlive the launcher.",
+            file=sys.stderr,
+        )
+
+
+def run_server(cmd: list[str]) -> int:
+    """Run the server command and return its exit code (1 if it cannot start).
+
+    On POSIX the server replaces this process (``exec``). Windows has no ``exec``:
+    ``os.execvp`` starts a new process and returns at once, orphaning the server. So
+    there the server runs as a child in a kill-on-exit job (``kill_children_on_exit``)
+    and the launcher waits in the foreground. Ctrl+C reaches the server directly
+    (same console), and the launcher waits for it to shut down.
+    """
+    if os.name != "nt":
+        try:
+            os.execvp(cmd[0], cmd)  # does not return on success
+        except Exception as exc:
+            print(f"[ERROR] Failed to execute {cmd[0]}: {exc}", file=sys.stderr)
+        return 1
+
+    kill_children_on_exit()
+    try:
+        proc = subprocess.Popen(cmd)
+    except OSError as exc:
+        print(f"[ERROR] Failed to execute {cmd[0]}: {exc}", file=sys.stderr)
+        return 1
+    try:
+        return proc.wait()
+    except KeyboardInterrupt:
+        try:
+            return proc.wait(timeout=10)
+        except (KeyboardInterrupt, subprocess.TimeoutExpired):
+            # Exiting closes the job, which kills whatever is still running.
+            return 130
+
+
 def print_banner(
     engine: str,
     host: str,
@@ -284,12 +382,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    """Launch the chosen WSGI server, replacing this process.
+    """Launch the chosen WSGI server.
 
     Falls back between Granian and Gunicorn if the chosen one is not installed,
     tunes and exports the database settings, exports ``FALCON_CORS_ORIGINS`` and
-    ``PYTHONPATH``, prints a banner and ``exec``s the server (or only prints the
-    command with ``--dry-run``). Returns 1 on failure.
+    ``PYTHONPATH``, prints a banner and runs the server with ``run_server`` (or only
+    prints the command with ``--dry-run``). Returns 1 on failure.
     """
     args = build_parser().parse_args()
 
@@ -352,12 +450,7 @@ def main() -> int:
         sqlite_info=sqlite_info,
     )
 
-    # Execute server process directly replacing current process
-    try:
-        os.execvp(cmd[0], cmd)
-    except Exception as exc:
-        print(f"[ERROR] Failed to execute {cmd[0]}: {exc}", file=sys.stderr)
-        return 1
+    return run_server(cmd)
 
 
 if __name__ == "__main__":
