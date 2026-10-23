@@ -62,6 +62,13 @@ Historical material; not current setup guidance.
 
 What changed in behaviour and documentation, newest first, so a difference from older code can be checked against an intended change. Each entry names its commit; API changes per contract version are also in [FALCON_API_CONTRACT.md §9](FALCON_API_CONTRACT.md#9-changes).
 
+### 2026-10-23 — categories and product ids from more scrapers
+
+**Breaking / behaviour changes**
+
+- The build and `scripts/csv_to_json.py` now read category and product-id columns under more spellings (`ana_kategori`, `kategori`, `Full Category`, `subcategory`; `urun_id`, `product_code`, `SKU`) and the name column `urun`. A101, Arden, Kale, Marketzade, Cagri, Macrocenter, addax, GoldenRose, Pazarium and Altınyıldız were re-imported from InflationResearchStudy `7d6b8e4`: their products get real categories instead of `Uncategorized` (except Marketzade, whose scraper writes none), and products of A101, addax, Cagri, Macrocenter, GoldenRose and Altınyıldız are keyed by the store's own id, so their `product_id` values in the API change ([DATABASE.md § Raw CSV ingestion](DATABASE.md#raw-csv-ingestion), [DATA_CONTRACT.md § Partitioned JSON input](DATA_CONTRACT.md#partitioned-json-input-dataprices_json)).
+- When merging, a real category beats `Uncategorized`, and name-keyed history from before a scraper wrote ids moves onto those ids; same-day prices that were stored under both are no longer counted twice (about 4,600 for A101).
+
 ### 2026-10-20 — per-store prices and JSON price data
 
 **Breaking / behaviour changes**

@@ -69,8 +69,19 @@ def test_raw_retailer_label(dirs: tuple[str, ...], expected: str | None) -> None
         (["İsim", "Fiyat"], ["name", "Fiyat"]),  # "Fiyat" is already a canonical price column
         (["isim", "fiyat"], ["name", "price"]),
         (["Tarih", "UrunID", "UrunAdi", "FiyatFloat"], ["Tarih", "UrunID", "name", "price"]),
-        (["ana_kategori", "ad", "fiyat", "normal_fiyat"], ["ana_kategori", "name", "price", "normal_fiyat"]),
+        (["ana_kategori", "ad", "fiyat", "normal_fiyat"], ["category", "name", "price", "normal_fiyat"]),
         (["Category", "Name", "Current Price", "Original Price"], ["Category", "name", "price", "Original Price"]),
+        # Category and id aliases (A101, Cagri, Macrocenter, GoldenRose, Altınyıldız layouts).
+        (
+            ["ana_kategori", "alt_kategori", "marka", "ad", "fiyat", "urun_id", "barkod"],
+            ["category", "alt_kategori", "marka", "name", "price", "product_id", "barkod"],
+        ),
+        (["category", "product_name", "price_tl", "product_code"], ["category", "product_name", "price", "product_id"]),
+        (["Category", "Subcategory", "Name", "Brand", "SKU", "Price"], ["Category", "Subcategory", "name", "Brand", "product_id", "Price"]),
+        (["Product ID", "SKU", "Category Path", "Full Category"], ["Product ID", "product_id", "Category Path", "category"]),
+        (["id", "urun", "fiyat", "kategori"], ["id", "name", "price", "category"]),
+        # TÜİK codes are not shop categories.
+        (["product_name", "price", "category_number", "sub_category_number"], ["product_name", "price", "category_number", "sub_category_number"]),
         (["product_name", "price (TL)"], ["product_name", "price"]),
         (["Brand", "productName", "Price"], ["Brand", "name", "Price"]),
         (["product_id", "name", "regular_price", "sale_price"], ["product_id", "name", "regular_price", "price"]),

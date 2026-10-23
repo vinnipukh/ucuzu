@@ -44,7 +44,13 @@ for entry in (REPO_ROOT, Path(__file__).resolve().parent):
 import data_files  # noqa: E402
 
 from inflation_dashboard.domain.catalog import name_key  # noqa: E402
-from inflation_dashboard.domain.prices import NAME_COLUMNS, PRICE_COLUMNS, build_product_frame  # noqa: E402
+from inflation_dashboard.domain.prices import (  # noqa: E402
+    CATEGORY_COLUMNS,
+    ID_COLUMNS,
+    NAME_COLUMNS,
+    PRICE_COLUMNS,
+    build_product_frame,
+)
 
 DATA_DIR = REPO_ROOT / "data"
 
@@ -62,11 +68,15 @@ TUIK_FOLDER = re.compile(r"^\d{2}_(?P<name>.+)$")
 # Header spellings used by individual scrapers, in priority order, keyed by their
 # normalized form (casefolded; spaces, "_", "-" and dotted-İ marks removed). They are
 # renamed to the domain's canonical columns only when no canonical column exists.
-NAME_ALIASES = ("productname", "name", "urunadi", "ürünadı", "urunismi", "isim", "ad", "title")
+NAME_ALIASES = ("productname", "name", "urunadi", "ürünadı", "urunismi", "isim", "ad", "urun", "title")
 PRICE_ALIASES = (
     "price", "fiyat", "fiyatfloat", "pricetl", "price(tl)", "saleprice", "currentprice",
     "productcost", "normalprice", "regularprice",
 )
+# Category names only: ``category_number`` / ``sub_category_number`` hold TÜİK codes
+# (``05``, ``0511116``), not shop categories, and are deliberately not aliased.
+CATEGORY_ALIASES = ("fullcategory", "categorypath", "anakategori", "kategori", "subcategory", "topcategory")
+ID_ALIASES = ("urunid", "productcode", "sku", "productid")
 
 DATE_PATTERNS = (
     (re.compile(r"(?<!\d)(20\d{2})[-_.](\d{2})[-_.](\d{2})(?!\d)"), (1, 2, 3)),
@@ -259,12 +269,17 @@ def _header_key(column: object) -> str:
 
 
 def normalize_columns(frame: pd.DataFrame) -> pd.DataFrame:
-    """Rename scraper-specific name/price headers to the domain's canonical columns."""
+    """Rename scraper-specific name/price/category/id headers to the domain's canonical columns."""
     by_key: dict[str, object] = {}
     for column in frame.columns:
         by_key.setdefault(_header_key(column), column)
     renames = {}
-    for canonical, known, aliases in (("name", NAME_COLUMNS, NAME_ALIASES), ("price", PRICE_COLUMNS, PRICE_ALIASES)):
+    for canonical, known, aliases in (
+        ("name", NAME_COLUMNS, NAME_ALIASES),
+        ("price", PRICE_COLUMNS, PRICE_ALIASES),
+        ("category", CATEGORY_COLUMNS, CATEGORY_ALIASES),
+        ("product_id", ID_COLUMNS, ID_ALIASES),
+    ):
         if any(column in frame.columns for column in known):
             continue
         source = next((by_key[alias] for alias in aliases if alias in by_key), None)

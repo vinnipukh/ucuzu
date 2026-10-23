@@ -81,6 +81,11 @@ The build reads only `name` (defaults to the product id), `category` (defaults t
 
 `csv_to_json.py` reads CSVs with the build's own parser and keeps its rules, so a database built from the JSON matches one built from the CSVs: the last row for a product and date wins (files in path order), and `name`/`category` come from the product's newest row. One difference: a CSV can give a product a different category on different days, while JSON stores one, so `observations.category_key` of converted retailers is the latest category on every day.
 
+Two more rules apply when merging, both for scrapers that added columns later (A101, addax, Cagri, Macrocenter, GoldenRose and Altınyıldız first wrote only `product_name, price`, then ids and categories):
+
+- **Category:** a product's category is its newest one that is not `Uncategorized`, so a real category is never replaced by the fill-in label.
+- **Name-keyed history moves onto ids:** rows without an id column are keyed by the product name. Such a product joins the id that was ever scraped with exactly that name; its prices fill dates the id lacks. When several ids share the name (the same garment in several colours, for example), the name-keyed product stays, but loses the dates from the first of those ids' prices on, which the ids already cover. The import prints `N name-keyed products moved to their id`.
+
 ## Generated inflation input (`data/inflation/`)
 
 `/api/epeykatfg/monthly-inflation` serves `data/inflation/EpeyKatfg/monthly_inflation.csv` (override with `EPEYKATFG_MONTHLY_CSV`): a UTF-8 CSV with a header and one row per month. Values in `month`, `prev_month` and `groups` stay strings; other values are converted to numbers when they parse. Per-group columns follow the `n_<code>`, `avg_<code>` and `basic_<code>` naming. The response shape is in [FALCON_API_CONTRACT.md](FALCON_API_CONTRACT.md).

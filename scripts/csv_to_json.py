@@ -66,10 +66,13 @@ class Layer:
     def __init__(self) -> None:
         self.prices: dict[str, dict[str, float]] = {}
         self.meta: dict[str, tuple[str, str, str]] = {}  # product_id -> (date, name, category)
+        self.ids_by_name: dict[str, set[str]] = {}  # every name a non-name id was seen with
 
     def add(self, day: str, rows: Iterable[tuple[str, str, str, float]]) -> None:
         for product_id, name, category, price in rows:
             self.prices.setdefault(product_id, {})[day] = price
+            if product_id != name:
+                self.ids_by_name.setdefault(name, set()).add(product_id)
             current = self.meta.get(product_id)
             if current is None or day >= current[0]:
                 self.meta[product_id] = (day, name, category)
@@ -88,7 +91,51 @@ class Layer:
                 product.get("name") or str(product_id),
                 product.get("category") or build_database.UNCATEGORIZED,
             )
+            if layer.meta[str(product_id)][1] != str(product_id):
+                layer.ids_by_name.setdefault(layer.meta[str(product_id)][1], set()).add(str(product_id))
         return layer
+
+
+def rekey_by_name(layers: list[Layer]) -> int:
+    """Move products keyed by their name onto the retailer's own product id.
+
+    Scrapers that started writing an id column (A101 ``urun_id`` since 2026-08) left
+    older rows keyed by the product name. A name-keyed product joins the id that
+    was ever scraped with exactly that name, if only one id was; its prices fill
+    dates the id lacks. When several ids share the name, the name-keyed history
+    stays but loses the dates from the first of those ids' prices on, which the ids
+    already cover. Returns the number of products moved or trimmed.
+    """
+    ids_by_name: dict[str, set[str]] = {}
+    for layer in layers:
+        for name, ids in layer.ids_by_name.items():
+            ids_by_name.setdefault(name, set()).update(ids)
+    all_ids = set().union(*ids_by_name.values()) if ids_by_name else set()
+    moved = 0
+    for layer in layers:
+        for product_id in [pid for pid in layer.prices if pid not in all_ids and len(ids_by_name.get(pid, ())) > 1]:
+            first = min(min(lay.prices[i]) for i in ids_by_name[product_id] for lay in layers if lay.prices.get(i))
+            kept = {day: price for day, price in layer.prices[product_id].items() if day < first}
+            if len(kept) == len(layer.prices[product_id]):
+                continue
+            if kept:
+                layer.prices[product_id] = kept
+                layer.meta[product_id] = (max(kept), *layer.meta[product_id][1:])
+            else:
+                del layer.prices[product_id], layer.meta[product_id]
+            moved += 1
+        for product_id in [pid for pid in layer.prices if pid not in all_ids and len(ids_by_name.get(pid, ())) == 1]:
+            (target,) = ids_by_name[product_id]
+            prices = layer.prices.pop(product_id)
+            meta = layer.meta.pop(product_id)
+            merged = layer.prices.setdefault(target, {})
+            for day, price in prices.items():
+                merged.setdefault(day, price)
+            current = layer.meta.get(target)
+            if current is None or meta[0] > current[0]:
+                layer.meta[target] = meta
+            moved += 1
+    return moved
 
 
 def merge(layers: list[Layer]) -> tuple[dict[str, dict[str, Any]], Counter]:
@@ -96,7 +143,8 @@ def merge(layers: list[Layer]) -> tuple[dict[str, dict[str, Any]], Counter]:
 
     Returns ``(payload, stats)``; ``stats`` counts prices kept from each layer
     (``layer0``, ``layer1``, ...) and conflicts where a lower layer had a different
-    price for the same product and date (``conflicts``).
+    price for the same product and date (``conflicts``). The newest row names the
+    product; its category is the newest one that is not ``Uncategorized``.
     """
     stats: Counter = Counter()
     prices: dict[str, dict[str, float]] = {}
@@ -112,8 +160,13 @@ def merge(layers: list[Layer]) -> tuple[dict[str, dict[str, Any]], Counter]:
     payload = {}
     for product_id in sorted(prices):
         # Newest row decides name and category; on a tie the higher-priority layer wins.
+        # A real category beats Uncategorized (older imports dropped category columns).
         candidates = [layer.meta[product_id] for layer in layers if product_id in layer.meta]
-        _, name, category = max(enumerate(candidates), key=lambda item: (item[1][0], -item[0]))[1]
+        newest = lambda item: (item[1][0], -item[0])  # noqa: E731
+        _, name, category = max(enumerate(candidates), key=newest)[1]
+        categorized = [c for c in enumerate(candidates) if c[1][2] != build_database.UNCATEGORIZED]
+        if categorized:
+            category = max(categorized, key=newest)[1][2]
         by_day = dict(sorted(prices[product_id].items()))
         values = list(by_day.values())
         payload[product_id] = {
@@ -219,7 +272,9 @@ def convert(
             existing = Layer.from_json(json.loads(path.read_text(encoding="utf-8"))) if path.exists() else Layer()
             raw_layer, raw_used = parse_jobs(pool, raw_jobs.get(label, []), problems)
             source_layer, _ = parse_jobs(pool, source_jobs.get(label, []), problems) if sources else (Layer(), [])
-            payload, stats = merge([raw_layer, existing, source_layer])
+            layers = [raw_layer, existing, source_layer]
+            rekeyed = rekey_by_name(layers)
+            payload, stats = merge(layers)
             if not payload:
                 print(f"skip {label}: no rows")
                 continue
@@ -229,6 +284,7 @@ def convert(
                 f"{stats['layer0']:,} prices from {len(raw_used)} raw CSVs, {stats['layer1']:,} kept from JSON, "
                 f"{stats['layer2']:,} new from --source"
                 + (f", {stats['conflicts']:,} conflicting prices ignored" if stats["conflicts"] else "")
+                + (f", {rekeyed:,} name-keyed products moved to their id" if rekeyed else "")
             )
             totals.update(stats)
             totals["retailers"] += 1

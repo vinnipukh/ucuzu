@@ -55,10 +55,14 @@ Mapped groups: `01_Food` → `Markets`, `03_Clothing` → `ClothingStores`, `04_
 
 **Parsing.** The delimiter is whichever of `;`, `,` or tab occurs most often in the first line. The file is read as UTF-8 (with BOM handling), then cp1254 if that fails; malformed lines are skipped.
 
-**Header aliases.** If a file has none of the domain's name columns (`product-name`, `product_name`, `name`, `Product Name`, `brand`, `District`), the first header matching a name alias is renamed to `name`. If it has none of the domain's price columns (`member_price`, `original_price`, `shown_price`, `product-price`, `product_price`, `price`, `Price`, `median_price`, `Fiyat`), the first header matching a price alias is renamed to `price`. Headers are compared casefolded with spaces, `_`, `-` and the dotted-İ mark removed. Aliases, in priority order (`NAME_ALIASES` / `PRICE_ALIASES`):
+**Header aliases.** If a file has none of the domain's name columns (`product-name`, `product_name`, `name`, `Product Name`, `brand`, `District`), the first header matching a name alias is renamed to `name`. If it has none of the domain's price columns (`member_price`, `original_price`, `shown_price`, `product-price`, `product_price`, `price`, `Price`, `median_price`, `Fiyat`), the first header matching a price alias is renamed to `price`. Category and product id work the same way: without one of the domain's category columns (`category`, `Category`, `Ana Kategori`, `Rooms`) the first category alias is renamed to `category`, and without one of its id columns (`Stok Kodu`, `sku`, `product_id`, `UrunID`, `id`, `Kategori ID`) the first id alias is renamed to `product_id`. Headers are compared casefolded with spaces, `_`, `-` and the dotted-İ mark removed. Aliases, in priority order (`NAME_ALIASES` / `PRICE_ALIASES` / `CATEGORY_ALIASES` / `ID_ALIASES`):
 
-- name: `productname`, `name`, `urunadi`, `ürünadı`, `urunismi`, `isim`, `ad`, `title`
+- name: `productname`, `name`, `urunadi`, `ürünadı`, `urunismi`, `isim`, `ad`, `urun`, `title`
 - price: `price`, `fiyat`, `fiyatfloat`, `pricetl`, `price(tl)`, `saleprice`, `currentprice`, `productcost`, `normalprice`, `regularprice`
+- category: `fullcategory`, `categorypath`, `anakategori`, `kategori`, `subcategory`, `topcategory` (A101 `ana_kategori`, Arden/Kale/Marketzade/addax/Altınyıldız `kategori`, GoldenRose `Full Category`, Pazarium `subcategory`)
+- product id: `urunid`, `productcode`, `sku`, `productid` (A101/addax `urun_id`, Cagri `product_code`, Macrocenter/GoldenRose `SKU`)
+
+`category_number` / `sub_category_number`, written by many upstream scrapers, are TÜİK codes (`05`, `0511116`), not shop categories, and are not aliased.
 
 Rows are then normalized by `build_product_frame` in `inflation_dashboard/domain/prices.py` (product id, name, category and price coercion). A missing category becomes `Uncategorized`.
 
