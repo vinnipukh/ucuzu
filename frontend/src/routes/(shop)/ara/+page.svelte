@@ -113,9 +113,9 @@
       </div>
     {:else}
       <div class="product-grid" class:loading={results.loading}>
-        {#each results.value ?? [] as item (item.key)}
+        {#each results.value ?? [] as item (item.id)}
           <ProductCard
-            href={itemHref(item.key)}
+            href={itemHref(item.id, item.name)}
             name={item.name}
             group={item.group}
             price={item.min_price}

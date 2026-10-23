@@ -11,11 +11,14 @@ Steps:
 2. Ingest every dated CSV under ``data/raw`` (TÜİK-grouped scraper output),
    labelling retailers the way the API/UI expects (``01_Food/Gurmar`` -> ``Markets / Gurmar``).
 3. Ingest ``data/prices_json`` partitions only for retailers that have no raw CSVs.
-4. Write the normalized schema (see SCHEMA), clean scraper prices
+4. Write the normalized schema (see SCHEMA), parse every title
+   (domain.product_attributes) into match and family keys (domain.matching, with
+   ``data/matching/brands.json`` and ``overrides.json``), clean scraper prices
    (domain.price_cleaning: missing, placeholder and dotted-thousands prices, case
-   prices; ``clean_prices``), summarize products, compute unit prices from the
-   titles (domain.product_attributes) and atomically replace the target.
-   Duplicate store folders are filed under one label (``RETAILER_ALIASES``).
+   prices; ``clean_prices``), summarize products, give catalog products their
+   permanent item and family IDs (``data/matching/ids.json``; ``write_items``),
+   compute unit prices and atomically replace the target. Duplicate store folders
+   are filed under one label (``RETAILER_ALIASES``).
 
 Storage is normalized: each retailer, category, source file and product is stored
 once and ``observations`` holds only integer keys, the date and the price,
@@ -32,8 +35,9 @@ import re
 import sqlite3
 import sys
 import time
-from collections import Counter
+from collections import Counter, defaultdict
 from concurrent.futures import ProcessPoolExecutor
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
 from statistics import median
@@ -47,7 +51,14 @@ for entry in (REPO_ROOT, Path(__file__).resolve().parent):
 
 import data_files  # noqa: E402
 
-from inflation_dashboard.domain.catalog import name_key  # noqa: E402
+from inflation_dashboard.domain.catalog import CATALOG_EXCLUDED_GROUPS, name_key, split_retailer  # noqa: E402
+from inflation_dashboard.domain.matching import (  # noqa: E402
+    Overrides,
+    assign_ids,
+    family_key,
+    match_key,
+    store_key,
+)
 from inflation_dashboard.domain.prices import (  # noqa: E402
     CATEGORY_COLUMNS,
     DETAIL_COLUMNS,
@@ -67,9 +78,13 @@ from inflation_dashboard.domain.price_cleaning import (  # noqa: E402
     reference_price,
     repair_thousands,
 )
-from inflation_dashboard.domain.product_attributes import parse, unit_price  # noqa: E402
+from inflation_dashboard.domain.product_attributes import brand_keys, parse, unit_basis  # noqa: E402
 
 DATA_DIR = REPO_ROOT / "data"
+# Matching inputs under data/: brand list, permanent IDs, manual corrections.
+BRANDS_FILE = Path("matching") / "brands.json"
+IDS_FILE = Path("matching") / "ids.json"
+OVERRIDES_FILE = Path("matching") / "overrides.json"
 
 # TÜİK COICOP folders whose stores map onto the API's existing retailer groups.
 GROUP_LABELS = {
@@ -146,6 +161,11 @@ CREATE TABLE sources (
 -- m or m2) parsed from the title; NULL when the title has no contents size or the
 -- price is a case price. is_case_price marks stores whose prices are whole cases
 -- (domain.price_cleaning.CASE_PRICE_RETAILERS); the catalog never ranks them cheapest.
+-- match_key / family_key (domain.matching) are parsed from the title, after
+-- data/matching/overrides.json; pack is the number of items in the package. item_id
+-- is the permanent catalog product (items) for products outside
+-- CATALOG_EXCLUDED_GROUPS whose item has an ID; is_pack_option marks multipacks of
+-- an item that is also sold in smaller packs (items.main_pack).
 CREATE TABLE products (
     product_key INTEGER PRIMARY KEY,
     retailer_key INTEGER NOT NULL REFERENCES retailers,
@@ -171,7 +191,26 @@ CREATE TABLE products (
     unit_price REAL,
     unit_price_unit TEXT,
     is_case_price INTEGER NOT NULL DEFAULT 0,
+    match_key TEXT,
+    family_key TEXT,
+    pack INTEGER NOT NULL DEFAULT 1,
+    item_id INTEGER REFERENCES items,
+    is_pack_option INTEGER NOT NULL DEFAULT 0,
     UNIQUE (retailer_key, product_id)
+);
+-- One row per catalog product (one match key) with its permanent ID from
+-- data/matching/ids.json. main_pack is the smallest pack its current products come in.
+CREATE TABLE items (
+    item_id INTEGER PRIMARY KEY,
+    match_key TEXT NOT NULL UNIQUE,
+    family_id INTEGER REFERENCES families,
+    main_pack INTEGER NOT NULL DEFAULT 1
+);
+-- One row per family (the product without its size) of two or more items.
+CREATE TABLE families (
+    family_id INTEGER PRIMARY KEY,
+    family_key TEXT NOT NULL UNIQUE,
+    item_count INTEGER NOT NULL
 );
 -- One row per product per day, clustered so a product's history is one range read.
 CREATE TABLE observations (
@@ -189,6 +228,8 @@ CREATE INDEX idx_products_retailer_name ON products(retailer_key, product_name);
 CREATE INDEX idx_products_name ON products(product_name);
 CREATE INDEX idx_products_product_id ON products(product_id);
 CREATE INDEX idx_products_name_key ON products(name_key);
+CREATE INDEX idx_products_item ON products(item_id);
+CREATE INDEX idx_items_family ON items(family_id);
 CREATE INDEX idx_sources_retailer_date ON sources(retailer_key, date);
 """
 
@@ -395,6 +436,67 @@ def discover_raw_csvs(raw_dir: Path) -> tuple[list[tuple[str, str, str, str]], C
     return jobs, skipped
 
 
+@dataclass
+class Matching:
+    """Matching inputs from ``data/matching`` (each file optional): folded brand keys,
+    manual overrides and the permanent IDs of ``ids.json``."""
+
+    brands: list[str] = field(default_factory=list)
+    overrides: Overrides = field(default_factory=Overrides)
+    item_ids: dict[str, int] = field(default_factory=dict)
+    family_ids: dict[str, int] = field(default_factory=dict)
+    next_item_id: int = 1
+    next_family_id: int = 1
+
+
+def read_ids(path: Path) -> tuple[dict[str, int], dict[str, int], int, int]:
+    """``ids.json`` as ``(item_ids, family_ids, next_item_id, next_family_id)``; empty when missing."""
+    if not path.exists():
+        return {}, {}, 1, 1
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    items, families = payload.get("items", {}), payload.get("families", {})
+    next_item = max(payload.get("next_item_id", 1), max(items.values(), default=0) + 1)
+    next_family = max(payload.get("next_family_id", 1), max(families.values(), default=0) + 1)
+    return items, families, next_item, next_family
+
+
+def write_ids(path: Path, items: dict[str, int], families: dict[str, int], next_item: int, next_family: int) -> None:
+    """Write ``ids.json``: one entry per line in ID order, so new IDs append and diffs stay small."""
+
+    def block(ids: dict[str, int]) -> str:
+        lines = [f"{json.dumps(key, ensure_ascii=False)}: {value}" for key, value in sorted(ids.items(), key=lambda kv: kv[1])]
+        return "{\n" + ",\n".join(lines) + ("\n}" if lines else "}")
+
+    text = (
+        "{\n"
+        '"description": "Permanent catalog item and family IDs by match/family key '
+        '(inflation_dashboard.domain.matching); appended by scripts/assign_ids.py, never renumbered.",\n'
+        f'"next_item_id": {next_item},\n'
+        f'"next_family_id": {next_family},\n'
+        f'"items": {block(items)},\n'
+        f'"families": {block(families)}\n'
+        "}\n"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8", newline="\n")
+
+
+def load_matching(data_dir: Path) -> Matching:
+    """Read ``brands.json``, ``overrides.json`` and ``ids.json`` from ``data_dir/matching``."""
+    brands_path, overrides_path = data_dir / BRANDS_FILE, data_dir / OVERRIDES_FILE
+    brands = (
+        [brand["key"] for brand in json.loads(brands_path.read_text(encoding="utf-8"))["brands"]]
+        if brands_path.exists()
+        else []
+    )
+    overrides = (
+        Overrides.from_json(json.loads(overrides_path.read_text(encoding="utf-8")))
+        if overrides_path.exists()
+        else Overrides()
+    )
+    return Matching(brands, overrides, *read_ids(data_dir / IDS_FILE))
+
+
 class Loader:
     """Assigns integer keys and streams observations into an append-only staging table.
 
@@ -403,8 +505,9 @@ class Loader:
     clustered by (product_key, date).
     """
 
-    def __init__(self, conn: sqlite3.Connection) -> None:
+    def __init__(self, conn: sqlite3.Connection, matching: Matching | None = None) -> None:
         self.conn = conn
+        self.matching = matching or Matching()
         self.retailers: dict[str, int] = {}
         self.categories: dict[str, int] = {}
         # (retailer_key, product_id) -> [product_key, latest_date, product_name, category_key]
@@ -413,8 +516,10 @@ class Loader:
         self.details: dict[int, dict[str, tuple[str, object]]] = {}
         self.ingested_at = datetime.now(timezone.utc).isoformat()
         self.staged_rows = 0
-        # Counts for the build summary: relabelled rows (RETAILER_ALIASES) and clean_prices rules.
+        # Counts for the build summary: relabelled rows (RETAILER_ALIASES) and clean_prices rules,
+        # then matching (write_match_keys, write_items).
         self.cleanup: Counter = Counter()
+        self.matched: Counter = Counter()
 
     def _key(self, table: dict[str, int], name: str) -> int:
         key = table.get(name)
@@ -470,12 +575,14 @@ class Loader:
     def finish(self, workers: int = 1) -> None:
         """Write the key tables, deduplicated observations and product summaries.
 
-        Inserts retailers, categories and products (with their details), copies the
-        staged rows into ``observations`` keeping the last staged row per (product,
-        date), cleans prices (``clean_prices``) and flags case prices
-        (``is_case_price``), then fills each product's first/last date, min/max price, observation
-        count, latest price, latest price change (``previous_price``, ``price_since``),
-        ``is_current``, ``is_store_latest`` and unit price (``write_unit_prices``).
+        Inserts retailers, categories and products (with their details), parses every
+        title into match/family keys and pack (``write_match_keys``), copies the staged
+        rows into ``observations`` keeping the last staged row per (product, date),
+        cleans prices (``clean_prices``) and flags case prices (``is_case_price``), then
+        fills each product's first/last date, min/max price, observation count, latest
+        price, latest price change (``previous_price``, ``price_since``), ``is_current``,
+        item and family (``write_items``), ``is_store_latest`` and unit price
+        (``write_unit_prices``).
         """
         conn = self.conn
         conn.executemany("INSERT INTO retailers VALUES (?, ?)", [(k, n) for n, k in self.retailers.items()])
@@ -490,6 +597,7 @@ class Loader:
             ],
         )
         conn.commit()
+        basis = write_match_keys(conn, self.retailers, self.matching, workers, self.matched)
         print(f"Writing observations ({self.staged_rows:,} staged rows, last row per product/day wins)...")
         conn.execute(
             """
@@ -566,57 +674,178 @@ class Loader:
             """,
             (f"-{CURRENT_WINDOW_DAYS} days",),
         )
-        # One window pass; an UPDATE ... FROM join on (name_key, retailer_key) has no
-        # index at this point and runs for hours.
+        conn.commit()
+        write_items(conn, self.matching, self.matched)
+        # One window pass; an UPDATE ... FROM join on (item, pack, retailer_key) has no
+        # index at this point and runs for hours. Products outside the catalog use name_key.
         conn.execute(
             """
             UPDATE products SET is_store_latest = 1 WHERE product_key IN (
                 SELECT product_key FROM (
                     SELECT product_key, last_date,
-                           max(last_date) OVER (PARTITION BY name_key, retailer_key) AS newest
+                           max(last_date) OVER (
+                               PARTITION BY coalesce('i' || item_id || '#' || pack, 'n' || name_key), retailer_key
+                           ) AS newest
                     FROM products
                 ) WHERE last_date IS newest
             )
             """
         )
         conn.commit()
-        write_unit_prices(conn, workers)
+        write_unit_prices(conn, basis)
 
 
-def _unit_prices(rows: list[tuple[int, str, float | None]]) -> list[tuple[float, str, int]]:
-    """``(product_key, product_name, latest_price)`` -> ``(unit_price, unit, product_key)`` (worker process)."""
+_PARSER_BRANDS: frozenset[tuple[str, ...]] = frozenset()
+
+
+def _init_parser(brands: list[str]) -> None:
+    """Worker initializer: the brand list ``parse`` matches titles against."""
+    global _PARSER_BRANDS
+    _PARSER_BRANDS = brand_keys(brands)
+
+
+def _parse_titles(rows: list[tuple[int, str, str | None]]) -> list[tuple]:
+    """``(product_key, product_name, brand)`` -> ``(product_key, match_key, family_key, pack,
+    unit amount, unit)`` (worker process; ``domain.matching``, ``unit_basis``)."""
     out = []
-    for product_key, product_name, price in rows:
-        priced = unit_price(parse(product_name), price)
-        if priced:
-            out.append((priced[0], priced[1], product_key))
+    for product_key, product_name, brand in rows:
+        parsed = parse(product_name, _PARSER_BRANDS, brand)
+        amount, unit = unit_basis(parsed) or (None, None)
+        out.append((product_key, match_key(parsed), family_key(parsed), parsed.pack, amount, unit))
     return out
 
 
-def write_unit_prices(conn: sqlite3.Connection, workers: int, chunk: int = 20_000) -> None:
-    """Fill ``products.unit_price``/``unit_price_unit`` from each title and latest price, in worker processes."""
-    print("Computing unit prices...")
+def write_match_keys(
+    conn: sqlite3.Connection, retailers: dict[str, int], matching: Matching, workers: int, counts: Counter,
+    chunk: int = 20_000,
+) -> dict[int, tuple[float, str]]:
+    """Parse every title in worker processes; fill ``products.match_key``, ``family_key`` and ``pack``.
+
+    Products of ``CATALOG_EXCLUDED_GROUPS`` get no keys. A title without brand, word
+    or code gets its own ``store_key``; ``matching.overrides`` are applied last.
+    Returns ``{product_key: (amount, unit)}``, what ``write_unit_prices`` divides
+    the latest price by.
+    """
+    print("Parsing titles into match keys...")
     started = time.perf_counter()
-    rows = conn.execute("SELECT product_key, product_name, latest_price FROM products WHERE is_case_price = 0").fetchall()
-    chunks = [rows[i:i + chunk] for i in range(0, len(rows), chunk)]
-    priced = 0
-    with ProcessPoolExecutor(max_workers=workers) as pool:
-        for result in pool.map(_unit_prices, chunks):
-            conn.executemany("UPDATE products SET unit_price = ?, unit_price_unit = ? WHERE product_key = ?", result)
-            priced += len(result)
+    names = {key: name for name, key in retailers.items()}
+    excluded = {key for name, key in retailers.items() if split_retailer(name)[0] in CATALOG_EXCLUDED_GROUPS}
+    rows = conn.execute("SELECT product_key, retailer_key, product_id, product_name, brand FROM products").fetchall()
+    owner = {product_key: (retailer_key, product_id) for product_key, retailer_key, product_id, _, _ in rows}
+    jobs = [(product_key, name, brand) for product_key, _, _, name, brand in rows]
+    basis: dict[int, tuple[float, str]] = {}
+    updates = []
+    with ProcessPoolExecutor(max_workers=workers, initializer=_init_parser, initargs=(matching.brands,)) as pool:
+        for result in pool.map(_parse_titles, [jobs[i:i + chunk] for i in range(0, len(jobs), chunk)]):
+            for product_key, key, family, pack, amount, unit in result:
+                if amount:
+                    basis[product_key] = (amount, unit)
+                retailer_key, product_id = owner[product_key]
+                if retailer_key in excluded:
+                    updates.append((None, None, pack, product_key))
+                    continue
+                retailer = names[retailer_key]
+                if key is None:
+                    counts["products without a usable title (own item)"] += 1
+                final = matching.overrides.apply(retailer, product_id, key or store_key(retailer, product_id))
+                if key is not None and final != key:
+                    counts["products moved by overrides.json"] += 1
+                updates.append((final, family, pack, product_key))
+    conn.executemany("UPDATE products SET match_key = ?, family_key = ?, pack = ? WHERE product_key = ?", updates)
     conn.commit()
-    print(f"  {priced:,} of {len(rows):,} products have a unit price ({time.perf_counter() - started:.0f}s)")
+    counts["multipack products (pack > 1)"] = sum(1 for update in updates if update[2] > 1)
+    print(f"  {len(rows):,} titles parsed ({time.perf_counter() - started:.0f}s)")
+    return basis
+
+
+def write_items(conn: sqlite3.Connection, matching: Matching, counts: Counter) -> None:
+    """Fill ``items``, ``families``, ``products.item_id`` and ``products.is_pack_option``.
+
+    An item is one match key that has a current product or already has an ID in
+    ``ids.json``; its family is the most common family key of its products, and a
+    family gets a row when it has two or more items or already has an ID. Keys
+    without an ID get provisional ones (``domain.matching.assign_ids``, the same IDs
+    ``scripts/assign_ids.py`` commits). ``main_pack`` is the smallest pack among the
+    item's current products (all its products when none is current); bigger packs
+    are pack options.
+    """
+    print("Assigning item and family IDs...")
+    rows = conn.execute(
+        "SELECT match_key, family_key, pack, is_current, product_key FROM products WHERE match_key IS NOT NULL"
+    ).fetchall()
+    keys = {key for key, _, _, current, _ in rows if current} | {key for key, *_ in rows if key in matching.item_ids}
+    new_items, next_item = assign_ids(matching.item_ids, keys, matching.next_item_id)
+    item_ids = {key: matching.item_ids.get(key) or new_items[key] for key in keys}
+
+    votes: dict[str, Counter] = defaultdict(Counter)
+    packs: dict[str, list[set[int]]] = defaultdict(lambda: [set(), set()])  # [current packs, all packs]
+    for key, family, pack, current, _ in rows:
+        if key not in item_ids:
+            continue
+        if family:
+            votes[key][family] += 1
+        packs[key][1].add(pack)
+        if current:
+            packs[key][0].add(pack)
+    item_family = {key: min(v.items(), key=lambda kv: (-kv[1], kv[0]))[0] for key, v in votes.items()}
+    members: Counter = Counter(item_family.values())
+    family_keys = {family for family, n in members.items() if n >= 2 or family in matching.family_ids}
+    new_families, next_family = assign_ids(matching.family_ids, family_keys, matching.next_family_id)
+    family_ids = {family: matching.family_ids.get(family) or new_families[family] for family in family_keys}
+
+    conn.executemany("INSERT INTO families VALUES (?, ?, ?)", [(fid, f, members[f]) for f, fid in family_ids.items()])
+    main_pack = {key: min(packs[key][0] or packs[key][1]) for key in item_ids}
+    conn.executemany(
+        "INSERT INTO items VALUES (?, ?, ?, ?)",
+        [(item_id, key, family_ids.get(item_family.get(key, "")), main_pack[key]) for key, item_id in item_ids.items()],
+    )
+    # Per product by key: an UPDATE ... FROM join on match_key has no index here.
+    updates = [
+        (item_ids[key], int(pack > main_pack[key]), product_key)
+        for key, _, pack, _, product_key in rows
+        if key in item_ids
+    ]
+    conn.executemany("UPDATE products SET item_id = ?, is_pack_option = ? WHERE product_key = ?", updates)
+    pack_options = sum(update[1] for update in updates)
+    conn.commit()
+    counts["items"] = len(item_ids)
+    counts[f"items with a provisional ID (next {next_item:,}; run scripts/assign_ids.py)"] = len(new_items)
+    counts["families (2+ items)"] = len(family_ids)
+    counts[f"families with a provisional ID (next {next_family:,})"] = len(new_families)
+    counts["pack-option products"] = pack_options
+
+
+def write_unit_prices(conn: sqlite3.Connection, basis: dict[int, tuple[float, str]]) -> None:
+    """Fill ``products.unit_price``/``unit_price_unit``: ``latest_price`` over the parsed contents (``basis``)."""
+    print("Computing unit prices...")
+    rows = conn.execute(
+        "SELECT product_key, latest_price FROM products WHERE is_case_price = 0 AND latest_price > 0"
+    ).fetchall()
+    updates = [
+        (price / basis[product_key][0], basis[product_key][1], product_key)
+        for product_key, price in rows
+        if product_key in basis
+    ]
+    conn.executemany("UPDATE products SET unit_price = ?, unit_price_unit = ? WHERE product_key = ?", updates)
+    conn.commit()
+    print(f"  {len(updates):,} of {len(rows):,} priced products have a unit price")
+
+
+# Same item for price references: same match key and pack (name_key outside the catalog).
+_PEER_KEY = "coalesce('m' || {p}match_key, 'n' || {p}name_key) || '#' || {p}pack"
 
 
 def _histories(conn: sqlite3.Connection, candidates_sql: str, params: list) -> dict[int, tuple[int, str, list]]:
-    """``{product_key: (retailer_key, name_key, [(date, price), ...])}`` for every product
-    sharing a ``name_key`` with the products ``candidates_sql`` selects (product keys)."""
+    """``{product_key: (retailer_key, peer key, [(date, price), ...])}`` for every product
+    sharing a match key and pack (``_PEER_KEY``) with the products ``candidates_sql`` selects."""
     histories: dict[int, tuple[int, str, list]] = {}
     for product_key, retailer_key, key, day, price in conn.execute(
         f"""
-        SELECT p.product_key, p.retailer_key, p.name_key, o.date, o.price
+        SELECT p.product_key, p.retailer_key, {_PEER_KEY.format(p="p.")}, o.date, o.price
         FROM products AS p JOIN observations AS o ON o.product_key = p.product_key
-        WHERE p.name_key IN (SELECT name_key FROM products WHERE product_key IN ({candidates_sql}))
+        WHERE {_PEER_KEY.format(p="p.")} IN (
+            SELECT {_PEER_KEY.format(p="")} FROM products WHERE product_key IN ({candidates_sql})
+        )
         """,
         params,
     ):
@@ -625,7 +854,7 @@ def _histories(conn: sqlite3.Connection, candidates_sql: str, params: list) -> d
 
 
 def _peer_references(histories: dict[int, tuple[int, str, list]], excluded: set[int]) -> dict[str, list[tuple[int, float]]]:
-    """``{name_key: [(retailer_key, reference price), ...]}`` from products outside ``excluded`` retailers."""
+    """``{peer key: [(retailer_key, reference price), ...]}`` from products outside ``excluded`` retailers."""
     peers: dict[str, list[tuple[int, float]]] = {}
     for retailer_key, key, history in histories.values():
         if retailer_key in excluded:
@@ -647,7 +876,7 @@ def clean_prices(conn: sqlite3.Connection, retailers: dict[str, int]) -> Counter
 
     Deletes prices of 0 or less, repairs or deletes dotted-thousands prices of
     ``THOUSANDS_DOT_RETAILERS``, then deletes 999-family placeholder prices. Peers
-    (same ``name_key``, other stores) never include ``CASE_PRICE_RETAILERS``; the
+    (same match key and pack, other stores) never include ``CASE_PRICE_RETAILERS``; the
     dotted-thousands stores are left out of their own repair's peers.
     """
     counts: Counter = Counter()
@@ -800,7 +1029,7 @@ def build(data_dir: Path, db_path: Path, workers: int) -> None:
         conn.execute(
             "CREATE TABLE staging.obs (product_key INTEGER, date TEXT, price REAL, category_key INTEGER, source_key INTEGER)"
         )
-        loader = Loader(conn)
+        loader = Loader(conn, load_matching(data_dir))
         covered = ingest_raw(loader, data_dir / "raw", workers)
         ingest_json_fallback(loader, data_dir / "prices_json", covered)
         loader.finish(workers)
@@ -828,6 +1057,9 @@ def build(data_dir: Path, db_path: Path, workers: int) -> None:
     )
     print("Price clean-up (domain.price_cleaning, RETAILER_ALIASES):")
     for rule, count in loader.cleanup.items():
+        print(f"  {count:>9,}  {rule}")
+    print("Matching (domain.matching, data/matching):")
+    for rule, count in loader.matched.items():
         print(f"  {count:>9,}  {rule}")
 
 

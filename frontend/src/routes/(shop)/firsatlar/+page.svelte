@@ -70,7 +70,7 @@
   <div class="product-grid six" class:loading={deals.loading}>
     {#each deals.value ?? [] as deal (deal.retailer + deal.product_id)}
       <ProductCard
-        href={itemHref(deal.name_key)}
+        href={itemHref(deal.item_id!, deal.product_name)}
         name={deal.product_name}
         group={deal.group}
         price={deal.latest_price}

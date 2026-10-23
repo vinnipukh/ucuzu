@@ -43,7 +43,8 @@ Bringing new scraper output into `data/prices_json` or `data/inflation`:
 - [ ] Never commit `*.db`, `*.db-wal`, `*.db-shm`, `.env`, cookies or browser profiles.
 - [ ] Commit and push in batches of about **500 MB**, so no single push approaches GitHub's 2 GB limit.
 - [ ] Regenerate the brand list with `uv run python scripts/build_brand_list.py` and review its diff; corrections go in `data/matching/brand_overrides.json`.
-- [ ] Rebuild the database and check the build summary: no `JSON ignored:` lines, the converter's skip counts for new retailers, and the number of products with a unit price.
+- [ ] Rebuild the database and check the build summary: no `JSON ignored:` lines, the converter's skip counts for new retailers, the number of products with a unit price and the number of items.
+- [ ] Run `uv run python scripts/assign_ids.py` and commit `data/matching/ids.json`, so new products keep their IDs. Never edit or renumber it by hand; matching corrections go in `data/matching/overrides.json`.
 - [ ] If the new data needs a new folder rule or header alias, follow the schema/data layout checklist above.
 - [ ] If the data layout or the import method changed, add an entry to the change history in [docs/README.md](README.md#change-history).
 

@@ -603,10 +603,11 @@ class CatalogSearchResource:
     """``GET /api/catalog/search``: search catalog items across stores."""
 
     def on_get(self, req: Any, resp: Any) -> None:
-        """``q``, ``group``, ``store``, ``sort`` (relevance|price_asc|price_desc|drop), ``limit`` 1-60, ``offset``.
+        """``q``, ``group``, ``store``, ``family`` (a family ID), ``sort`` (relevance|price_asc|price_desc|drop),
+        ``limit`` 1-60, ``offset``.
 
         ``data`` is a page of items; ``meta.total`` counts every matching item.
-        An unknown ``sort`` or out-of-range ``limit``/``offset`` is a 400.
+        An unknown ``sort`` or out-of-range ``family``/``limit``/``offset`` is a 400.
         """
         try:
             if _serve_cached(resp, req, "catalog-search", req.query_string):
@@ -619,12 +620,13 @@ class CatalogSearchResource:
                 raise ApiFilterError("invalid_filter", "Invalid sort", meta={"filters": {"sort": sort}})
             limit = _parse_bounded_int(req, "limit", default=24, minimum=1, maximum=60)
             offset = _parse_bounded_int(req, "offset", default=0, minimum=0, maximum=10_000)
+            family = _parse_bounded_int(req, "family", default=0, minimum=1) or None
             items, total = _catalog_call(
                 sqlite_catalog_repository.search_items,
-                query=query, group=group, store=store, sort=sort, limit=limit, offset=offset,
+                query=query, group=group, store=store, sort=sort, limit=limit, offset=offset, family=family,
             )
             meta = {
-                "query": query, "group": group, "store": store, "sort": sort,
+                "query": query, "group": group, "store": store, "family": family, "sort": sort,
                 "limit": limit, "offset": offset, "count": len(items), "total": total,
             }
             _send_response(resp, req, "catalog-search", req.query_string, envelope(items, meta=meta))
@@ -636,19 +638,19 @@ class CatalogItemResource:
     """``GET /api/catalog/item``: one item's offers across stores with price histories."""
 
     def on_get(self, req: Any, resp: Any) -> None:
-        """``key`` (a ``name_key``, required). Unknown keys are a 404 ``not_found``."""
+        """``id`` (an item ID, required). Unknown IDs are a 404 ``not_found``."""
         try:
             if _serve_cached(resp, req, "catalog-item", req.query_string):
                 return
-            key = _optional_param(req, "key")
-            if not key:
-                raise ApiFilterError("invalid_filter", "key is required", meta={"filters": {"key": key}})
-            item = _catalog_call(sqlite_catalog_repository.get_item, key)
+            if _optional_param(req, "id") is None:
+                raise ApiFilterError("invalid_filter", "id is required", meta={"filters": {"id": None}})
+            item_id = _parse_bounded_int(req, "id", default=0, minimum=1)
+            item = _catalog_call(sqlite_catalog_repository.get_item, item_id)
             if item is None:
                 resp.status = falcon.HTTP_404
-                resp.media = error_envelope("not_found", f"Item not found: {key}", meta={"key": key})
+                resp.media = error_envelope("not_found", f"Item not found: {item_id}", meta={"id": item_id})
                 return
-            meta = {"key": key, "offer_count": item["summary"]["offer_count"]}
+            meta = {"id": item_id, "offer_count": item["summary"]["offer_count"]}
             _send_response(resp, req, "catalog-item", req.query_string, envelope(item, meta=meta))
         except ApiFilterError as exc:
             _set_filter_error(resp, exc)

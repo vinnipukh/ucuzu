@@ -89,7 +89,7 @@
     <div class="product-grid six">
       {#each deals as deal (deal.retailer + deal.product_id)}
         <ProductCard
-          href={itemHref(deal.name_key)}
+          href={itemHref(deal.item_id!, deal.product_name)}
           name={deal.product_name}
           group={deal.group}
           price={deal.latest_price}
@@ -111,9 +111,9 @@
       <a href={searchHref({ group: group.group })}>Tümünü gör</a>
     </div>
     <div class="product-grid six">
-      {#each popular[group.group] ?? [] as item (item.key)}
+      {#each popular[group.group] ?? [] as item (item.id)}
         <ProductCard
-          href={itemHref(item.key)}
+          href={itemHref(item.id, item.name)}
           name={item.name}
           group={item.group}
           price={item.min_price}

@@ -39,7 +39,7 @@ What the build does (full pipeline: [DATABASE.md](DATABASE.md#build-pipeline)):
 1. Joins split files (`join` again, so the first command is optional).
 2. Reads any dated CSV under `data/raw/` in parallel (today there are none). The folder path gives the retailer (`01_Food/Migros/…` → `Markets / Migros`); the file name gives the date.
 3. Reads every retailer that has no raw CSVs from its `data/prices_json/<Group>_<Store>.json` file (most retailers). A JSON file whose retailer still has raw CSVs is ignored, and the build says so (`JSON ignored: …`).
-4. Writes the tables, then the price-comparison columns the shop needs (`name_key`, `previous_price`, `price_since`, `is_current`, `is_store_latest`), indexes and views.
+4. Writes the tables, matches products across stores into items with the permanent IDs of `data/matching/ids.json`, then the price-comparison columns the shop needs (`name_key`, `previous_price`, `price_since`, `is_current`, `is_store_latest`), indexes and views.
 5. Swaps the finished file in atomically, so a failed build never leaves a half-written `data/prices.db`.
 
 It takes about 5 minutes on an 8-core machine and ends with a summary line like:
@@ -145,11 +145,12 @@ uv run python scripts/data_files.py split    # commit them as 80 MB .partNNN chu
 ```bash
 uv run python scripts/build_brand_list.py
 uv run python scripts/build_database.py
+uv run python scripts/assign_ids.py
 uv run pytest
 uv run python scripts/verify_falcon_api.py
 ```
 
-`build_brand_list.py` regenerates `data/matching/brands.json` from the new data; review new brands in its diff and put corrections in `data/matching/brand_overrides.json` ([DATA_CONTRACT.md § Matching data](DATA_CONTRACT.md#matching-data-datamatching)). Compare the build summary with the previous one: retailer and product counts should grow, no `JSON ignored:` line should appear, and the `products have a unit price` count should not drop. A new store that `csv_to_json.py` skipped as `undated or unlabelled` or `no price column` needs a folder rule or a header alias in `scripts/build_database.py` (with a test in `tests/test_build_database.py`); see the schema/data layout checklist in [DEVELOPMENT.md](DEVELOPMENT.md).
+`build_brand_list.py` regenerates `data/matching/brands.json` from the new data; review new brands in its diff and put corrections in `data/matching/brand_overrides.json` ([DATA_CONTRACT.md § Matching data](DATA_CONTRACT.md#matching-data-datamatching)). `assign_ids.py` appends the IDs the build gave new products and families to `data/matching/ids.json` (commit it with the data); the build summary's `items with a provisional ID` line says how many there were. Compare the build summary with the previous one: retailer and product counts should grow, no `JSON ignored:` line should appear, and the `products have a unit price` and `items` counts should not drop. A new store that `csv_to_json.py` skipped as `undated or unlabelled` or `no price column` needs a folder rule or a header alias in `scripts/build_database.py` (with a test in `tests/test_build_database.py`); see the schema/data layout checklist in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ### 4.6 Commit in batches
 

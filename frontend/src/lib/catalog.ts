@@ -26,9 +26,25 @@ export function groupLabel(group: string): string {
   return GROUP_LABELS[group] ?? group;
 }
 
-/** Link to an item's comparison page. */
-export function itemHref(key: string): string {
-  return `/urun/${encodeURIComponent(key)}`;
+/** URL slug of a product name: `Pınar Süt 1 L` -> `pinar-sut-1-l`. */
+export function slugify(name: string): string {
+  const folded = name
+    .toLocaleLowerCase('tr-TR')
+    .replaceAll('ı', 'i')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '');
+  return folded.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'urun';
+}
+
+/** Link to an item's comparison page, cimri-style: `/urun/pinar-sut-1-l,123`. */
+export function itemHref(id: number, name: string): string {
+  return `/urun/${slugify(name)},${id}`;
+}
+
+/** The item ID at the end of an `/urun/<slug>,<id>` segment, or `null`. */
+export function itemIdFromParam(param: string): number | null {
+  const match = /(?:^|,)(\d+)$/.exec(param);
+  return match ? Number(match[1]) : null;
 }
 
 /** Link to the search page with the given parameters (empty values dropped). */

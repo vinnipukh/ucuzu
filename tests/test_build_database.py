@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 import sys
 from pathlib import Path
 
@@ -307,3 +308,60 @@ def test_build_cleans_prices_and_merges_duplicate_stores(tmp_path: Path, capsys:
         "1  products flagged as case prices",
     ):
         assert line in summary
+
+
+def test_build_assigns_permanent_ids_pack_options_and_overrides(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    import assign_ids
+
+    json_dir = tmp_path / "prices_json"
+    json_dir.mkdir()
+    day = {"2026-01-01": 10.0}
+    for stem, names in (
+        ("Markets_A", {"1": "Pınar Süt 1 L", "2": "Pınar Süt 500 ml", "3": "Ülker Gofret 40 g", "4": "Ülker Fındıklı Gofret 40 g"}),
+        ("Markets_B", {"1": "PINAR SÜT 1 LT", "2": "Pınar Süt 6x1 L", "9": "Ülker Gofret 40 gr"}),
+    ):
+        payload = {pid: {"name": name, "prices": day} for pid, name in names.items()}
+        (json_dir / f"{stem}.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    ids_path = tmp_path / "matching" / "ids.json"
+    build_database.write_ids(ids_path, {"|pinar sut|||500ml": 41, "|gone|||": 49}, {}, 50, 1)
+    (tmp_path / "matching" / "overrides.json").write_text(
+        json.dumps({
+            "merge": [{"into": "|gofret ulker|||40g", "keys": ["|findikli gofret ulker|||40g"]}],
+            "split": [{"retailer": "Markets / B", "product_id": "9"}],
+        }),
+        encoding="utf-8",
+    )
+    db_path = tmp_path / "prices.db"
+
+    def products() -> dict[tuple[str, str], tuple]:
+        with closing(sqlite3.connect(db_path)) as conn:
+            return {
+                (retailer, product_id): (item_id, pack, is_pack_option, family_id)
+                for retailer, product_id, item_id, pack, is_pack_option, family_id in conn.execute(
+                    "SELECT r.name, p.product_id, p.item_id, p.pack, p.is_pack_option, i.family_id "
+                    "FROM products AS p JOIN retailers AS r USING (retailer_key) LEFT JOIN items AS i USING (item_id)"
+                )
+            }
+
+    build_database.build(tmp_path, db_path, workers=1)
+    first = products()
+    # Known key keeps 41; new keys get 50, 51, 52 in key order; retired 49 is never reused.
+    assert first[("Markets / A", "2")][0] == 41
+    milk = first[("Markets / A", "1")]
+    assert first[("Markets / B", "1")] == milk and milk[1:3] == (1, 0)
+    assert first[("Markets / B", "2")] == (milk[0], 6, 1, milk[3])  # the 6-pack is a pack option
+    assert milk[3] == first[("Markets / A", "2")][3] == 1  # 1 L and 500 ml: one family
+    assert first[("Markets / A", "4")][0] == first[("Markets / A", "3")][0]  # merged by overrides.json
+    assert first[("Markets / B", "9")][0] not in {first[("Markets / A", "3")][0], None}  # split off
+    assert sorted({v[0] for v in first.values()}) == [41, 50, 51, 52]
+    assert "3  items with a provisional ID (next 53; run scripts/assign_ids.py)" in capsys.readouterr().out
+
+    assert assign_ids.assign(db_path, ids_path) == (3, 1)
+    items, families, next_item, next_family = build_database.read_ids(ids_path)
+    assert (items["|pinar sut|||500ml"], items["|gone|||"], next_item, next_family) == (41, 49, 53, 2)
+    assert families == {"|pinar sut||": 1}
+    assert assign_ids.assign(db_path, ids_path) == (0, 0)
+
+    build_database.build(tmp_path, db_path, workers=1)
+    assert products() == first
+    assert "0  items with a provisional ID" in capsys.readouterr().out

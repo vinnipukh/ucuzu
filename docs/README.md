@@ -62,6 +62,17 @@ Historical material; not current setup guidance.
 
 What changed in behaviour and documentation, newest first, so a difference from older code can be checked against an intended change. Each entry names its commit; API changes per contract version are also in [FALCON_API_CONTRACT.md §9](FALCON_API_CONTRACT.md#9-changes).
 
+### 2026-10-23 — matched products, permanent IDs, families and pack options (cimri clone phase 3)
+
+**Breaking / behaviour changes**
+
+- The shop groups store products into items by a **match key** from the parsed title (new `inflation_dashboard/domain/matching.py`): brand, the other words in any order, model/shade codes, variant attributes and the size per item must agree, as on cimri; letter case, word order, unit spelling, `1 Adet`, warranty and marketing words do not count. Previously only products with an identical `name_key` were one item. Items sold in 2 or more stores grew from 4,739 to 7,640 in Markets (+61 %) and from 24,627 to 29,792 in the whole catalog ([DATABASE.md § Items, families and pack options](DATABASE.md#items-families-and-pack-options)).
+- Items and families have **permanent numeric IDs** from the new committed `data/matching/ids.json` (384,558 items, 11,842 families); the build gives new keys provisional IDs and the new `scripts/assign_ids.py` appends them to the file, never reusing a number. New `data/matching/overrides.json` (empty) holds manual merge/split corrections, applied after the keys are built; the build now also reads `data/matching/brands.json` and the stores' `brand` column ([DATA_CONTRACT.md § Matching data](DATA_CONTRACT.md#matching-data-datamatching), [SETUP.md § 4.5](SETUP.md#45-rebuild-and-check)).
+- New tables `items` and `families` and `products` columns `match_key`, `family_key`, `pack`, `item_id` and `is_pack_option`; `is_store_latest` is now per item and pack. Databases without them return 503 `database_outdated` on `/api/catalog/*` until rebuilt. The price clean-up compares a product with other stores' products of the same match key and pack instead of the same `name_key` (placeholder prices dropped 13,802 → 14,038, sehzade prices repaired 1,720 → 1,763) ([DATABASE.md § Price clean-up](DATABASE.md#price-clean-up)).
+- **API 3.0.0:** `/api/catalog/item` takes `id` instead of `key`; search items have `id` and `family_id` instead of `key`; multipacks of the same size (6 × 1 L, 9,556 multipack products, 2,119 of them beside a smaller pack) are `pack_options` with a price per package instead of separate items; new search parameter `family`; offers carry `item_id` and `pack` ([contract 3.0.0](FALCON_API_CONTRACT.md#300-2026-10-23)).
+- Shop URLs are `/urun/<slug>,<id>` instead of `/urun/<name_key>`; the product page shows pack options and other sizes; price alarms are stored by item ID, so alarms saved before are dropped ([USER_GUIDE.md § Price comparison shop](USER_GUIDE.md#price-comparison-shop), [frontend/README.md § Routes](../frontend/README.md#routes)).
+- The title parser reads `x 2 Paket` / `2 Paket` as a multipack and keeps `zero` apart from `light` (Coca-Cola Zero and Light are different products).
+
 ### 2026-10-23 — price clean-up and merged duplicate stores (cimri clone phase 2)
 
 **Breaking / behaviour changes**

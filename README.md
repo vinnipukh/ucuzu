@@ -31,7 +31,7 @@ Run the last command in a second terminal, then open `http://localhost:5173` (sh
 ## ucuzu shop
 
 - **Search** (`/ara`) — every word must appear in the product name; filter by category and store, sort by relevance, price or largest drop.
-- **Product page** (`/urun/<name>`) — products with the same normalized name are compared across stores: cheapest current price, one offer per store (its other listings folded under it), price history per store, lowest price seen.
+- **Product page** (`/urun/<name>,<id>`) — the same product is compared across stores (brand, words, code, variant and size per item agree, as on cimri): cheapest current price, one offer per store (its other listings folded under it), multipack options with the price per package, other sizes, price history per store, lowest price seen.
 - **Deals** (`/firsatlar`) — current offers whose latest price change was a drop.
 - **Price alarms** (`/alarmlar`) — a target price per product, stored in your browser.
 

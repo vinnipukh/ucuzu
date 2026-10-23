@@ -26,7 +26,8 @@ flowchart LR
 ```text
 inflation_dashboard/
   domain/prices.py                 price/date normalization, HISTORY_COLUMNS, product details (brand, barcode, URLs, regular price)
-  domain/catalog.py                catalog rules: name_key (cross-store item match), split_retailer, excluded groups
+  domain/catalog.py                catalog rules: name_key (search text), split_retailer, excluded groups
+  domain/matching.py               match keys (same product across stores), family keys, overrides, permanent IDs
   domain/product_attributes.py     title parser (brand, size, pack, attributes, model codes) and unit prices
   domain/price_cleaning.py         rules for placeholder, dotted-thousands and case prices (used by the build)
   application/use_cases.py         history, averages, movers, coverage calculations (pandas)
@@ -43,6 +44,7 @@ scripts/
   build_database.py                builds data/prices.db from data/
   csv_to_json.py                   merges scraper CSVs into the per-retailer data/prices_json files
   build_brand_list.py              builds data/matching/brands.json for the title parser
+  assign_ids.py                    appends the build's new item/family IDs to data/matching/ids.json
   data_files.py                    split/join/check files over the 85 MB limit
   verify_falcon_api.py             in-process API smoke and boundary checks
   test_sqlite_adapter.py, test_new_endpoints.py, benchmark_*.py   manual tooling
@@ -52,13 +54,13 @@ frontend/src/
   routes/+layout.ts                ssr = false (pure client-side SPA)
   routes/+layout.svelte            root layout: imports app.css, applies the colour theme
   routes/(shop)/                   price-comparison shop (layout group, no URL segment): SiteHeader + footer layout,
-                                   / home, /ara search, /urun/[key] item, /firsatlar deals, /alarmlar price alarms
+                                   / home, /ara search, /urun/[key] item (<slug>,<id>), /firsatlar deals, /alarmlar price alarms
   routes/analiz/+page.svelte       inflation dashboard at /analiz: inventory load, sidebar, five view tabs
   lib/api/client.ts                fetchApi(): the only HTTP client
   lib/stores/filters.svelte.ts     global filter state (Svelte 5 runes)
   lib/stores/catalog.svelte.ts     catalog groups, loaded once from /api/catalog/groups
   lib/stores/alarms.svelte.ts      price alarms in localStorage (`price-alarms`)
-  lib/catalog.ts                   shop helpers: Turkish group labels, item/search links, TL formatting
+  lib/catalog.ts                   shop helpers: Turkish group labels, item (/urun/<slug>,<id>) and search links, TL formatting
   lib/types/api.ts                 TypeScript mirror of the API contract
   lib/themes.svelte.ts             Auto/Light/Dark theme state
   lib/components/                  Header, Sidebar, Chart, DataTable, selects, alerts; shop: SiteHeader, ProductCard, Icon
@@ -83,7 +85,7 @@ frontend/src/
 4. On a miss, filter endpoints parse and validate the common filters (cached per query signature), then load the matching history frame from SQLite (cached per filter signature) via `sqlite_price_repository.load_price_history_from_db`.
 5. Application use cases compute the response tables in pandas; `api/serialization.py` converts them to JSON-native values inside the envelope; the bytes are cached and sent.
 6. `/api/products` (product names per retailer, used by the Product explorer's pickers) queries the `products` table, and `/api/products/search` and `/api/product` query the `product_prices` view, through the adapter directly. `/api/epeykatfg/monthly-inflation` reads the monthly inflation CSV.
-7. `/api/catalog/*` (the shop) calls `adapters/sqlite_catalog_repository.py`, which reads the `products`, `categories`, `retailers` and `observations` tables over the same read-only connections. Items are products that share `products.name_key` (`domain/catalog.py`); only current offers (`is_current`) are listed. Search counts only each store's latest offers (`is_store_latest`), and an item lists one offer per store (the cheapest on the store's newest date) with the store's other offers under `other_offers`.
+7. `/api/catalog/*` (the shop) calls `adapters/sqlite_catalog_repository.py`, which reads the `products`, `items`, `families`, `categories`, `retailers` and `observations` tables over the same read-only connections. Items are products that share `products.name_key` (`domain/catalog.py`); only current offers (`is_current`) are listed. Search counts only each store's latest offers (`is_store_latest`), and an item lists one offer per store (the cheapest on the store's newest date) with the store's other offers under `other_offers`.
 8. Errors: filter validation returns 400 `invalid_filter`; a missing or empty database returns 503 `database_unavailable`, and a database built before the catalog columns returns 503 `database_outdated` on `/api/catalog/*`; unknown routes, wrong methods and unhandled exceptions are rendered as envelopes by the error handlers in `create_app`. The SQLite database is the only data path.
 
 ## Conventions

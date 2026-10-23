@@ -1,9 +1,11 @@
 """SQLite queries behind the price-comparison catalog (``/api/catalog/*``).
 
-A catalog *item* is every product row that shares one ``products.name_key``
-(see ``inflation_dashboard.domain.catalog``); each row is one store's *offer*.
-Searches, listings and deals read only current offers (``is_current = 1``) from
-retailers outside ``CATALOG_EXCLUDED_GROUPS``. Case prices (``products.is_case_price``,
+A catalog *item* is every product row that shares one ``products.item_id`` (one
+match key, see ``inflation_dashboard.domain.matching``; the permanent ID comes from
+``data/matching/ids.json``); each row is one store's *offer*. Multipacks of the
+item (``products.is_pack_option``) are its *pack options*, not offers; items of
+one family share ``items.family_id``. Searches, listings and deals read only
+current offers (``is_current = 1``) from retailers outside ``CATALOG_EXCLUDED_GROUPS``. Case prices (``products.is_case_price``,
 a whole case where the title describes one item) never count as an item's lowest
 price while another offer exists, and never appear as deals. Connections come from
 ``sqlite_price_repository`` (read-only, one per thread).
@@ -57,7 +59,10 @@ def _retailers(conn: Any) -> dict[int, tuple[str, str, str]]:
     if cached is not None and now - cached[0] <= _CACHE_TTL_SECONDS:
         return cached[1]
     columns = {row[1] for row in conn.execute("PRAGMA table_info(products)")}
-    if not {"name_key", "previous_price", "price_since", "is_current", "is_store_latest", "is_case_price"} <= columns:
+    required = {"name_key", "previous_price", "price_since", "is_current", "is_store_latest", "is_case_price"}
+    required |= {"item_id", "pack", "is_pack_option"}
+    has_items = conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'items'").fetchone()
+    if not required <= columns or not has_items:
         raise CatalogSchemaError("Database predates the catalog; run scripts/build_database.py")
     table = {
         retailer_key: (name, *split_retailer(name))
@@ -101,7 +106,7 @@ def _offer(row: dict[str, Any], table: dict[int, tuple[str, str, str]]) -> dict[
 _OFFER_COLUMNS = """
     p.product_key, p.retailer_key, p.product_id, p.product_name, p.name_key, c.name AS category,
     p.latest_price, p.previous_price, p.price_since, p.first_date, p.last_date,
-    p.min_price, p.max_price, p.observations_count, p.is_current, p.is_case_price
+    p.min_price, p.max_price, p.observations_count, p.is_current, p.is_case_price, p.item_id, p.pack
 """
 
 
@@ -137,11 +142,13 @@ def search_items(
     sort: str = "relevance",
     limit: int = 24,
     offset: int = 0,
+    family: int | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     """Search catalog items; return ``(items, total)``.
 
-    Every normalized query term must occur in the item's ``name_key``. Items
-    aggregate the current offers of the selected group/store, counting only each
+    Every normalized query term must occur in the ``name_key`` of one of the item's
+    offers; ``family`` keeps only the items of one family. Items aggregate the
+    current offers (not pack options) of the selected group/store, counting only each
     store's offers on its newest date for the item (``is_store_latest``): lowest and highest
     price (of offers that are not case prices, unless all are), offer and store counts
     and the largest current price drop. Each item names its cheapest offer (``name``,
@@ -150,10 +157,10 @@ def search_items(
     words, then store count, then shorter names.
     """
     order_by = {
-        "relevance": "word_hits DESC, store_count DESC, length(p.name_key) ASC, p.name_key",
-        "price_asc": "case_only ASC, min_price ASC, p.name_key",
-        "price_desc": "case_only ASC, min_price DESC, p.name_key",
-        "drop": "max_drop DESC NULLS LAST, store_count DESC, p.name_key",
+        "relevance": "word_hits DESC, store_count DESC, min(length(p.name_key)) ASC, p.item_id",
+        "price_asc": "case_only ASC, min_price ASC, p.item_id",
+        "price_desc": "case_only ASC, min_price DESC, p.item_id",
+        "drop": "max_drop DESC NULLS LAST, store_count DESC, p.item_id",
     }[sort]
     terms = search_terms(query)
 
@@ -168,8 +175,13 @@ def search_items(
             "p.is_current = 1",
             "p.is_store_latest = 1",
             "p.latest_price > 0",
+            "p.item_id IS NOT NULL",
+            "p.is_pack_option = 0",
         ]
         params: list[Any] = list(keys)
+        if family is not None:
+            where.append("p.item_id IN (SELECT item_id FROM items WHERE family_id = ?)")
+            params.append(family)
         for term in terms:
             where.append("p.name_key LIKE ? ESCAPE '!'")
             params.append(f"%{_escape_like(term)}%")
@@ -178,7 +190,7 @@ def search_items(
         word_hits = " + ".join(["(' ' || p.name_key || ' ' LIKE ? ESCAPE '!')"] * len(terms)) or "0"
         rows = conn.execute(
             f"""
-            SELECT p.name_key, count(*) AS offer_count, count(DISTINCT p.retailer_key) AS store_count,
+            SELECT p.item_id, count(*) AS offer_count, count(DISTINCT p.retailer_key) AS store_count,
                    coalesce(min(CASE WHEN p.is_case_price = 0 THEN p.latest_price END), min(p.latest_price)) AS min_price,
                    coalesce(max(CASE WHEN p.is_case_price = 0 THEN p.latest_price END), max(p.latest_price)) AS max_price,
                    min(p.is_case_price) AS case_only,
@@ -186,7 +198,7 @@ def search_items(
                    max(p.last_date) AS last_date, max({word_hits}) AS word_hits, count(*) OVER () AS total
             FROM products AS p
             WHERE {where_sql}
-            GROUP BY p.name_key
+            GROUP BY p.item_id
             ORDER BY {order_by}
             LIMIT ? OFFSET ?
             """,
@@ -195,22 +207,24 @@ def search_items(
         if not rows:
             return [], 0
         page_keys = [row[0] for row in rows]
+        marks = ",".join("?" * len(page_keys))
         offer_rows = conn.execute(
             f"""
-            SELECT p.name_key, p.retailer_key, p.product_name, c.name, p.latest_price
+            SELECT p.item_id, p.retailer_key, p.product_name, c.name, p.latest_price
             FROM products AS p JOIN categories AS c ON c.category_key = p.category_key
-            WHERE p.name_key IN ({','.join('?' * len(page_keys))})
+            WHERE p.item_id IN ({marks})
               AND p.retailer_key IN ({','.join('?' * len(keys))})
-              AND p.is_current = 1 AND p.is_store_latest = 1 AND p.latest_price > 0
+              AND p.is_current = 1 AND p.is_store_latest = 1 AND p.latest_price > 0 AND p.is_pack_option = 0
             ORDER BY p.is_case_price ASC, p.latest_price ASC
             """,
             (*page_keys, *keys),
         ).fetchall()
+        families = dict(conn.execute(f"SELECT item_id, family_id FROM items WHERE item_id IN ({marks})", page_keys))
     finally:
         close_connection(conn)
 
-    cheapest: dict[str, tuple[Any, ...]] = {}
-    stores: dict[str, list[str]] = {}
+    cheapest: dict[int, tuple[Any, ...]] = {}
+    stores: dict[int, list[str]] = {}
     for key, retailer_key, product_name, category, _ in offer_rows:
         cheapest.setdefault(key, (retailer_key, product_name, category))
         names = stores.setdefault(key, [])
@@ -224,7 +238,8 @@ def search_items(
         _, item_group, item_store = table[retailer_key]
         items.append(
             {
-                "key": key,
+                "id": key,
+                "family_id": families.get(key),
                 "name": product_name,
                 "group": item_group,
                 "category": category,
@@ -264,13 +279,47 @@ def _store_offers(offers: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return chosen
 
 
-def get_item(key: str) -> dict[str, Any] | None:
+def _ranked_store_offers(offers: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One offer per store (``_store_offers``): current first, then case prices last, then cheapest first."""
+    chosen = _store_offers(offers)
+    chosen.sort(key=lambda o: o["latest_price"] if o["latest_price"] is not None else float("inf"))
+    chosen.sort(key=lambda o: o["is_case_price"])
+    chosen.sort(key=lambda o: not o["is_current"])
+    return chosen[:MAX_ITEM_OFFERS]
+
+
+def _pack_options(offers: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Group pack-option offers by ``pack`` (smallest first), one offer per store, with per-package prices."""
+    by_pack: dict[int, list[dict[str, Any]]] = {}
+    for offer in offers:
+        offer["price_per_package"] = round(offer["latest_price"] / offer["pack"], 2) if offer["latest_price"] else None
+        by_pack.setdefault(offer["pack"], []).append(offer)
+    options = []
+    for pack in sorted(by_pack):
+        chosen = _ranked_store_offers(by_pack[pack])
+        ranked = [o for o in chosen if not o["is_case_price"]] or chosen
+        priced = [o for o in ranked if o["is_current"] and o["latest_price"]] or [o for o in ranked if o["latest_price"]]
+        best = min(priced, key=lambda o: o["latest_price"], default=None)
+        options.append(
+            {
+                "pack": pack,
+                "min_price": best["latest_price"] if best else None,
+                "min_price_per_package": best["price_per_package"] if best else None,
+                "offers": chosen,
+            }
+        )
+    return options
+
+
+def get_item(item_id: int) -> dict[str, Any] | None:
     """Return one catalog item with one offer per store and its price history, or ``None``.
 
     Each store shows its latest price: its cheapest offer on its newest date, with
     the store's other offers in ``other_offers`` (see ``_store_offers``). Offers are
     current first, then case prices last, then cheapest first (at most
     ``MAX_ITEM_OFFERS`` stores); each carries ``history`` as ``[[date, price], ...]``.
+    Multipacks of the item are not offers but ``pack_options`` (``_pack_options``),
+    without history; ``family_id`` and ``family_item_count`` name the item's family.
     ``summary`` covers the current offers (falling back to all offers when none is
     current), leaving out case prices unless every offer is one, and the lowest price
     ever observed for the item among those offers, ignoring prices below
@@ -279,33 +328,41 @@ def get_item(key: str) -> dict[str, Any] | None:
     conn = get_reusable_connection()
     try:
         table = _retailers(conn)
-        excluded = [k for k, (_, g, _) in table.items() if g in CATALOG_EXCLUDED_GROUPS] or [-1]
+        item = conn.execute(
+            """
+            SELECT i.match_key, i.family_id, f.item_count
+            FROM items AS i LEFT JOIN families AS f ON f.family_id = i.family_id
+            WHERE i.item_id = ?
+            """,
+            (item_id,),
+        ).fetchone()
+        if item is None:
+            return None
         cursor = conn.execute(
             f"""
-            SELECT {_OFFER_COLUMNS}
+            SELECT {_OFFER_COLUMNS}, p.is_pack_option
             FROM products AS p JOIN categories AS c ON c.category_key = p.category_key
-            WHERE p.name_key = ? AND p.retailer_key NOT IN ({','.join('?' * len(excluded))})
+            WHERE p.item_id = ?
             ORDER BY p.is_current DESC, p.is_case_price ASC, p.latest_price ASC
             LIMIT ?
             """,
-            (key, *excluded, MAX_ITEM_ROWS),
+            (item_id, MAX_ITEM_ROWS),
         )
         columns = [d[0] for d in cursor.description]
         rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
         if not rows:
             return None
         product_keys = {}
-        all_offers = []
+        all_offers, pack_offers = [], []
         for row in rows:
             product_key = row.pop("product_key")
+            is_pack_option = row.pop("is_pack_option")
             offer = _offer(row, table)
             product_keys[id(offer)] = product_key
-            all_offers.append(offer)
-        offers = _store_offers(all_offers)
-        offers.sort(key=lambda o: o["latest_price"] if o["latest_price"] is not None else float("inf"))
-        offers.sort(key=lambda o: o["is_case_price"])
-        offers.sort(key=lambda o: not o["is_current"])
-        offers = offers[:MAX_ITEM_OFFERS]
+            (pack_offers if is_pack_option else all_offers).append(offer)
+        if not all_offers:  # only when MAX_ITEM_ROWS cut off every main offer
+            all_offers, pack_offers = pack_offers, []
+        offers = _ranked_store_offers(all_offers)
 
         # Price history only for the offer shown per store.
         history: dict[int, list[list[Any]]] = {product_keys[id(o)]: [] for o in offers}
@@ -334,12 +391,17 @@ def get_item(key: str) -> dict[str, Any] | None:
             if price and price >= floor and (lowest_ever is None or price < lowest_ever["price"]):
                 lowest_ever = {"price": price, "date": date, "store": offer["store"]}
     best = current[0] if current else offers[0]
+    match_key, family_id, family_item_count = item
     return {
-        "key": key,
+        "id": item_id,
+        "match_key": match_key,
+        "family_id": family_id,
+        "family_item_count": family_item_count or 1,
         "name": best["product_name"],
         "group": best["group"],
         "category": best["category"],
         "offers": offers,
+        "pack_options": _pack_options(pack_offers),
         "summary": {
             "offer_count": len(offers),
             "current_offer_count": sum(1 for o in offers if o["is_current"]),
@@ -375,7 +437,7 @@ def list_deals(
             SELECT {_OFFER_COLUMNS}
             FROM products AS p JOIN categories AS c ON c.category_key = p.category_key
             WHERE p.retailer_key IN ({','.join('?' * len(keys))})
-              AND p.is_current = 1 AND p.is_case_price = 0 AND p.latest_price > 0
+              AND p.is_current = 1 AND p.is_case_price = 0 AND p.latest_price > 0 AND p.item_id IS NOT NULL
               AND p.previous_price > p.latest_price AND p.price_since >= date(p.last_date, ?)
               AND {_DROP_PERCENT_SQL} BETWEEN ? AND ?
             ORDER BY {_DROP_PERCENT_SQL} DESC, p.observations_count DESC

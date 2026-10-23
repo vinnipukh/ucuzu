@@ -78,6 +78,11 @@ def client() -> testing.TestClient:
     return testing.TestClient(create_app())
 
 
+def _item_id(client: testing.TestClient, query: str) -> int:
+    """ID of the first search hit for ``query``."""
+    return client.simulate_get("/api/catalog/search", params={"q": query}).json["data"][0]["id"]
+
+
 def test_build_stores_price_change_and_current_flag(catalog_db: Path) -> None:
     conn = sqlite3.connect(catalog_db)
     rows = {
@@ -98,7 +103,7 @@ def test_search_groups_offers_across_stores(client: testing.TestClient, catalog_
     assert result.status_code == 200
     assert result.json["meta"]["total"] == 1  # housing listings are not in the catalog
     item = result.json["data"][0]
-    assert item["key"] == "sütaş süt 1l"
+    assert isinstance(item["id"], int) and item["family_id"] is None
     assert item["store_count"] == 3
     # Kale's 25 is an older offer than its newest date: only k1/k2 (33, 31) count.
     assert item["min_price"] == 30.0
@@ -117,10 +122,13 @@ def test_search_excludes_stale_offers_and_rejects_bad_sort(client: testing.TestC
 
 
 def test_item_lists_offers_cheapest_first_with_history(client: testing.TestClient, catalog_db: Path) -> None:
-    result = client.simulate_get("/api/catalog/item", params={"key": "sütaş süt 1l"})
+    item_id = _item_id(client, "süt")
+    result = client.simulate_get("/api/catalog/item", params={"id": item_id})
 
     assert result.status_code == 200
+    assert result.json["meta"] == {"id": item_id, "offer_count": 4}
     data = result.json["data"]
+    assert (data["id"], data["match_key"], data["pack_options"]) == (item_id, "|sut sutas|||1000ml", [])
     assert [o["store"] for o in data["offers"]] == ["Gurmar", "Kale", "Onur", "Sariyer"]
     assert data["offers"][3]["is_current"] is False
     assert data["offers"][0]["history"] == [["2026-01-01", 40.0], ["2026-01-10", 30.0]]
@@ -133,7 +141,7 @@ def test_item_lists_offers_cheapest_first_with_history(client: testing.TestClien
 def test_item_shows_each_stores_cheapest_offer_on_its_newest_date(
     client: testing.TestClient, catalog_db: Path
 ) -> None:
-    offers = client.simulate_get("/api/catalog/item", params={"key": "sütaş süt 1l"}).json["data"]["offers"]
+    offers = client.simulate_get("/api/catalog/item", params={"id": _item_id(client, "süt")}).json["data"]["offers"]
     kale = next(o for o in offers if o["store"] == "Kale")
 
     # k3 (25) is cheaper but last seen on 2026-01-05, before Kale's newest date.
@@ -155,15 +163,19 @@ def test_store_offers_never_prefers_an_unpriced_offer() -> None:
     assert [o["product_id"] for o in best["other_offers"]] == ["b", "a"]
 
 
-def test_item_unknown_key_is_not_found(client: testing.TestClient, catalog_db: Path) -> None:
-    result = client.simulate_get("/api/catalog/item", params={"key": "yok"})
+def test_item_unknown_or_invalid_id(client: testing.TestClient, catalog_db: Path) -> None:
+    result = client.simulate_get("/api/catalog/item", params={"id": "999999"})
     assert result.status_code == 404
     assert result.json["errors"][0]["code"] == "not_found"
+    for params, message in (({}, "id is required"), ({"id": "süt"}, "Invalid id"), ({"id": "0"}, "Invalid id")):
+        bad = client.simulate_get("/api/catalog/item", params=params)
+        assert (bad.status_code, bad.json["errors"][0]["message"]) == (400, message)
 
 
 def test_deals_and_groups(client: testing.TestClient, catalog_db: Path) -> None:
     deals = client.simulate_get("/api/catalog/deals").json["data"]
-    assert [(d["store"], d["drop_percent"]) for d in deals] == [("Gurmar", 25.0)]
+    assert [(d["store"], d["drop_percent"], d["pack"]) for d in deals] == [("Gurmar", 25.0, 1)]
+    assert deals[0]["item_id"] == _item_id(client, "süt")
 
     groups = client.simulate_get("/api/catalog/groups").json["data"]
     assert [g["group"] for g in groups] == ["Markets"]
@@ -199,9 +211,9 @@ def test_case_prices_never_rank_cheapest(client: testing.TestClient, case_price_
 
     # BizimMarket's cola (3) is the cheapest price but only a case price: it sorts last.
     by_price = client.simulate_get("/api/catalog/search", params={"sort": "price_asc"}).json["data"]
-    assert [(i["key"], i["min_price"]) for i in by_price] == [("çay 1kg", 4.0), ("su 1l", 8.0), ("kola 250ml", 3.0)]
+    assert [(i["name"], i["min_price"]) for i in by_price] == [("Çay 1 kg", 4.0), ("Su 1 L", 8.0), ("Kola 250 ml", 3.0)]
 
-    item = client.simulate_get("/api/catalog/item", params={"key": "su 1l"}).json["data"]
+    item = client.simulate_get("/api/catalog/item", params={"id": water["id"]}).json["data"]
     assert [(o["store"], o["is_case_price"]) for o in item["offers"]] == [("Onur", False), ("BizimMarket", True)]
     assert item["summary"]["min_price"] == 8.0
     assert item["summary"]["lowest_ever"] == {"price": 8.0, "date": "2026-01-10", "store": "Onur"}
@@ -228,3 +240,52 @@ def test_outdated_database_returns_503(client: testing.TestClient, monkeypatch: 
 
     assert result.status_code == 503
     assert result.json["errors"][0]["code"] == "database_outdated"
+
+
+@pytest.fixture
+def family_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    """Pınar milk in 1 L (also a 6 x 1 L pack) and 500 ml: one family of two items with a pack option."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import build_database
+
+    raw = tmp_path / "data" / "raw"
+    _write(
+        raw / "01_Food" / "Onur" / "o_2026-01-10.csv",
+        "product_name,price\nPınar Süt 1 L,30\nPınar Süt 6x1 L,170\nPınar Süt 500 ml,18\n",
+    )
+    _write(raw / "01_Food" / "Gurmar" / "g_2026-01-10.csv", "product_name,price\nPINAR SÜT 1 Lt,32\nPınar Süt 1 L x 6,180\n")
+    db_path = tmp_path / "prices.db"
+    build_database.build(tmp_path / "data", db_path, workers=1)
+    monkeypatch.setenv("PRICES_DB_PATH", str(db_path))
+    clear_inventory_cache()
+    sqlite_catalog_repository.clear_catalog_cache()
+    yield db_path
+    clear_inventory_cache()
+    sqlite_catalog_repository.clear_catalog_cache()
+    sqlite_price_repository.close_local_connections()
+
+
+def test_multipacks_are_pack_options_and_sizes_form_a_family(client: testing.TestClient, family_db: Path) -> None:
+    items = client.simulate_get("/api/catalog/search", params={"q": "pınar süt", "sort": "price_asc"}).json["data"]
+    assert [(i["name"], i["min_price"], i["store_count"], i["offer_count"]) for i in items] == [
+        ("Pınar Süt 500 ml", 18.0, 1, 1),
+        ("Pınar Süt 1 L", 30.0, 2, 2),  # the 6-packs are not offers
+    ]
+    family_id = items[0]["family_id"]
+    assert family_id is not None and items[1]["family_id"] == family_id
+
+    item = client.simulate_get("/api/catalog/item", params={"id": items[1]["id"]}).json["data"]
+    assert (item["family_id"], item["family_item_count"]) == (family_id, 2)
+    assert [o["store"] for o in item["offers"]] == ["Onur", "Gurmar"]
+    [six] = item["pack_options"]
+    assert (six["pack"], six["min_price"], six["min_price_per_package"]) == (6, 170.0, 28.33)
+    assert [(o["store"], o["latest_price"], o["price_per_package"]) for o in six["offers"]] == [
+        ("Onur", 170.0, 28.33),
+        ("Gurmar", 180.0, 30.0),
+    ]
+    assert all("history" not in o for o in six["offers"])
+
+    family = client.simulate_get("/api/catalog/search", params={"family": family_id}).json
+    assert family["meta"]["family"] == family_id
+    assert {i["id"] for i in family["data"]} == {i["id"] for i in items}
+    assert client.simulate_get("/api/catalog/search", params={"family": "x"}).status_code == 400

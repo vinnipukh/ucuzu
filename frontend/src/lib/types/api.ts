@@ -355,9 +355,10 @@ export interface CatalogGroup {
 /** Sort orders accepted by `GET /api/catalog/search`. */
 export type CatalogSort = 'relevance' | 'price_asc' | 'price_desc' | 'drop';
 
-/** One item (all offers sharing a `name_key`) of `GET /api/catalog/search`. */
+/** One item (all offers sharing an item ID, one match key) of `GET /api/catalog/search`. */
 export interface CatalogSearchItem {
-  key: string;
+  id: number; // permanent item ID: `GET /api/catalog/item?id=`
+  family_id: number | null; // family of 2+ sizes: `GET /api/catalog/search?family=`
   name: string; // name of the cheapest offer
   group: string;
   category: string;
@@ -376,6 +377,7 @@ export interface CatalogSearchMeta {
   query: string;
   group: string | null;
   store: string | null;
+  family: number | null;
   sort: CatalogSort;
   limit: number;
   offset: number;
@@ -403,19 +405,35 @@ export interface CatalogOffer {
   is_current: boolean;
   /** The store sells whole cases (koli); never counted as the item's lowest price. */
   is_case_price: boolean;
+  item_id: number | null; // the catalog item this offer belongs to
+  pack: number; // items in the package (6 for a 6 x 1 L multipack)
   drop_percent: number | null;
+  /** `pack_options` offers only: `latest_price / pack`. */
+  price_per_package?: number | null;
   history?: [string, number][]; // `GET /api/catalog/item` only
   /** `GET /api/catalog/item` only: the store's other offers for the item, without `history`. */
   other_offers?: CatalogOffer[];
 }
 
+/** Multipacks of an item with one pack size (`pack_options` of `GET /api/catalog/item`). */
+export interface CatalogPackOption {
+  pack: number;
+  min_price: number | null;
+  min_price_per_package: number | null;
+  offers: CatalogOffer[]; // one per store, with `price_per_package`, without `history`
+}
+
 /** `data` of `GET /api/catalog/item`. */
 export interface CatalogItem {
-  key: string;
+  id: number;
+  match_key: string;
+  family_id: number | null;
+  family_item_count: number;
   name: string;
   group: string;
   category: string;
   offers: CatalogOffer[];
+  pack_options: CatalogPackOption[];
   summary: {
     offer_count: number;
     current_offer_count: number;

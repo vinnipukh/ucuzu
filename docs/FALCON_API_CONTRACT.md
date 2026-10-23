@@ -2,7 +2,7 @@
 
 **Target Frontend:** Svelte 5 / SvelteKit SPA (`frontend/`)  
 **API Backend:** Falcon WSGI application (`inflation_dashboard/api/falcon_app.py`)  
-**Specification Version:** 2.5.0  
+**Specification Version:** 3.0.0  
 **Last Updated:** 2026-10-23  
 **Status:** Authoritative. [API.md](API.md) is a summary; this file wins on any difference.
 
@@ -58,12 +58,12 @@ Error objects have exactly two fields, `code` and `message`. Context goes on the
 | Status | `code` | When | `message` |
 |---|---|---|---|
 | 400 | `invalid_filter` | Any query-parameter validation failure (sections 3–4) | Names the parameter, e.g. `Invalid limit`, `Unknown retailer: X`, `Invalid date range` |
-| 404 | `not_found` | Unknown route, `/api/product` found no product, or `/api/catalog/item` found no item | `Product not found: <key>` for products; `Item not found: <key>` for catalog items; Falcon's description or title for routes |
+| 404 | `not_found` | Unknown route, `/api/product` found no product, or `/api/catalog/item` found no item | `Product not found: <key>` for products; `Item not found: <id>` for catalog items; Falcon's description or title for routes |
 | 405 | `method_not_allowed` | A method other than `GET`/`OPTIONS` on a known route (the `Allow` header is `GET, OPTIONS`) | Falcon's description or title |
 | other 4xx/5xx | `http_error` | Any other `falcon.HTTPError` raised by Falcon | Falcon's description or title |
 | 500 | `server_error` | Any unhandled exception | Always the fixed string `Internal server error`; the traceback is logged server-side (logger `inflation_dashboard.api`), never sent |
 | 503 | `database_unavailable` | The configured database file is missing or 0 bytes (every endpoint except `/api/health` and `/api/epeykatfg/monthly-inflation`) | `Database not found; run scripts/build_database.py` |
-| 503 | `database_outdated` | `/api/catalog/*` only: the database was built before the catalog columns (`products.name_key`, `previous_price`, `price_since`, `is_current`, `is_store_latest`, `is_case_price`) existed. The other endpoints keep working; rebuild the database. | `Database predates the catalog; run scripts/build_database.py` |
+| 503 | `database_outdated` | `/api/catalog/*` only: the database was built before the catalog columns (`products.name_key`, `previous_price`, `price_since`, `is_current`, `is_store_latest`, `is_case_price`, `item_id`, `pack`, `is_pack_option`) and the `items` table existed. The other endpoints keep working; rebuild the database. | `Database predates the catalog; run scripts/build_database.py` |
 
 The handlers for 404/405/500/503 are registered in `create_app`. Messages are short and safe to show in the UI.
 
@@ -423,6 +423,7 @@ The four catalog endpoints (§4.11–§4.14) read the `products` table through `
 
 - A retailer label `Group / Store` is split into its group and store (`Markets / Migros` → `Markets`, `Migros`); a label without ` / ` (`EpeyKatfg`) is its own group and store.
 - The `HousesRent` group (rental listings, `CATALOG_EXCLUDED_GROUPS`) is never part of the catalog.
+- Items are identified by permanent numeric IDs (`products.item_id`, from `data/matching/ids.json`); products whose match key has no item (never current, see [DATABASE.md § Items, families and pack options](DATABASE.md#items-families-and-pack-options)) are never shown.
 - Groups, search and deals count only current offers (`products.is_current = 1`, see [DATABASE.md](DATABASE.md#catalog-columns)).
 - Prices were cleaned by the database build: placeholder (`999`, `9999.99` …), zero and negative prices are missing and dotted-thousands prices repaired ([DATABASE.md § Price clean-up](DATABASE.md#price-clean-up)). Offers of stores that sell whole cases (`products.is_case_price`, BizimMarket) never set an item's lowest or highest price while the item has another offer, are listed after the other offers and are never deals.
 - They are cached and compressed like the other endpoints (§5), return 503 `database_unavailable` without a database and 503 `database_outdated` when the database was built before the catalog columns existed (§2.3).
@@ -449,128 +450,150 @@ The four catalog endpoints (§4.11–§4.14) read the `products` table through `
 
 ### 4.12 `GET /api/catalog/search`
 
-Searches catalog items. An **item** is every product that shares one `products.name_key` (the Turkish-aware normalized product name from `inflation_dashboard/domain/catalog.py`), so one item groups the same product across stores; each product is one store's **offer**.
+Searches catalog items. An **item** is every product with one `products.item_id`: store products that are the same product by cimri's rules (brand, words in any order, model/shade code, variant and size per item agree; built from the parsed title by `inflation_dashboard/domain/matching.py`, see [DATABASE.md § Items, families and pack options](DATABASE.md#items-families-and-pack-options)). Each product is one store's **offer**; multipacks of the item (6 × 1 L) are its **pack options** (§4.13), not offers. The item `id` is permanent: it comes from the committed `data/matching/ids.json` and stays the same across rebuilds. Items of the same product in other sizes share a `family_id`.
 
 Parameters:
 
-- `q` (`string`, optional): normalized with the same `name_key` rules and split into terms; every term must occur as a substring of the item's `name_key`. Empty lists every item.
+- `q` (`string`, optional): normalized with the `name_key` rules of `inflation_dashboard/domain/catalog.py` (Turkish-aware lowercase, `1 L` → `1l`) and split into terms; every term must occur as a substring of the `name_key` of one of the item's counted offers. Empty lists every item.
 - `group`, `store` (`string`, optional, exact match; blank is ignored): limit the offers to one group and/or store. Unknown values are not an error; they return `data: []` and `total: 0`.
-- `sort` (default `relevance`): `relevance` ranks by the number of query terms that match whole words, then store count, then shorter names; `price_asc` / `price_desc` by `min_price`, items whose offers are all case prices last; `drop` by `max_drop_percent` (items without a drop last), then store count. Any other value → 400 `Invalid sort`.
+- `family` (integer ≥ 1, optional): only the items of this family (a `family_id`). Not an integer or below 1 → 400 `Invalid family`; an unknown family returns `data: []`.
+- `sort` (default `relevance`): `relevance` ranks by the number of query terms that match whole words, then store count, then shorter names; `price_asc` / `price_desc` by `min_price`, items whose offers are all case prices last; `drop` by `max_drop_percent` (items without a drop last), then store count. Ties are broken by `id`. Any other value → 400 `Invalid sort`.
 - `limit` (integer 1–60, default 24), `offset` (integer 0–10000, default 0): out of range or not an integer → 400 `Invalid limit` / `Invalid offset` (not clamped).
 
-Only current offers with `latest_price > 0` in the selected group/store count, and of those only each store's latest prices for the item (`products.is_store_latest = 1`: offers last seen on the store's newest date for that item; see [DATABASE.md](DATABASE.md#catalog-columns)), matching the per-store prices of §4.13. For each item, `name`, `store` and `category` come from its cheapest offer that is not a case price (a case price only when all are); `stores` lists up to three stores, cheapest first, case prices last; `min_price`/`max_price` span the offers that are not case prices (all offers when every offer is one); `max_drop_percent` is the largest offer `drop_percent` (§4.13), `null` if none dropped; `last_date` is the newest offer date. `meta.total` counts every matching item (`0` when `offset` is past the last match), `meta.count` the items on this page.
+Only current offers with `latest_price > 0` in the selected group/store count, that are not pack options, and of those only each store's latest prices for the item (`products.is_store_latest = 1`: offers last seen on the store's newest date for that item; see [DATABASE.md](DATABASE.md#catalog-columns)), matching the per-store prices of §4.13. For each item, `name`, `store` and `category` come from its cheapest offer that is not a case price (a case price only when all are); `stores` lists up to three stores, cheapest first, case prices last; `min_price`/`max_price` span the offers that are not case prices (all offers when every offer is one); `max_drop_percent` is the largest offer `drop_percent` (§4.13), `null` if none dropped; `last_date` is the newest offer date; `family_id` is `null` when no other size of the item exists. `meta.total` counts every matching item (`0` when `offset` is past the last match), `meta.count` the items on this page; `meta.family` echoes `family` (`null` when not given).
 
 ```json
 {
   "data": [
     {
-      "key": "içim yarım yağlı süt 1l",
-      "name": "İçim Yarım Yağlı Süt 1 L",
+      "id": 155498,
+      "family_id": 7296,
+      "name": "Ülker Çikolatalı Gofret 36 g",
       "group": "Markets",
-      "category": "Süt, Kahvaltılık",
+      "category": "Atıştırmalık",
       "store": "Hapeloglu",
-      "stores": ["Hapeloglu", "Kale", "CarrefourSA"],
-      "offer_count": 5,
-      "store_count": 5,
-      "min_price": 55.0,
-      "max_price": 59.75,
-      "max_drop_percent": null,
-      "last_date": "2026-10-17"
+      "stores": ["Hapeloglu", "Kale", "Cagri"],
+      "offer_count": 10,
+      "store_count": 10,
+      "min_price": 13.95,
+      "max_price": 22.0,
+      "max_drop_percent": 16.94,
+      "last_date": "2026-10-22"
     }
   ],
-  "meta": {"query": "süt 1l", "group": null, "store": null, "sort": "relevance", "limit": 1, "offset": 0, "count": 1, "total": 322},
+  "meta": {"query": "", "group": null, "store": null, "family": 7296, "sort": "price_asc", "limit": 1, "offset": 0, "count": 1, "total": 6},
   "errors": []
 }
 ```
 
 ### 4.13 `GET /api/catalog/item`
 
-One item's offers in every store, each with its full price history.
+One item's offers in every store, each with its full price history, plus its pack options and family.
 
 Parameters:
 
-- `key` (`string`, **required**): a `name_key`, as returned in `key` by §4.12. Missing or blank → 400 `key is required`. A key with no products → 404 `not_found` with message `Item not found: <key>` and `meta` `{key}`.
+- `id` (integer ≥ 1, **required**): an item ID, as returned in `id` by §4.12 or `item_id` by §4.14. Missing or blank → 400 `id is required`; not an integer or below 1 → 400 `Invalid id`. An ID with no item → 404 `not_found` with message `Item not found: <id>` and `meta` `{id}`.
 
-`offers` holds **one offer per store** for the products with that `name_key` outside `HousesRent`, **including stale ones** (`is_current: false`): current offers first, then offers that are not case prices, then cheapest first, at most 40 stores (`MAX_ITEM_OFFERS`; up to 400 products are read, `MAX_ITEM_ROWS`). A store's offer is its latest price: of its products, those with the newest `last_date`, and among them the cheapest (a product without a price never wins over a priced one). Each offer is the `products` row plus:
+`offers` holds **one offer per store** for the item's products that are not pack options, **including stale ones** (`is_current: false`): current offers first, then offers that are not case prices, then cheapest first, at most 40 stores (`MAX_ITEM_OFFERS`; up to 400 products are read, `MAX_ITEM_ROWS`). A store's offer is its latest price: of its products, those with the newest `last_date`, and among them the cheapest (a product without a price never wins over a priced one). Each offer is the `products` row plus:
 
 - `retailer`, `group`, `store`: the retailer label and its split.
 - `previous_price`, `price_since`: the price before the latest change and the first day of the current price (see [DATABASE.md](DATABASE.md#catalog-columns)).
 - `is_current`: a boolean.
 - `is_case_price`: a boolean; `true` for stores that sell whole cases while the title describes one item (BizimMarket, `products.is_case_price`).
+- `item_id`: the item's ID; `pack`: items in the package (`1` for offers, more for pack options).
 - `drop_percent`: `(previous_price − latest_price) / previous_price × 100`, rounded to 2 decimals, when the latest change was a drop; else `null`.
 - `history`: every observation as `[date, price]` pairs, oldest first.
-- `other_offers`: the store's other products for the item (another product under the same name, such as a different repair service for the same phone, or an older offer), newest `last_date` first, then cheapest first. Same fields, without `history` and `other_offers`; `[]` when the store has only one.
+- `other_offers`: the store's other products for the item (another listing of the same product, such as a different repair service for the same phone, or an older offer), newest `last_date` first, then cheapest first. Same fields, without `history` and `other_offers`; `[]` when the store has only one.
 
-`name`, `group` and `category` come from the cheapest current offer with a price (else the cheapest priced offer, else the first offer), leaving out case-price offers unless every offer is one. In `summary`, `min_price`/`max_price` span the current offers with a price (all offers with a price when none is current), again without case prices unless every offer is one; `lowest_ever` is the lowest price in the history of those offers, with its date and store, ignoring prices below 25 % (`LOWEST_EVER_FLOOR`) of the lowest current price (`null` when nothing qualifies); `store_count` counts distinct retailers among the returned offers, which equals `offer_count` now that there is one offer per store; `offer_count` and `current_offer_count` count the returned (per-store) offers, so `other_offers` are not counted and `lowest_ever` ignores their histories. `meta` is `{key, offer_count}`.
+`pack_options` lists the item's multipacks (products whose `pack` is larger than the item's smallest current pack), one entry per pack size, smallest first: `pack`, `offers` (one per store, chosen and ordered like `offers`, each with `price_per_package` = `latest_price / pack` rounded to 2 decimals and `other_offers`, without `history`), and `min_price` / `min_price_per_package` of the cheapest current offer with a price that is not a case price (falling back like `summary`; `null` when none has a price). `[]` when the item has no multipacks.
+
+`id`, `match_key` (the item's match key, as used in `data/matching/overrides.json`), `family_id` (`null` when the item is alone in its family) and `family_item_count` (items in the family, `1` when alone; list them with §4.12 `family`) describe the item. `name`, `group` and `category` come from the cheapest current offer with a price (else the cheapest priced offer, else the first offer), leaving out case-price offers unless every offer is one. In `summary`, `min_price`/`max_price` span the current offers with a price (all offers with a price when none is current), again without case prices unless every offer is one; `lowest_ever` is the lowest price in the history of those offers, with its date and store, ignoring prices below 25 % (`LOWEST_EVER_FLOOR`) of the lowest current price (`null` when nothing qualifies); `store_count` counts distinct retailers among the returned offers, which equals `offer_count` now that there is one offer per store; `offer_count` and `current_offer_count` count the returned (per-store) offers, so `other_offers` and `pack_options` are not counted and `lowest_ever` ignores their histories. `meta` is `{id, offer_count}`.
 
 ```json
 {
   "data": {
-    "key": "içim yarım yağlı süt 1l",
-    "name": "İçim Yarım Yağlı Süt 1 L",
+    "id": 155498,
+    "match_key": "ulker|cikolatali gofret|||36g",
+    "family_id": 7296,
+    "family_item_count": 6,
+    "name": "Ülker Çikolatalı Gofret 36 g",
     "group": "Markets",
-    "category": "Kazandıran Ürünler > Süt ve Süt Ürünleri",
+    "category": "Atıştırmalık",
     "offers": [
       {
-        "retailer": "Markets / Kale",
+        "retailer": "Markets / Hapeloglu",
         "group": "Markets",
-        "store": "Kale",
-        "product_id": "13488",
-        "product_name": "İçim Yarım Yağlı Süt 1 L",
-        "name_key": "içim yarım yağlı süt 1l",
-        "category": "Kazandıran Ürünler > Süt ve Süt Ürünleri",
-        "latest_price": 54.5,
-        "previous_price": 59.5,
-        "price_since": "2026-10-19",
-        "first_date": "2026-10-05",
-        "last_date": "2026-10-19",
-        "min_price": 54.5,
-        "max_price": 59.5,
-        "observations_count": 6,
+        "store": "Hapeloglu",
+        "product_id": "7128",
+        "product_name": "Ülker Çikolatalı Gofret 36 g",
+        "name_key": "ülker çikolatalı gofret 36g",
+        "category": "Atıştırmalık",
+        "latest_price": 13.95,
+        "previous_price": 10.0,
+        "price_since": "2026-03-21",
+        "first_date": "2026-02-24",
+        "last_date": "2026-10-22",
+        "min_price": 10.0,
+        "max_price": 13.95,
+        "observations_count": 142,
         "is_current": true,
         "is_case_price": false,
-        "drop_percent": 8.4,
-        "other_offers": [
+        "item_id": 155498,
+        "pack": 1,
+        "drop_percent": null,
+        "other_offers": [],
+        "history": ["…", ["2026-10-21", 13.95], ["2026-10-22", 13.95]]
+      }
+    ],
+    "pack_options": [
+      {
+        "pack": 4,
+        "min_price": 67.5,
+        "min_price_per_package": 16.88,
+        "offers": [
           {
-            "retailer": "Markets / Kale",
+            "retailer": "Markets / A101",
             "group": "Markets",
-            "store": "Kale",
-            "product_id": "İçim Yarım Yağlı Süt 1 L",
-            "product_name": "İçim Yarım Yağlı Süt 1 L",
-            "name_key": "içim yarım yağlı süt 1l",
-            "category": "Uncategorized",
-            "latest_price": 43.9,
-            "previous_price": 52.5,
-            "price_since": "2026-04-10",
-            "first_date": "2026-03-14",
-            "last_date": "2026-04-10",
-            "min_price": 1.0,
-            "max_price": 52.5,
-            "observations_count": 22,
-            "is_current": false,
+            "store": "A101",
+            "product_id": "17002688",
+            "product_name": "Ülker Çikolatalı Gofret 4x36 G",
+            "name_key": "ülker çikolatalı gofret 4x36g",
+            "category": "Atıştırmalık",
+            "latest_price": 67.5,
+            "previous_price": 55.0,
+            "price_since": "2026-08-11",
+            "first_date": "2026-03-13",
+            "last_date": "2026-10-22",
+            "min_price": 55.0,
+            "max_price": 67.5,
+            "observations_count": 113,
+            "is_current": true,
             "is_case_price": false,
-            "drop_percent": 16.38
+            "item_id": 155498,
+            "pack": 4,
+            "drop_percent": null,
+            "price_per_package": 16.88,
+            "other_offers": []
           }
-        ],
-        "history": [["2026-10-05", 59.5], ["2026-10-06", 59.5], "…", ["2026-10-19", 54.5]]
+        ]
       }
     ],
     "summary": {
-      "offer_count": 5,
-      "current_offer_count": 5,
-      "store_count": 5,
-      "min_price": 54.5,
-      "max_price": 59.75,
-      "lowest_ever": {"price": 49.5, "date": "2026-10-02", "store": "Hapeloglu"},
-      "last_date": "2026-10-19"
+      "offer_count": 16,
+      "current_offer_count": 10,
+      "store_count": 16,
+      "min_price": 13.95,
+      "max_price": 22.0,
+      "lowest_ever": {"price": 10.0, "date": "2026-03-12", "store": "Hapeloglu"},
+      "last_date": "2026-10-22"
     }
   },
-  "meta": {"key": "içim yarım yağlı süt 1l", "offer_count": 5},
+  "meta": {"id": 155498, "offer_count": 16},
   "errors": []
 }
 ```
 
-Kale's older listing (last seen 2026-04-10, with a `1.0` scraper error in its history) appears only under `other_offers`, so neither its price nor its history affects `summary`. The 25 % floor drops such scraper errors from the offers that are read.
+The example is shortened to one offer and one pack option. The 25 % floor drops scraper errors (such as a `1.0` price) from the histories that are read.
 
 ### 4.14 `GET /api/catalog/deals`
 
@@ -583,7 +606,7 @@ Parameters:
 - `days` (integer 1–365, default 30): the drop must have happened within this many days of the offer's last observation (`price_since` on or after `last_date` − `days`).
 - `limit` (integer 1–60, default 24).
 
-Out of range or not an integer → 400 `Invalid <name>` (not clamped). Drops above 80 % (`MAX_DEAL_DROP_PERCENT`, also the `min_drop` maximum) are ignored as likely scraper or unit errors, and case-price offers (`is_case_price`) are never deals.
+Out of range or not an integer → 400 `Invalid <name>` (not clamped). Drops above 80 % (`MAX_DEAL_DROP_PERCENT`, also the `min_drop` maximum) are ignored as likely scraper or unit errors, case-price offers (`is_case_price`) are never deals, and only offers that belong to an item (`item_id`, link with §4.13) are listed; pack options can be deals (`pack` > 1).
 
 `data` is a list of offers shaped as in §4.13 **without** `history` and `other_offers`. `meta` echoes `group`, `store`, `min_drop`, `days`, `limit` and adds `count`.
 
@@ -608,6 +631,8 @@ Out of range or not an integer → 400 `Invalid <name>` (not clamped). Drops abo
       "observations_count": 80,
       "is_current": true,
       "is_case_price": false,
+      "item_id": 295247,
+      "pack": 1,
       "drop_percent": 80.0
     }
   ],
@@ -632,7 +657,7 @@ Applies to the successful (200) responses of every endpoint except `/api/health`
 
 ## 6. TypeScript types (`frontend/src/lib/types/api.ts`)
 
-This section mirrors `frontend/src/lib/types/api.ts` as of 2026-10-18. The file in the repository is the source; if they differ, update this copy.
+This section mirrors `frontend/src/lib/types/api.ts` as of 2026-10-23. The file in the repository is the source; if they differ, update this copy.
 
 ### 6.1 Differences between client types and server output
 
@@ -649,7 +674,9 @@ The client types are not a complete or exact model of the server. Known differen
 | `CommonFilterMeta.warnings?`, `history_row_count?`, `skipped_file_count?` | Optional in the type, but always sent by the four filter endpoints. |
 | *(none)* `meta` types for `/api/catalog/groups`, `/api/catalog/item`, `/api/catalog/deals` | Only `/api/catalog/search` has a `meta` type (`CatalogSearchMeta`); the SPA does not read the other catalog `meta` objects. Their shapes are in §4.11, §4.13 and §4.14. |
 | `CatalogOffer.history?` | Sent by `/api/catalog/item` only; `/api/catalog/deals` offers have no `history`. |
-| `CatalogOffer.other_offers?` | Always sent on `/api/catalog/item` offers (`[]` when the store has one product); never on deals, and the nested offers carry neither `history` nor `other_offers`. |
+| `CatalogOffer.other_offers?` | Always sent on `/api/catalog/item` offers and pack-option offers (`[]` when the store has one product); never on deals, and the nested offers carry neither `history` nor `other_offers`. |
+| `CatalogOffer.price_per_package?` | Sent only on `/api/catalog/item` `pack_options` offers (and their `other_offers`). |
+| `CatalogOffer.item_id: number \| null` | Never `null` on `/api/catalog/*` responses: item offers, pack options and deals all belong to an item. |
 
 ### 6.2 `api.ts`
 
@@ -1011,9 +1038,10 @@ export interface CatalogGroup {
 /** Sort orders accepted by `GET /api/catalog/search`. */
 export type CatalogSort = 'relevance' | 'price_asc' | 'price_desc' | 'drop';
 
-/** One item (all offers sharing a `name_key`) of `GET /api/catalog/search`. */
+/** One item (all offers sharing an item ID, one match key) of `GET /api/catalog/search`. */
 export interface CatalogSearchItem {
-  key: string;
+  id: number; // permanent item ID: `GET /api/catalog/item?id=`
+  family_id: number | null; // family of 2+ sizes: `GET /api/catalog/search?family=`
   name: string; // name of the cheapest offer
   group: string;
   category: string;
@@ -1032,6 +1060,7 @@ export interface CatalogSearchMeta {
   query: string;
   group: string | null;
   store: string | null;
+  family: number | null;
   sort: CatalogSort;
   limit: number;
   offset: number;
@@ -1059,19 +1088,35 @@ export interface CatalogOffer {
   is_current: boolean;
   /** The store sells whole cases (koli); never counted as the item's lowest price. */
   is_case_price: boolean;
+  item_id: number | null; // the catalog item this offer belongs to
+  pack: number; // items in the package (6 for a 6 x 1 L multipack)
   drop_percent: number | null;
+  /** `pack_options` offers only: `latest_price / pack`. */
+  price_per_package?: number | null;
   history?: [string, number][]; // `GET /api/catalog/item` only
   /** `GET /api/catalog/item` only: the store's other offers for the item, without `history`. */
   other_offers?: CatalogOffer[];
 }
 
+/** Multipacks of an item with one pack size (`pack_options` of `GET /api/catalog/item`). */
+export interface CatalogPackOption {
+  pack: number;
+  min_price: number | null;
+  min_price_per_package: number | null;
+  offers: CatalogOffer[]; // one per store, with `price_per_package`, without `history`
+}
+
 /** `data` of `GET /api/catalog/item`. */
 export interface CatalogItem {
-  key: string;
+  id: number;
+  match_key: string;
+  family_id: number | null;
+  family_item_count: number;
   name: string;
   group: string;
   category: string;
   offers: CatalogOffer[];
+  pack_options: CatalogPackOption[];
   summary: {
     offer_count: number;
     current_offer_count: number;
@@ -1128,6 +1173,14 @@ See [TESTING.md](TESTING.md).
 ## 9. Changes
 
 Client-visible changes per contract version, newest first. The repository-wide change history is in [docs/README.md](README.md#change-history).
+
+### 3.0.0 (2026-10-23)
+
+- **Breaking:** catalog items are identified by permanent numeric IDs instead of `name_key`. `/api/catalog/search` items have `id` and `family_id` instead of `key`; `/api/catalog/item` takes `id` (required integer; missing → 400 `id is required`, invalid → 400 `Invalid id`, unknown → 404 `Item not found: <id>` with `meta` `{id}`) instead of `key`, and its `data` and `meta` have `id` instead of `key` ([§4.12](#412-get-apicatalogsearch), [§4.13](#413-get-apicatalogitem)).
+- Items group store products by match key (brand, words, code, variant and size per item, cimri's rules) instead of identical `name_key`, so more items have several stores; IDs stay the same across rebuilds (`data/matching/ids.json`) ([DATABASE.md § Items, families and pack options](DATABASE.md#items-families-and-pack-options)).
+- Multipacks of an item are no longer separate items or offers but `pack_options` of `/api/catalog/item`, with `price_per_package`; `/api/catalog/item` also returns `match_key`, `family_id` and `family_item_count`, and `/api/catalog/search` takes a new `family` parameter (echoed in `meta.family`) ([§4.12](#412-get-apicatalogsearch), [§4.13](#413-get-apicatalogitem)).
+- Offers (item, pack options and deals) have new fields `item_id` and `pack`; deals list only offers that belong to an item ([§4.14](#414-get-apicatalogdeals)).
+- `database_outdated` also covers databases built without `products.item_id`, `pack`, `is_pack_option` or the `items` table ([§2.3](#23-error-codes-and-status)).
 
 ### 2.5.0 (2026-10-23)
 

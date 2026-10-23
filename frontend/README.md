@@ -26,12 +26,12 @@ Install, run and build commands are in [docs/GETTING-STARTED.md](../docs/GETTING
 |---|---|---|---|
 | `/` | `routes/(shop)/+page.svelte` | Shop home: deal rail, popular items of the four largest groups, popular stores | `/api/catalog/deals`, `/api/catalog/search`, `/api/catalog/groups` |
 | `/ara` | `routes/(shop)/ara/+page.svelte` | Search with group/store filters, sort and paging; URL params `q`, `group`, `store`, `sort`, `sayfa` (page, 24 items each) | `/api/catalog/search` |
-| `/urun/[key]` | `routes/(shop)/urun/[key]/+page.svelte` | Item comparison: one offer per store, cheapest first (the store's `other_offers` expandable under it), stale offers collapsed, per-store price-history chart (1 month / 3 months / all), similar items, price alarm form | `/api/catalog/item`, `/api/catalog/search` |
+| `/urun/[key]` | `routes/(shop)/urun/[key]/+page.svelte` | Item comparison: one offer per store, cheapest first (the store's `other_offers` expandable under it), stale offers collapsed, pack options with the price per package, per-store price-history chart (1 month / 3 months / all), other sizes (the item's family), similar items, price alarm form | `/api/catalog/item`, `/api/catalog/search` |
 | `/firsatlar` | `routes/(shop)/firsatlar/+page.svelte` | Deals: filter by group, minimum drop and period | `/api/catalog/deals` |
 | `/alarmlar` | `routes/(shop)/alarmlar/+page.svelte` | Price alarms with each item's current lowest price | `/api/catalog/item` |
 | `/analiz` | `routes/analiz/+page.svelte` | Inflation dashboard (the five views below) | see below |
 
-`(shop)` is a SvelteKit layout group: it adds `SiteHeader` and the shop footer without a URL segment. `[key]` is an item's `name_key`, URL-encoded (`itemHref` in `src/lib/catalog.ts`).
+`(shop)` is a SvelteKit layout group: it adds `SiteHeader` and the shop footer without a URL segment. `[key]` is `<slug>,<id>`: a slug of the item's name and its permanent item ID (`itemHref` / `itemIdFromParam` in `src/lib/catalog.ts`); only the ID is read, cimri-style (`/urun/pinar-sut-1-l,123`).
 
 > **Changed 2026-10-18:** the dashboard moved from `/` to `/analiz` and the shop took over `/`; previously the dashboard was the site root. See [change history](../docs/README.md#change-history).
 
@@ -57,7 +57,7 @@ User-facing behaviour is described in [docs/USER_GUIDE.md](../docs/USER_GUIDE.md
 - **Theme:** `src/lib/themes.svelte.ts` stores `auto | light | dark` in `localStorage` (`inflation-dashboard-theme`); `auto` follows `prefers-color-scheme`.
 - **Search:** `src/lib/utils/search.ts` normalizes Turkish characters and ranks prefix, substring and fuzzy matches.
 - **Catalog groups:** `src/lib/stores/catalog.svelte.ts` loads `/api/catalog/groups` once per page load and shares it between the shop header, footer and pages.
-- **Price alarms:** `src/lib/stores/alarms.svelte.ts` keeps `{key, name, target, priceWhenSet, createdAt}` entries in `localStorage` (`price-alarms`). Nothing is sent to the API, which stays read-only.
+- **Price alarms:** `src/lib/stores/alarms.svelte.ts` keeps `{id, name, target, priceWhenSet, createdAt}` entries (`id`: the item ID) in `localStorage` (`price-alarms`); entries without a numeric `id`, saved before item IDs, are dropped on load. Nothing is sent to the API, which stays read-only.
 
 ## Source layout
 

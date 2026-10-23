@@ -1,0 +1,5 @@
+{
+  "description": "Manual matching corrections applied after the match keys are built (inflation_dashboard.domain.matching.Overrides). merge: products whose match key is listed in keys join the item of into. split: one store product leaves its item, into its own item or the item of the match key into. Format: docs/DATA_CONTRACT.md#matching-data-datamatching.",
+  "merge": [],
+  "split": []
+}

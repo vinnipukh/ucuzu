@@ -6,7 +6,7 @@
   import Icon from '$lib/components/Icon.svelte';
   import ProductCard from '$lib/components/ProductCard.svelte';
   import Spinner from '$lib/components/Spinner.svelte';
-  import { formatDayTR, formatTL, groupLabel, hueOf, itemHref, monogram, searchHref } from '$lib/catalog';
+  import { formatDayTR, formatTL, groupLabel, hueOf, itemHref, itemIdFromParam, monogram, searchHref } from '$lib/catalog';
   import { alarmFor, removeAlarm, setAlarm } from '$lib/stores/alarms.svelte';
   import { AsyncResource } from '$lib/utils/async.svelte';
   import { baseChartOption, getChartTheme } from '$lib/utils/chartTheme.svelte';
@@ -17,32 +17,43 @@
 
   const item = new AsyncResource<CatalogItem>();
   let similar = $state<CatalogSearchItem[]>([]);
+  let sizes = $state<CatalogSearchItem[]>([]);
   let range = $state<Range>(90);
   let alarmFormOpen = $state(false);
   let target = $state<number | null>(null);
 
-  const key = $derived(page.params.key ?? '');
+  // The route segment is `<slug>,<id>`; only the ID matters.
+  const id = $derived(itemIdFromParam(page.params.key ?? ''));
   const data = $derived(item.value);
   const current = $derived(data?.offers.filter((o) => o.is_current) ?? []);
   const stale = $derived(data?.offers.filter((o) => !o.is_current) ?? []);
   const best = $derived(current[0] ?? data?.offers[0]);
-  const alarm = $derived(alarmFor(key));
-  const hue = $derived(hueOf(data?.name ?? key));
+  const alarm = $derived(id === null ? undefined : alarmFor(id));
+  const hue = $derived(hueOf(data?.name ?? String(id)));
 
   $effect(() => {
-    const k = key;
+    const itemId = id;
     alarmFormOpen = false;
     similar = [];
-    void item.run(() => fetchApi<CatalogItem>('/api/catalog/item', { key: k }));
+    sizes = [];
+    void item.run(() => fetchApi<CatalogItem>('/api/catalog/item', { id: itemId ?? '' }));
   });
 
   // "Similar" = same first two words, same group.
   $effect(() => {
     if (!data) return;
-    const words = data.key.split(' ').slice(0, 2).join(' ');
+    const words = data.name.split(/\s+/).slice(0, 2).join(' ');
     fetchApi<CatalogSearchItem[]>('/api/catalog/search', { q: words, group: data.group, limit: 7 })
-      .then((r) => (similar = r.data.filter((s) => s.key !== data.key).slice(0, 6)))
+      .then((r) => (similar = r.data.filter((s) => s.id !== data.id && s.family_id !== data.family_id).slice(0, 6)))
       .catch(() => (similar = []));
+  });
+
+  // Other sizes of the same product (its family).
+  $effect(() => {
+    if (!data?.family_id) return;
+    fetchApi<CatalogSearchItem[]>('/api/catalog/search', { family: data.family_id, sort: 'price_asc', limit: 24 })
+      .then((r) => (sizes = r.data.filter((s) => s.id !== data.id)))
+      .catch(() => (sizes = []));
   });
 
   function openAlarmForm(): void {
@@ -54,7 +65,7 @@
   function saveAlarm(event: SubmitEvent): void {
     event.preventDefault();
     if (!data || !target || target <= 0) return;
-    setAlarm(data.key, data.name, target, data.summary.min_price);
+    setAlarm(data.id, data.name, target, data.summary.min_price);
     alarmFormOpen = false;
   }
 
@@ -201,7 +212,7 @@
           <p class="alarm-set">
             <Icon name="bell" size={18} /> Alarm kurulu: {formatTL(alarm.target)} altı
             <button class="link" type="button" onclick={openAlarmForm}>Değiştir</button>
-            <button class="link" type="button" onclick={() => removeAlarm(data.key)}>Kaldır</button>
+            <button class="link" type="button" onclick={() => removeAlarm(data.id)}>Kaldır</button>
           </p>
         {:else}
           <button class="primary" type="button" onclick={openAlarmForm}>
@@ -259,6 +270,28 @@
     {/if}
   </section>
 
+  {#if data.pack_options.length}
+    <section class="block">
+      <h2>Paket seçenekleri</h2>
+      <ol class="offers">
+        {#each data.pack_options as option (option.pack)}
+          {#each option.offers as offer (offer.retailer + offer.product_id)}
+            <li>
+              <div class="offer-store">
+                <strong>{option.pack} adetlik paket · {offer.store}</strong>
+                <span class="muted">{offer.product_name}</span>
+              </div>
+              <div class="offer-change muted">
+                {#if offer.is_current}paket başı {formatTL(offer.price_per_package)}{:else}son görülme {formatDayTR(offer.last_date)}{/if}
+              </div>
+              <div class="offer-price"><strong>{formatTL(offer.latest_price)}</strong></div>
+            </li>
+          {/each}
+        {/each}
+      </ol>
+    </section>
+  {/if}
+
   <section class="block">
     <div class="section-head">
       <h2>Fiyat geçmişi</h2>
@@ -271,13 +304,31 @@
     <Chart option={chartOption} height={340} ariaLabel={`${data.name} mağaza fiyat geçmişi`} />
   </section>
 
+  {#if sizes.length}
+    <section class="block">
+      <div class="section-head"><h2>Diğer boyutlar</h2></div>
+      <div class="product-grid six">
+        {#each sizes as s (s.id)}
+          <ProductCard
+            href={itemHref(s.id, s.name)}
+            name={s.name}
+            group={s.group}
+            price={s.min_price}
+            priceLabel={s.store_count > 1 ? 'en ucuz' : undefined}
+            storeLine={s.store_count > 1 ? `${s.store_count} mağazada` : s.store}
+          />
+        {/each}
+      </div>
+    </section>
+  {/if}
+
   {#if similar.length}
     <section class="block">
       <div class="section-head"><h2>Benzer ürünler</h2></div>
       <div class="product-grid six">
-        {#each similar as s (s.key)}
+        {#each similar as s (s.id)}
           <ProductCard
-            href={itemHref(s.key)}
+            href={itemHref(s.id, s.name)}
             name={s.name}
             group={s.group}
             price={s.min_price}

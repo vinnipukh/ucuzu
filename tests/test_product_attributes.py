@@ -40,6 +40,9 @@ SIZES = [
     ("Doğuş Demlik Early Grey Demlik Poşet Çay 3,2 g 100 Adet", 3.2, "g", 100, KIND_CONTENTS),
     ("İnişdibi Maden Suyu (6*200) Ml", 200, "ml", 6, KIND_CONTENTS),
     ("Freshmaker Islak Mendil Meyveli 3X15 li", 15, "adet", 3, KIND_CONTENTS),
+    # "x N Paket": the whole title N times over
+    ("Sleepy Sensitive Islak Havlu 90'lı x12 Paket 1080 Yaprak", 90, "adet", 12, KIND_CONTENTS),
+    ("Selpak Tuvalet Kağıdı 32'li 2 Paket", 32, "adet", 2, KIND_CONTENTS),
     # a count before the size, or a large count, is pieces inside: the size is the total
     ("Doğuş Detox Karışık Bitki Çayı 20'li 30G", 30, "g", 1, KIND_CONTENTS),
     ("Mgs Küp Şeker 405 Li 1 Kg", 1000, "g", 1, KIND_CONTENTS),
@@ -143,6 +146,8 @@ ATTRIBUTES = [
     ("Pınar Organik Süt Uht 200 ml", "organic"),
     ("Pınar Organik Süt Uht 200 ml", "uht"),
     ("Uludağ Gazoz Cam 250 ml", "pack=glass"),
+    ("Coca-Cola Zero Sugar 1 L", "zero"),
+    ("Coca-Cola Light 1 L", "light"),
     ("Sütaş Ayran %1,5 Yağlı 1 L", "pct=1.5"),
     ("Sleepy Natural Double Soft 4 No 7-14 Kg 52'li", "range=7-14kg"),
 ]

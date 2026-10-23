@@ -11,25 +11,25 @@
     error: boolean;
   }
 
-  let status = $state<Record<string, Status>>({});
+  let status = $state<Record<number, Status>>({});
 
   // Fetch each alarm's current lowest price once.
   $effect(() => {
     for (const alarm of alarms.list) {
-      if (status[alarm.key]) continue;
-      status[alarm.key] = { price: null, store: null, error: false };
-      fetchApi<CatalogItem>('/api/catalog/item', { key: alarm.key })
+      if (status[alarm.id]) continue;
+      status[alarm.id] = { price: null, store: null, error: false };
+      fetchApi<CatalogItem>('/api/catalog/item', { id: alarm.id })
         .then((r) => {
           const best = r.data.offers.find((o) => o.is_current) ?? null;
-          status[alarm.key] = { price: r.data.summary.min_price, store: best?.store ?? null, error: false };
+          status[alarm.id] = { price: r.data.summary.min_price, store: best?.store ?? null, error: false };
         })
-        .catch(() => (status[alarm.key] = { price: null, store: null, error: true }));
+        .catch(() => (status[alarm.id] = { price: null, store: null, error: true }));
     }
   });
 
   const reached = $derived(
     alarms.list.filter((a) => {
-      const price = status[a.key]?.price;
+      const price = status[a.id]?.price;
       return price !== null && price !== undefined && price <= a.target;
     }).length
   );
@@ -58,12 +58,12 @@
     <p class="banner"><Icon name="bell" size={18} /> {reached} ürün hedef fiyatınıza indi.</p>
   {/if}
   <ul class="list">
-    {#each alarms.list as alarm (alarm.key)}
-      {@const s = status[alarm.key]}
+    {#each alarms.list as alarm (alarm.id)}
+      {@const s = status[alarm.id]}
       {@const hit = s?.price != null && s.price <= alarm.target}
       <li class:hit>
         <div class="name">
-          <a href={itemHref(alarm.key)}>{alarm.name}</a>
+          <a href={itemHref(alarm.id, alarm.name)}>{alarm.name}</a>
           <span class="muted">Kuruldu: {formatDayTR(alarm.createdAt)} · o günkü fiyat {formatTL(alarm.priceWhenSet)}</span>
         </div>
         <div class="num">
@@ -84,7 +84,7 @@
         <div class="state">
           {#if hit}<span class="tag">Hedefe ulaştı</span>{:else if s && !s.error}<span class="muted">Bekleniyor</span>{/if}
         </div>
-        <button type="button" class="remove" aria-label={`${alarm.name} alarmını kaldır`} onclick={() => removeAlarm(alarm.key)}>
+        <button type="button" class="remove" aria-label={`${alarm.name} alarmını kaldır`} onclick={() => removeAlarm(alarm.id)}>
           <Icon name="x" size={18} />
         </button>
       </li>

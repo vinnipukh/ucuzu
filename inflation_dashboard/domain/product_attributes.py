@@ -14,8 +14,8 @@ Rules (``docs/DATABASE.md`` has the user-facing summary):
   in small units (``1.440 ml``, ``1,850 ml``); ``800 + 250 g`` and ``120 g/115 g``
   are summed. When there are several sizes the last one wins; a wash count beats a
   volume (detergents are priced per wash).
-* ``6x200 ml`` / ``200 ml x 6`` and a count *after* the size (``200 ml 6'lı``,
-  ``24'lü Koli``) are multipacks (``pack``). A count *before* the size
+* ``6x200 ml`` / ``200 ml x 6``, a count *after* the size (``200 ml 6'lı``,
+  ``24'lü Koli``) and ``x 2 Paket`` are multipacks (``pack``). A count *before* the size
   (``20'li 30 g`` tea bags) or above ``MAX_PACK`` is the number of pieces inside
   (``pieces``); the size is then the total. A count with no size is the size
   itself in pieces (``Yumurta 30'lu`` → 30 adet).
@@ -86,6 +86,8 @@ _BARE_ADET = re.compile(r"(?<![\d.,]\s)(?<![\d.,])\badet\b")
 _ONE_ADET = re.compile(r"(?<![\d.,])\b1\s*(?:adet|ad)\b")
 _FRACTION = re.compile(r"(?<![\d.,])1\s*/\s*([24])(?=\s*(?:kg|kilo|lt|l|litre)\b)")
 _CASE_NOTE = re.compile(r"\(\s*1\s*/\s*\d+\s*\)")
+# "50'li x 12 Paket", "2 Paket": the whole title is sold N times over ("1+2 Paketi" is a plan name).
+_PAKET = re.compile(r"(?<![a-z0-9+])(?:[x*]\s*)?(?P<pack>\d{1,2})\s*(?:paket|pk)(?![a-z0-9])")
 _PERCENT = re.compile(rf"%\s*(?P<a>{_NUM})|(?P<b>{_NUM})\s*%")
 _RANGE = re.compile(
     rf"{_LEAD}(?P<a>{_NUM})\s*(?:-|/(?=\s*\d{{2}}))\s*(?P<b>{_NUM})\s*"
@@ -148,7 +150,8 @@ _ATTRIBUTE_RULES: tuple[tuple[re.Pattern[str], str], ...] = tuple(
         (r"\btuzsuz\b", "salt_free"),
         (r"\bkafeinsiz\b", "decaf"),
         (r"\bilave\s*sekersiz\b", "no_added_sugar"),
-        (r"\bdiyet\b|\bdiet\b|\blight\b|\bzero\b", "light"),
+        (r"\bdiyet\b|\bdiet\b|\blight\b", "light"),
+        (r"\bzero\b", "zero"),
         (r"\borganik\b", "organic"),
         (r"\buht\b", "uht"),
         (r"\bpastorize\b", "pasteurised"),
@@ -258,6 +261,10 @@ def parse(name: str, brands: frozenset[tuple[str, ...]] = frozenset(), brand_hin
     text = _GLUED.sub(" ", _CASE_NOTE.sub(" ", text))
     text = _FRACTION.sub(lambda match: "0.5" if match[1] == "2" else "0.25", text)  # 1/2 kg
     text = _NOISE_PHRASES.sub(" ", text)
+    times = 1
+    if (paket := _PAKET.search(text)) and 1 < int(paket["pack"]) <= MAX_PACK:
+        times = int(paket["pack"])
+        text = _cut(text, paket.start(), paket.end())
 
     for match in _PERCENT.finditer(text):
         attrs.add(f"pct={_short(float((match['a'] or match['b']).replace(',', '.')))}")
@@ -338,6 +345,10 @@ def parse(name: str, brands: frozenset[tuple[str, ...]] = frozenset(), brand_hin
             unit, amount = "g", 1000.0
         elif one_piece or _BARE_ADET.search(text):
             unit, amount = "adet", 1.0
+    if times > 1:
+        if pieces and amount and pieces == amount * times:
+            pieces = None  # "90'lı x12 Paket 1080 Yaprak": 1080 is the package total
+        pack *= times
 
     kind = None
     if amount is not None or washes:
@@ -408,12 +419,20 @@ def unit_price(parsed: ParsedName, price: float | None) -> tuple[float, str] | N
     is missing or not positive, the title has no contents size, or the size is a
     capacity/dimension.
     """
-    if price is None or not price > 0 or parsed.kind != KIND_CONTENTS:
+    basis = unit_basis(parsed)
+    if price is None or not price > 0 or basis is None:
+        return None
+    return price / basis[0], basis[1]
+
+
+def unit_basis(parsed: ParsedName) -> tuple[float, str] | None:
+    """What a package price is divided by for :func:`unit_price`: ``(amount, unit)`` or ``None``."""
+    if parsed.kind != KIND_CONTENTS:
         return None
     washes = next((int(a.split("=", 1)[1]) for a in parsed.attrs if a.startswith("washes=")), None)
     if washes:
-        return price / washes, "yikama"
+        return float(washes), "yikama"
     total = parsed.total_amount
     if not total or parsed.unit is None:
         return None
-    return price / total, parsed.unit
+    return total, parsed.unit

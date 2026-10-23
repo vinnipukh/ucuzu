@@ -5,7 +5,7 @@
 
 /** One price alarm on a catalog item. */
 export interface PriceAlarm {
-  key: string;
+  id: number; // catalog item ID
   name: string;
   target: number;
   priceWhenSet: number | null;
@@ -17,7 +17,8 @@ const STORAGE_KEY = 'price-alarms';
 function load(): PriceAlarm[] {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-    return Array.isArray(parsed) ? parsed : [];
+    // Alarms saved before item IDs (keyed by name) no longer resolve.
+    return Array.isArray(parsed) ? parsed.filter((alarm) => typeof alarm?.id === 'number') : [];
   } catch {
     return [];
   }
@@ -34,20 +35,20 @@ function save(): void {
 /** Reactive alarm list, loaded once from localStorage. */
 export const alarms = $state({ list: typeof localStorage === 'undefined' ? [] : load() });
 
-/** The alarm for `key`, if any. */
-export function alarmFor(key: string): PriceAlarm | undefined {
-  return alarms.list.find((alarm) => alarm.key === key);
+/** The alarm for item `id`, if any. */
+export function alarmFor(id: number): PriceAlarm | undefined {
+  return alarms.list.find((alarm) => alarm.id === id);
 }
 
 /** Create or replace the alarm for an item. */
-export function setAlarm(key: string, name: string, target: number, priceWhenSet: number | null): void {
-  const alarm: PriceAlarm = { key, name, target, priceWhenSet, createdAt: new Date().toISOString() };
-  alarms.list = [alarm, ...alarms.list.filter((a) => a.key !== key)];
+export function setAlarm(id: number, name: string, target: number, priceWhenSet: number | null): void {
+  const alarm: PriceAlarm = { id, name, target, priceWhenSet, createdAt: new Date().toISOString() };
+  alarms.list = [alarm, ...alarms.list.filter((a) => a.id !== id)];
   save();
 }
 
 /** Delete the alarm for an item. */
-export function removeAlarm(key: string): void {
-  alarms.list = alarms.list.filter((a) => a.key !== key);
+export function removeAlarm(id: number): void {
+  alarms.list = alarms.list.filter((a) => a.id !== id);
   save();
 }

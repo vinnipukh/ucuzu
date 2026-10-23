@@ -290,14 +290,20 @@ def run_endpoint_smoke() -> None:
 
 
 def _assert_catalog(client: Any) -> None:
-    """Catalog routes: groups, a search, the first hit's item page, deals and a bad sort (400)."""
+    """Catalog routes: groups, a search, the first hit's item page and family, deals and a bad sort (400)."""
     groups = _get(client, "/api/catalog/groups")
     assert isinstance(groups["data"], list), "catalog groups data must be an array"
     search = _get(client, "/api/catalog/search?q=s%C3%BCt&limit=3")
     assert isinstance(search["data"], list) and "total" in search["meta"], "catalog search shape mismatch"
     if search["data"]:
-        item = _get(client, f"/api/catalog/item?key={quote(search['data'][0]['key'], safe='')}")
-        assert {"offers", "summary"} <= set(item["data"]), "catalog item keys missing"
+        first = search["data"][0]
+        item = _get(client, f"/api/catalog/item?id={first['id']}")
+        assert {"id", "offers", "summary", "pack_options", "family_id"} <= set(item["data"]), "catalog item keys missing"
+        if first["family_id"] is not None:
+            family = _get(client, f"/api/catalog/search?family={first['family_id']}")
+            assert first["id"] in {i["id"] for i in family["data"]}, "catalog family search misses its item"
+    missing = _get(client, "/api/catalog/item", expected_status="400 Bad Request")
+    assert missing["errors"][0].get("code") == "invalid_filter", "catalog item without id must be a 400"
     deals = _get(client, "/api/catalog/deals?limit=3")
     assert isinstance(deals["data"], list), "catalog deals data must be an array"
     bad = _get(client, "/api/catalog/search?sort=__bad__", expected_status="400 Bad Request")
