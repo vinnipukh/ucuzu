@@ -3,7 +3,9 @@
 A catalog *item* is every product row that shares one ``products.name_key``
 (see ``inflation_dashboard.domain.catalog``); each row is one store's *offer*.
 Searches, listings and deals read only current offers (``is_current = 1``) from
-retailers outside ``CATALOG_EXCLUDED_GROUPS``. Connections come from
+retailers outside ``CATALOG_EXCLUDED_GROUPS``. Case prices (``products.is_case_price``,
+a whole case where the title describes one item) never count as an item's lowest
+price while another offer exists, and never appear as deals. Connections come from
 ``sqlite_price_repository`` (read-only, one per thread).
 """
 
@@ -55,7 +57,7 @@ def _retailers(conn: Any) -> dict[int, tuple[str, str, str]]:
     if cached is not None and now - cached[0] <= _CACHE_TTL_SECONDS:
         return cached[1]
     columns = {row[1] for row in conn.execute("PRAGMA table_info(products)")}
-    if not {"name_key", "previous_price", "price_since", "is_current", "is_store_latest"} <= columns:
+    if not {"name_key", "previous_price", "price_since", "is_current", "is_store_latest", "is_case_price"} <= columns:
         raise CatalogSchemaError("Database predates the catalog; run scripts/build_database.py")
     table = {
         retailer_key: (name, *split_retailer(name))
@@ -91,6 +93,7 @@ def _offer(row: dict[str, Any], table: dict[int, tuple[str, str, str]]) -> dict[
         "store": store,
         **row,
         "is_current": bool(row.get("is_current")),
+        "is_case_price": bool(row.get("is_case_price")),
         "drop_percent": round(drop, 2) if drop is not None else None,
     }
 
@@ -98,7 +101,7 @@ def _offer(row: dict[str, Any], table: dict[int, tuple[str, str, str]]) -> dict[
 _OFFER_COLUMNS = """
     p.product_key, p.retailer_key, p.product_id, p.product_name, p.name_key, c.name AS category,
     p.latest_price, p.previous_price, p.price_since, p.first_date, p.last_date,
-    p.min_price, p.max_price, p.observations_count, p.is_current
+    p.min_price, p.max_price, p.observations_count, p.is_current, p.is_case_price
 """
 
 
@@ -140,15 +143,16 @@ def search_items(
     Every normalized query term must occur in the item's ``name_key``. Items
     aggregate the current offers of the selected group/store, counting only each
     store's offers on its newest date for the item (``is_store_latest``): lowest and highest
-    price, offer and store counts and the largest current price drop. Each item
-    names its cheapest offer (``name``, ``store``, ``category``) and up to three
-    stores. ``relevance`` ranks by the number of query terms that match whole
+    price (of offers that are not case prices, unless all are), offer and store counts
+    and the largest current price drop. Each item names its cheapest offer (``name``,
+    ``store``, ``category``; case prices last) and up to three stores. Price sorts put
+    items with only case prices last. ``relevance`` ranks by the number of query terms that match whole
     words, then store count, then shorter names.
     """
     order_by = {
         "relevance": "word_hits DESC, store_count DESC, length(p.name_key) ASC, p.name_key",
-        "price_asc": "min_price ASC, p.name_key",
-        "price_desc": "min_price DESC, p.name_key",
+        "price_asc": "case_only ASC, min_price ASC, p.name_key",
+        "price_desc": "case_only ASC, min_price DESC, p.name_key",
         "drop": "max_drop DESC NULLS LAST, store_count DESC, p.name_key",
     }[sort]
     terms = search_terms(query)
@@ -175,7 +179,9 @@ def search_items(
         rows = conn.execute(
             f"""
             SELECT p.name_key, count(*) AS offer_count, count(DISTINCT p.retailer_key) AS store_count,
-                   min(p.latest_price) AS min_price, max(p.latest_price) AS max_price,
+                   coalesce(min(CASE WHEN p.is_case_price = 0 THEN p.latest_price END), min(p.latest_price)) AS min_price,
+                   coalesce(max(CASE WHEN p.is_case_price = 0 THEN p.latest_price END), max(p.latest_price)) AS max_price,
+                   min(p.is_case_price) AS case_only,
                    max(CASE WHEN p.previous_price > p.latest_price THEN {_DROP_PERCENT_SQL} END) AS max_drop,
                    max(p.last_date) AS last_date, max({word_hits}) AS word_hits, count(*) OVER () AS total
             FROM products AS p
@@ -196,7 +202,7 @@ def search_items(
             WHERE p.name_key IN ({','.join('?' * len(page_keys))})
               AND p.retailer_key IN ({','.join('?' * len(keys))})
               AND p.is_current = 1 AND p.is_store_latest = 1 AND p.latest_price > 0
-            ORDER BY p.latest_price ASC
+            ORDER BY p.is_case_price ASC, p.latest_price ASC
             """,
             (*page_keys, *keys),
         ).fetchall()
@@ -213,7 +219,7 @@ def search_items(
             names.append(store_name)
 
     items = []
-    for key, offer_count, store_count, min_price, max_price, max_drop, last_date, _, _ in rows:
+    for key, offer_count, store_count, min_price, max_price, _, max_drop, last_date, _, _ in rows:
         retailer_key, product_name, category = cheapest[key]
         _, item_group, item_store = table[retailer_key]
         items.append(
@@ -263,11 +269,12 @@ def get_item(key: str) -> dict[str, Any] | None:
 
     Each store shows its latest price: its cheapest offer on its newest date, with
     the store's other offers in ``other_offers`` (see ``_store_offers``). Offers are
-    current first, then cheapest first (at most ``MAX_ITEM_OFFERS`` stores); each
-    carries ``history`` as ``[[date, price], ...]``. ``summary`` covers the current
-    offers (falling back to all offers when none is current) and the lowest price
-    ever observed for the item, ignoring prices below ``LOWEST_EVER_FLOOR`` of the
-    lowest current price.
+    current first, then case prices last, then cheapest first (at most
+    ``MAX_ITEM_OFFERS`` stores); each carries ``history`` as ``[[date, price], ...]``.
+    ``summary`` covers the current offers (falling back to all offers when none is
+    current), leaving out case prices unless every offer is one, and the lowest price
+    ever observed for the item among those offers, ignoring prices below
+    ``LOWEST_EVER_FLOOR`` of the lowest current price.
     """
     conn = get_reusable_connection()
     try:
@@ -278,7 +285,7 @@ def get_item(key: str) -> dict[str, Any] | None:
             SELECT {_OFFER_COLUMNS}
             FROM products AS p JOIN categories AS c ON c.category_key = p.category_key
             WHERE p.name_key = ? AND p.retailer_key NOT IN ({','.join('?' * len(excluded))})
-            ORDER BY p.is_current DESC, p.latest_price ASC
+            ORDER BY p.is_current DESC, p.is_case_price ASC, p.latest_price ASC
             LIMIT ?
             """,
             (key, *excluded, MAX_ITEM_ROWS),
@@ -296,6 +303,7 @@ def get_item(key: str) -> dict[str, Any] | None:
             all_offers.append(offer)
         offers = _store_offers(all_offers)
         offers.sort(key=lambda o: o["latest_price"] if o["latest_price"] is not None else float("inf"))
+        offers.sort(key=lambda o: o["is_case_price"])
         offers.sort(key=lambda o: not o["is_current"])
         offers = offers[:MAX_ITEM_OFFERS]
 
@@ -316,11 +324,12 @@ def get_item(key: str) -> dict[str, Any] | None:
     for offer in offers:
         offer["history"] = history[product_keys[id(offer)]]
 
-    current = [o for o in offers if o["is_current"] and o["latest_price"]] or [o for o in offers if o["latest_price"]]
+    ranked = [o for o in offers if not o["is_case_price"]] or offers
+    current = [o for o in ranked if o["is_current"] and o["latest_price"]] or [o for o in ranked if o["latest_price"]]
     current_min = min((o["latest_price"] for o in current), default=None)
     floor = current_min * LOWEST_EVER_FLOOR if current_min else 0.0
     lowest_ever = None
-    for offer in offers:
+    for offer in ranked:
         for date, price in offer["history"]:
             if price and price >= floor and (lowest_ever is None or price < lowest_ever["price"]):
                 lowest_ever = {"price": price, "date": date, "store": offer["store"]}
@@ -353,7 +362,7 @@ def list_deals(
     """Current offers whose latest price change was a drop of at least ``min_drop`` percent.
 
     Only changes within ``days`` of the offer's last observation count; drops above
-    ``MAX_DEAL_DROP_PERCENT`` are ignored. Largest drop first.
+    ``MAX_DEAL_DROP_PERCENT`` and case prices are ignored. Largest drop first.
     """
     conn = get_reusable_connection()
     try:
@@ -366,8 +375,8 @@ def list_deals(
             SELECT {_OFFER_COLUMNS}
             FROM products AS p JOIN categories AS c ON c.category_key = p.category_key
             WHERE p.retailer_key IN ({','.join('?' * len(keys))})
-              AND p.is_current = 1 AND p.latest_price > 0 AND p.previous_price > p.latest_price
-              AND p.price_since >= date(p.last_date, ?)
+              AND p.is_current = 1 AND p.is_case_price = 0 AND p.latest_price > 0
+              AND p.previous_price > p.latest_price AND p.price_since >= date(p.last_date, ?)
               AND {_DROP_PERCENT_SQL} BETWEEN ? AND ?
             ORDER BY {_DROP_PERCENT_SQL} DESC, p.observations_count DESC
             LIMIT ?

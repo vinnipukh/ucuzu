@@ -2,8 +2,8 @@
 
 **Target Frontend:** Svelte 5 / SvelteKit SPA (`frontend/`)  
 **API Backend:** Falcon WSGI application (`inflation_dashboard/api/falcon_app.py`)  
-**Specification Version:** 2.4.0  
-**Last Updated:** 2026-10-20  
+**Specification Version:** 2.5.0  
+**Last Updated:** 2026-10-23  
 **Status:** Authoritative. [API.md](API.md) is a summary; this file wins on any difference.
 
 ---
@@ -63,7 +63,7 @@ Error objects have exactly two fields, `code` and `message`. Context goes on the
 | other 4xx/5xx | `http_error` | Any other `falcon.HTTPError` raised by Falcon | Falcon's description or title |
 | 500 | `server_error` | Any unhandled exception | Always the fixed string `Internal server error`; the traceback is logged server-side (logger `inflation_dashboard.api`), never sent |
 | 503 | `database_unavailable` | The configured database file is missing or 0 bytes (every endpoint except `/api/health` and `/api/epeykatfg/monthly-inflation`) | `Database not found; run scripts/build_database.py` |
-| 503 | `database_outdated` | `/api/catalog/*` only: the database was built before the catalog columns (`products.name_key`, `previous_price`, `price_since`, `is_current`, `is_store_latest`) existed. The other endpoints keep working; rebuild the database. | `Database predates the catalog; run scripts/build_database.py` |
+| 503 | `database_outdated` | `/api/catalog/*` only: the database was built before the catalog columns (`products.name_key`, `previous_price`, `price_since`, `is_current`, `is_store_latest`, `is_case_price`) existed. The other endpoints keep working; rebuild the database. | `Database predates the catalog; run scripts/build_database.py` |
 
 The handlers for 404/405/500/503 are registered in `create_app`. Messages are short and safe to show in the UI.
 
@@ -424,6 +424,7 @@ The four catalog endpoints (§4.11–§4.14) read the `products` table through `
 - A retailer label `Group / Store` is split into its group and store (`Markets / Migros` → `Markets`, `Migros`); a label without ` / ` (`EpeyKatfg`) is its own group and store.
 - The `HousesRent` group (rental listings, `CATALOG_EXCLUDED_GROUPS`) is never part of the catalog.
 - Groups, search and deals count only current offers (`products.is_current = 1`, see [DATABASE.md](DATABASE.md#catalog-columns)).
+- Prices were cleaned by the database build: placeholder (`999`, `9999.99` …), zero and negative prices are missing and dotted-thousands prices repaired ([DATABASE.md § Price clean-up](DATABASE.md#price-clean-up)). Offers of stores that sell whole cases (`products.is_case_price`, BizimMarket) never set an item's lowest or highest price while the item has another offer, are listed after the other offers and are never deals.
 - They are cached and compressed like the other endpoints (§5), return 503 `database_unavailable` without a database and 503 `database_outdated` when the database was built before the catalog columns existed (§2.3).
 
 `data` lists groups with at least one current offer, largest `offer_count` first (ties by name); each group's `stores` are sorted the same way and list only stores with current offers. `last_date` is the newest `last_date` of any product (current or not) of the store, and for a group, of its listed stores. `meta.count` is the number of groups.
@@ -454,10 +455,10 @@ Parameters:
 
 - `q` (`string`, optional): normalized with the same `name_key` rules and split into terms; every term must occur as a substring of the item's `name_key`. Empty lists every item.
 - `group`, `store` (`string`, optional, exact match; blank is ignored): limit the offers to one group and/or store. Unknown values are not an error; they return `data: []` and `total: 0`.
-- `sort` (default `relevance`): `relevance` ranks by the number of query terms that match whole words, then store count, then shorter names; `price_asc` / `price_desc` by `min_price`; `drop` by `max_drop_percent` (items without a drop last), then store count. Any other value → 400 `Invalid sort`.
+- `sort` (default `relevance`): `relevance` ranks by the number of query terms that match whole words, then store count, then shorter names; `price_asc` / `price_desc` by `min_price`, items whose offers are all case prices last; `drop` by `max_drop_percent` (items without a drop last), then store count. Any other value → 400 `Invalid sort`.
 - `limit` (integer 1–60, default 24), `offset` (integer 0–10000, default 0): out of range or not an integer → 400 `Invalid limit` / `Invalid offset` (not clamped).
 
-Only current offers with `latest_price > 0` in the selected group/store count, and of those only each store's latest prices for the item (`products.is_store_latest = 1`: offers last seen on the store's newest date for that item; see [DATABASE.md](DATABASE.md#catalog-columns)), matching the per-store prices of §4.13. For each item, `name`, `store` and `category` come from its cheapest offer; `stores` lists up to three stores, cheapest first; `min_price`/`max_price` span the offers; `max_drop_percent` is the largest offer `drop_percent` (§4.13), `null` if none dropped; `last_date` is the newest offer date. `meta.total` counts every matching item (`0` when `offset` is past the last match), `meta.count` the items on this page.
+Only current offers with `latest_price > 0` in the selected group/store count, and of those only each store's latest prices for the item (`products.is_store_latest = 1`: offers last seen on the store's newest date for that item; see [DATABASE.md](DATABASE.md#catalog-columns)), matching the per-store prices of §4.13. For each item, `name`, `store` and `category` come from its cheapest offer that is not a case price (a case price only when all are); `stores` lists up to three stores, cheapest first, case prices last; `min_price`/`max_price` span the offers that are not case prices (all offers when every offer is one); `max_drop_percent` is the largest offer `drop_percent` (§4.13), `null` if none dropped; `last_date` is the newest offer date. `meta.total` counts every matching item (`0` when `offset` is past the last match), `meta.count` the items on this page.
 
 ```json
 {
@@ -468,7 +469,7 @@ Only current offers with `latest_price > 0` in the selected group/store count, a
       "group": "Markets",
       "category": "Süt, Kahvaltılık",
       "store": "Hapeloglu",
-      "stores": ["Hapeloglu", "BizimMarket", "CarrefourSA"],
+      "stores": ["Hapeloglu", "Kale", "CarrefourSA"],
       "offer_count": 5,
       "store_count": 5,
       "min_price": 55.0,
@@ -490,16 +491,17 @@ Parameters:
 
 - `key` (`string`, **required**): a `name_key`, as returned in `key` by §4.12. Missing or blank → 400 `key is required`. A key with no products → 404 `not_found` with message `Item not found: <key>` and `meta` `{key}`.
 
-`offers` holds **one offer per store** for the products with that `name_key` outside `HousesRent`, **including stale ones** (`is_current: false`): current offers first, then cheapest first, at most 40 stores (`MAX_ITEM_OFFERS`; up to 400 products are read, `MAX_ITEM_ROWS`). A store's offer is its latest price: of its products, those with the newest `last_date`, and among them the cheapest (a product without a price never wins over a priced one). Each offer is the `products` row plus:
+`offers` holds **one offer per store** for the products with that `name_key` outside `HousesRent`, **including stale ones** (`is_current: false`): current offers first, then offers that are not case prices, then cheapest first, at most 40 stores (`MAX_ITEM_OFFERS`; up to 400 products are read, `MAX_ITEM_ROWS`). A store's offer is its latest price: of its products, those with the newest `last_date`, and among them the cheapest (a product without a price never wins over a priced one). Each offer is the `products` row plus:
 
 - `retailer`, `group`, `store`: the retailer label and its split.
 - `previous_price`, `price_since`: the price before the latest change and the first day of the current price (see [DATABASE.md](DATABASE.md#catalog-columns)).
 - `is_current`: a boolean.
+- `is_case_price`: a boolean; `true` for stores that sell whole cases while the title describes one item (BizimMarket, `products.is_case_price`).
 - `drop_percent`: `(previous_price − latest_price) / previous_price × 100`, rounded to 2 decimals, when the latest change was a drop; else `null`.
 - `history`: every observation as `[date, price]` pairs, oldest first.
 - `other_offers`: the store's other products for the item (another product under the same name, such as a different repair service for the same phone, or an older offer), newest `last_date` first, then cheapest first. Same fields, without `history` and `other_offers`; `[]` when the store has only one.
 
-`name`, `group` and `category` come from the cheapest current offer with a price (else the cheapest priced offer, else the first offer). In `summary`, `min_price`/`max_price` span the current offers with a price (all offers with a price when none is current); `lowest_ever` is the lowest price in any returned offer's history, with its date and store, ignoring prices below 25 % (`LOWEST_EVER_FLOOR`) of the lowest current price (`null` when nothing qualifies); `store_count` counts distinct retailers among the returned offers, which equals `offer_count` now that there is one offer per store; `offer_count` and `current_offer_count` count the returned (per-store) offers, so `other_offers` are not counted and `lowest_ever` ignores their histories. `meta` is `{key, offer_count}`.
+`name`, `group` and `category` come from the cheapest current offer with a price (else the cheapest priced offer, else the first offer), leaving out case-price offers unless every offer is one. In `summary`, `min_price`/`max_price` span the current offers with a price (all offers with a price when none is current), again without case prices unless every offer is one; `lowest_ever` is the lowest price in the history of those offers, with its date and store, ignoring prices below 25 % (`LOWEST_EVER_FLOOR`) of the lowest current price (`null` when nothing qualifies); `store_count` counts distinct retailers among the returned offers, which equals `offer_count` now that there is one offer per store; `offer_count` and `current_offer_count` count the returned (per-store) offers, so `other_offers` are not counted and `lowest_ever` ignores their histories. `meta` is `{key, offer_count}`.
 
 ```json
 {
@@ -510,9 +512,9 @@ Parameters:
     "category": "Kazandıran Ürünler > Süt ve Süt Ürünleri",
     "offers": [
       {
-        "retailer": "Markets / BizimMarket",
+        "retailer": "Markets / Kale",
         "group": "Markets",
-        "store": "BizimMarket",
+        "store": "Kale",
         "product_id": "13488",
         "product_name": "İçim Yarım Yağlı Süt 1 L",
         "name_key": "içim yarım yağlı süt 1l",
@@ -526,12 +528,13 @@ Parameters:
         "max_price": 59.5,
         "observations_count": 6,
         "is_current": true,
+        "is_case_price": false,
         "drop_percent": 8.4,
         "other_offers": [
           {
-            "retailer": "Markets / BizimMarket",
+            "retailer": "Markets / Kale",
             "group": "Markets",
-            "store": "BizimMarket",
+            "store": "Kale",
             "product_id": "İçim Yarım Yağlı Süt 1 L",
             "product_name": "İçim Yarım Yağlı Süt 1 L",
             "name_key": "içim yarım yağlı süt 1l",
@@ -545,6 +548,7 @@ Parameters:
             "max_price": 52.5,
             "observations_count": 22,
             "is_current": false,
+            "is_case_price": false,
             "drop_percent": 16.38
           }
         ],
@@ -566,7 +570,7 @@ Parameters:
 }
 ```
 
-BizimMarket's older listing (last seen 2026-04-10, with a `1.0` scraper error in its history) appears only under `other_offers`, so neither its price nor its history affects `summary`. The 25 % floor drops such scraper errors from the offers that are read.
+Kale's older listing (last seen 2026-04-10, with a `1.0` scraper error in its history) appears only under `other_offers`, so neither its price nor its history affects `summary`. The 25 % floor drops such scraper errors from the offers that are read.
 
 ### 4.14 `GET /api/catalog/deals`
 
@@ -579,7 +583,7 @@ Parameters:
 - `days` (integer 1–365, default 30): the drop must have happened within this many days of the offer's last observation (`price_since` on or after `last_date` − `days`).
 - `limit` (integer 1–60, default 24).
 
-Out of range or not an integer → 400 `Invalid <name>` (not clamped). Drops above 80 % (`MAX_DEAL_DROP_PERCENT`, also the `min_drop` maximum) are ignored as likely scraper or unit errors.
+Out of range or not an integer → 400 `Invalid <name>` (not clamped). Drops above 80 % (`MAX_DEAL_DROP_PERCENT`, also the `min_drop` maximum) are ignored as likely scraper or unit errors, and case-price offers (`is_case_price`) are never deals.
 
 `data` is a list of offers shaped as in §4.13 **without** `history` and `other_offers`. `meta` echoes `group`, `store`, `min_drop`, `days`, `limit` and adds `count`.
 
@@ -603,6 +607,7 @@ Out of range or not an integer → 400 `Invalid <name>` (not clamped). Drops abo
       "max_price": 250.0,
       "observations_count": 80,
       "is_current": true,
+      "is_case_price": false,
       "drop_percent": 80.0
     }
   ],
@@ -1052,6 +1057,8 @@ export interface CatalogOffer {
   max_price: number | null;
   observations_count: number;
   is_current: boolean;
+  /** The store sells whole cases (koli); never counted as the item's lowest price. */
+  is_case_price: boolean;
   drop_percent: number | null;
   history?: [string, number][]; // `GET /api/catalog/item` only
   /** `GET /api/catalog/item` only: the store's other offers for the item, without `history`. */
@@ -1121,6 +1128,12 @@ See [TESTING.md](TESTING.md).
 ## 9. Changes
 
 Client-visible changes per contract version, newest first. The repository-wide change history is in [docs/README.md](README.md#change-history).
+
+### 2.5.0 (2026-10-23)
+
+- Offers have a new boolean `is_case_price` (stores that sell whole cases, BizimMarket). Case prices never set an item's `min_price`/`max_price`, cheapest `name`/`store` or `summary` while the item has another offer, sort after other offers and items with only case prices sort last by price; they are never deals ([§4.11](#411-get-apicataloggroups)–[§4.14](#414-get-apicatalogdeals)).
+- Placeholder (`999` family), zero and negative prices are missing and sehzade's dotted-thousands prices are repaired, so prices, histories and `lowest_ever` change after a rebuild; the stores `Cosmetics / Watson`, `ConstructionSuppliesMarkets / Koçtaş` and `Communication / Vatan Computer` are merged into `Cosmetics / Watsons`, `ConstructionSuppliesMarkets / Koctas` and `Communication / VatanComputer` ([DATABASE.md § Price clean-up](DATABASE.md#price-clean-up)).
+- `database_outdated` also covers databases built without `products.is_case_price` ([§2.3](#23-error-codes-and-status)).
 
 ### 2.4.0 (2026-10-20)
 

@@ -401,6 +401,8 @@ export interface CatalogOffer {
   max_price: number | null;
   observations_count: number;
   is_current: boolean;
+  /** The store sells whole cases (koli); never counted as the item's lowest price. */
+  is_case_price: boolean;
   drop_percent: number | null;
   history?: [string, number][]; // `GET /api/catalog/item` only
   /** `GET /api/catalog/item` only: the store's other offers for the item, without `history`. */

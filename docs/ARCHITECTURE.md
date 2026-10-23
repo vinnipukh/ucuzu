@@ -28,6 +28,7 @@ inflation_dashboard/
   domain/prices.py                 price/date normalization, HISTORY_COLUMNS, product details (brand, barcode, URLs, regular price)
   domain/catalog.py                catalog rules: name_key (cross-store item match), split_retailer, excluded groups
   domain/product_attributes.py     title parser (brand, size, pack, attributes, model codes) and unit prices
+  domain/price_cleaning.py         rules for placeholder, dotted-thousands and case prices (used by the build)
   application/use_cases.py         history, averages, movers, coverage calculations (pandas)
   application/chart_specs.py       column contracts for each response table
   application/epeykatfg_monthly.py reads the EpeyKatfg monthly inflation CSV

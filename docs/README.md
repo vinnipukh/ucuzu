@@ -62,6 +62,15 @@ Historical material; not current setup guidance.
 
 What changed in behaviour and documentation, newest first, so a difference from older code can be checked against an intended change. Each entry names its commit; API changes per contract version are also in [FALCON_API_CONTRACT.md §9](FALCON_API_CONTRACT.md#9-changes).
 
+### 2026-10-23 — price clean-up and merged duplicate stores (cimri clone phase 2)
+
+**Breaking / behaviour changes**
+
+- The build cleans scraped prices before summarizing products (`clean_prices`, rules in the new `inflation_dashboard/domain/price_cleaning.py`): 7,583 prices of 0 or less and 13,802 placeholder prices of the 999 family (`999`, `999.99`, `9999` …; 706 products, mostly EnglishHome, Watsons, MadameCoco, LC Waikiki and Karaca) are now missing, while 370,769 family prices that the product's own or other stores' prices confirm, or that have nothing to compare with, stay as real prices; sehzade's dotted-thousands prices (`1.769` for 1,769 TL) are multiplied by 1000 where a reference confirms it (1,720 prices, 125 products) and 832 unconfirmed three-decimal ones are missing. Prices, histories, `min_price`/`max_price`, unit prices and dashboard series change accordingly ([DATABASE.md § Price clean-up](DATABASE.md#price-clean-up)).
+- `Cosmetics / Watson`, `ConstructionSuppliesMarkets / Koçtaş` and `Communication / Vatan Computer` are filed under `Cosmetics / Watsons`, `ConstructionSuppliesMarkets / Koctas` and `Communication / VatanComputer` (`RETAILER_ALIASES`); the old labels disappear from the API, retailers 208 → 205 and products 953,201 → 929,511 ([DATABASE.md § JSON fallback](DATABASE.md#json-fallback)).
+- New column `products.is_case_price`, set for BizimMarket (4,867 products), whose prices are often whole cases. `/api/catalog/*` offers carry a new boolean `is_case_price`; case prices never set an item's cheapest or highest price, `name`/`store` or `summary` while another store sells it, sort after other offers (items with only case prices last in price sorts), are never deals and get no unit price. Databases without the column return 503 `database_outdated` on `/api/catalog/*` until rebuilt ([contract 2.5.0](FALCON_API_CONTRACT.md#250-2026-10-23), [USER_GUIDE.md § Price comparison shop](USER_GUIDE.md#price-comparison-shop)).
+- The build summary ends with one count per clean-up rule.
+
 ### 2026-10-23 — product details, title parser and unit prices (cimri clone phase 1)
 
 **Breaking / behaviour changes**

@@ -13,6 +13,10 @@ The site has two parts:
 
 The same product is matched across stores by its normalized name, so one product page compares every store that sells it. Only current prices are listed: a store's price counts when it was seen within 7 days of that store's newest data and within 45 days of the newest data overall, so stores that are no longer scraped drop out. Rental listings (`HousesRent`) are not part of the shop.
 
+Prices that scrapers write when a product has no price (`999`, `9999.99` and similar, when the product's other prices or other stores disagree) and zero prices are left out, and sehzade's prices of 1,000 TL and more, which its scraper writes as `1.769`, are corrected where other prices confirm them. BizimMarket (Bizim Toptan) sells whole cases, so its prices are listed after the other stores and are never shown as the cheapest price or as a deal, unless it is the only store selling the product. Watson/Watsons, Koçtaş/Koctas and Vatan Computer/VatanComputer are each one store.
+
+> **Changed 2026-10-23:** before, these prices were shown as sent and the three stores appeared twice each. See [change history](README.md#change-history).
+
 - **Header** — the search box (searches `/ara`), a category menu, links to **Fırsatlar** (deals), **Fiyat Alarmı** (price alarms, with a count) and **Analiz** (the dashboard), and a light/dark toggle.
 - **Home (`/`)** — shortcut tiles, recent price drops, popular products of the largest categories and the stores with the most products.
 - **Search (`/ara`)** — every word typed must appear in the product name (Turkish letters, case and units such as `1 L`/`1l` are normalized). Filter by category and store, sort by **Önerilen** (relevance), **En düşük fiyat**, **En yüksek fiyat** or **En çok düşen** (largest drop), and page through results (24 per page). The URL keeps the state (`q`, `group`, `store`, `sort`, `sayfa`), so searches can be bookmarked.

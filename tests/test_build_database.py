@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 import sys
 from pathlib import Path
@@ -242,3 +243,67 @@ def test_build_stores_product_details_and_unit_prices(tmp_path: Path) -> None:
         ("2", None, None, None, None, None, pytest.approx(5.0), "adet"),
         ("3", None, None, None, None, None, None, None),
     ]
+
+
+def test_build_cleans_prices_and_merges_duplicate_stores(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    json_dir = tmp_path / "prices_json"
+    json_dir.mkdir()
+
+    def partition(stem: str, products: dict[str, tuple[str, dict[str, float]]]) -> None:
+        payload = {pid: {"name": name, "prices": prices} for pid, (name, prices) in products.items()}
+        (json_dir / f"{stem}.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    d1, d2, d3 = "2026-01-01", "2026-01-02", "2026-01-03"
+    partition("HomeGoods_EnglishHome", {
+        "robe": ("Bornoz", {d1: 1999.99, d2: 9999.99, d3: 1999.99}),  # placeholder in its own history
+        "mower": ("Çim Biçme Makinesi", {d3: 9999}),  # placeholder against another store
+        "shirt": ("Tişört", {d1: 999.99}),  # no reference: kept
+        "towel": ("Havlu", {d1: 0, d2: 50}),
+    })
+    partition("Markets_Onur", {"mower": ("Çim Biçme Makinesi", {d3: 26690}), "oil": ("Yudum Yağ 18 L", {d1: 1925})})
+    partition("Markets_sehzade", {
+        "sucuk": ("Sucuk kg", {d1: 955.9, d2: 1.039}),  # own history confirms x1000
+        "oil": ("Yudum Yağ 18 L", {d1: 2.139}),  # Onur confirms x1000
+        "olive": ("Zeytinyağı 5 L", {d1: 1.424}),  # unconfirmed three decimals: missing
+        "wafer": ("Gofret", {d1: 8.5}),
+    })
+    partition("Cosmetics_Watson", {"1": ("Krem 50 ml", {d1: 100})})
+    partition("Cosmetics_Watsons", {"1": ("Krem 50 ml", {d2: 110}), "2": ("Ruj", {d2: 50})})
+    partition("Markets_BizimMarket", {"cola": ("Kola 250 ml", {d1: 177})})
+    db_path = tmp_path / "prices.db"
+
+    build_database.build(tmp_path, db_path, workers=1)
+
+    with sqlite3.connect(db_path) as conn:
+        prices = {
+            (retailer, product_id): {day: price for day, price in json.loads(history or "{}").items()}
+            for retailer, product_id, history in conn.execute("SELECT retailer, product_id, price_history FROM product_prices")
+        }
+        retailers = {row[0] for row in conn.execute("SELECT name FROM retailers")}
+        cases = conn.execute(
+            "SELECT r.name, p.is_case_price, p.unit_price FROM products AS p JOIN retailers AS r USING (retailer_key) "
+            "WHERE p.is_case_price = 1"
+        ).fetchall()
+    assert prices[("HomeGoods / EnglishHome", "robe")] == {d1: 1999.99, d3: 1999.99}
+    assert prices[("HomeGoods / EnglishHome", "mower")] == {}
+    assert prices[("HomeGoods / EnglishHome", "shirt")] == {d1: 999.99}
+    assert prices[("HomeGoods / EnglishHome", "towel")] == {d2: 50}
+    assert prices[("Markets / sehzade", "sucuk")] == {d1: 955.9, d2: 1039.0}
+    assert prices[("Markets / sehzade", "oil")] == {d1: 2139.0}
+    assert prices[("Markets / sehzade", "olive")] == {}
+    assert prices[("Markets / sehzade", "wafer")] == {d1: 8.5}
+    # Watson and Watsons are one store; the same product id merges.
+    assert "Cosmetics / Watson" not in retailers
+    assert prices[("Cosmetics / Watsons", "1")] == {d1: 100, d2: 110}
+    assert cases == [("Markets / BizimMarket", 1, None)]
+    summary = capsys.readouterr().out.split("Price clean-up")[1]
+    for line in (
+        "1  prices <= 0 dropped",
+        "2  dotted-thousands prices repaired x1000 (2 products)",
+        "1  dotted-thousands prices dropped (unconfirmed)",
+        "2  placeholder prices dropped (2 products)",
+        "1  999-family prices kept as real",
+        "1  rows filed from Cosmetics / Watson under Cosmetics / Watsons",
+        "1  products flagged as case prices",
+    ):
+        assert line in summary

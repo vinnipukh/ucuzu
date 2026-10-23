@@ -21,11 +21,11 @@ A database built before the catalog columns existed (`products` without `name_ke
 3. **Create the target.** Builds into `<db>.building` with `journal_mode=OFF`, `synchronous=OFF` and a 512 MB page cache, and attaches a scratch database `<db>.staging` (journal off) holding an append-only `obs` table, so staging pages never bloat the served file.
 4. **Ingest raw CSVs** in parallel worker processes (see [Raw CSV ingestion](#raw-csv-ingestion)).
 5. **Ingest JSON fallback** for retailers that got no raw rows (see [JSON fallback](#json-fallback)).
-6. **Write tables.** Inserts `retailers`, `categories` and `products` (with each product's `name_key`, see [Catalog columns](#catalog-columns), and its [product details](#product-details-and-unit-prices)); copies staged observations into `observations`, keeping the **last staged row** per `(product, date)`; then fills each product's first/last date, min/max price, observation count and latest price.
+6. **Write tables.** Inserts `retailers`, `categories` and `products` (with each product's `name_key`, see [Catalog columns](#catalog-columns), and its [product details](#product-details-and-unit-prices)); copies staged observations into `observations`, keeping the **last staged row** per `(product, date)`; cleans prices and flags case prices (printed as "Cleaning prices...", see [Price clean-up](#price-clean-up)); then fills each product's first/last date, min/max price, observation count and latest price.
 7. **Compute price changes** (printed as "Computing price changes..."). Fills `previous_price`, `price_since`, `is_current` and `is_store_latest` on every product (see [Catalog columns](#catalog-columns)).
 8. **Compute unit prices** (printed as "Computing unit prices..." with the number of products that got one). Parses every product title in worker processes and fills `unit_price` and `unit_price_unit` from `latest_price` (see [Product details and unit prices](#product-details-and-unit-prices)).
 9. **Indexes, views, statistics.** Creates the [indexes](#indexes) and [views](#views), runs `ANALYZE`, and switches the file to `journal_mode=WAL` (what the read-only API connections expect).
-10. **Swap in.** Closes the connection, deletes `<db>.staging`, removes any stale `<db>-wal` and `<db>-shm`, and atomically replaces the target with `os.replace(<db>.building, <db>)`.
+10. **Swap in.** Closes the connection, deletes `<db>.staging`, removes any stale `<db>-wal` and `<db>-shm`, and atomically replaces the target with `os.replace(<db>.building, <db>)`. The closing summary prints the database size and counts, then one line per [price clean-up](#price-clean-up) rule with its count.
 
 On Windows, stop the API before rebuilding: an open database cannot be replaced. On other platforms, restart the API after a rebuild; running workers keep their open connection and 5-minute caches.
 
@@ -92,7 +92,7 @@ A product keeps the newest non-empty value of each detail, and the regular price
 
 ### JSON fallback
 
-`data/prices_json/*.json` partitions are used **only for retailers with no successfully ingested raw CSV**; a partition whose retailer has raw CSVs is skipped with the message `JSON ignored: <file> (…)`. Every retailer comes from JSON today (`data/raw/` has no CSVs): new scrapes are converted into partitions by `scripts/csv_to_json.py` ([DATA_CONTRACT.md](DATA_CONTRACT.md#partitioned-json-input-dataprices_json)). The retailer comes from the file stem (`retailer_from_stem`): the first `_` becomes ` / ` and later underscores stay in the store name (`Markets_Gurmar` → `Markets / Gurmar`, `Transport_motor_bicyle_car` → `Transport / motor_bicyle_car`), with one alias: `Health_Diagnostic_Surgical_Services` → `Health / Diagnostic&Surgical Services`. `retailer_stem` is the inverse; it rejects labels that cannot round-trip (an `_` in the group, more than one ` / `, or a character Windows forbids in file names).
+`data/prices_json/*.json` partitions are used **only for retailers with no successfully ingested raw CSV**; a partition whose retailer has raw CSVs is skipped with the message `JSON ignored: <file> (…)`. Every retailer comes from JSON today (`data/raw/` has no CSVs): new scrapes are converted into partitions by `scripts/csv_to_json.py` ([DATA_CONTRACT.md](DATA_CONTRACT.md#partitioned-json-input-dataprices_json)). The retailer comes from the file stem (`retailer_from_stem`): the first `_` becomes ` / ` and later underscores stay in the store name (`Markets_Gurmar` → `Markets / Gurmar`, `Transport_motor_bicyle_car` → `Transport / motor_bicyle_car`), with one alias: `Health_Diagnostic_Surgical_Services` → `Health / Diagnostic&Surgical Services`. Stores that the scrapers write under two folder names are then filed under one label (`RETAILER_ALIASES`, see [Price clean-up](#price-clean-up)). `retailer_stem` is the inverse; it rejects labels that cannot round-trip (an `_` in the group, more than one ` / `, or a character Windows forbids in file names).
 
 Each partition maps `product_id` to an object. Only `name` (default: the product id), `category` (default `Uncategorized`), `prices` (`{"YYYY-MM-DD": price}`, `null` prices skipped) and the optional detail fields `brand`, `barcode`, `image_url`, `product_url` and `regular_price` (counted as sent on the product's newest date) are read. Stored fields such as `latest_price`, `min_price` and `max_price` are ignored; the build recomputes them from the observations. Each date becomes one synthetic source row `<file>.json#YYYY-MM-DD`, so the API's newest-N-files (`max_files`) selection still works.
 
@@ -109,7 +109,7 @@ Storage is normalized so repeated text is stored once. The schema is defined in 
 | `retailers` | retailer label | `retailer_key`, `name` (unique) |
 | `categories` | category name | `category_key`, `name` (unique) |
 | `sources` | ingested file (JSON: one synthetic row per date) | `source_key`, `file_path` (unique; raw CSVs relative to `data/`, e.g. `raw/01_Food/...`; JSON as `<file>.json#YYYY-MM-DD`), `retailer_key`, `date`, `file_size`, `mtime`, `rows_ingested`, `ingested_at` |
-| `products` | `(retailer_key, product_id)` (unique) | `product_key`, `retailer_key`, `product_id`, `product_name`, `name_key`, `category_key`, `first_date`, `last_date`, `latest_price`, `min_price`, `max_price`, `observations_count`, `previous_price`, `price_since`, `is_current`, `is_store_latest`, `brand`, `barcode`, `image_url`, `product_url`, `regular_price`, `unit_price`, `unit_price_unit` |
+| `products` | `(retailer_key, product_id)` (unique) | `product_key`, `retailer_key`, `product_id`, `product_name`, `name_key`, `category_key`, `first_date`, `last_date`, `latest_price`, `min_price`, `max_price`, `observations_count`, `previous_price`, `price_since`, `is_current`, `is_store_latest`, `brand`, `barcode`, `image_url`, `product_url`, `regular_price`, `unit_price`, `unit_price_unit`, `is_case_price` |
 | `observations` | product per day | `product_key`, `date`, `price`, `category_key` (as observed that day), `source_key` |
 
 `observations` is a `WITHOUT ROWID` table with primary key `(product_key, date)`, so a product's full history is one contiguous range read. A product's name and category in `products` come from its latest observation; renamed products keep a single history.
@@ -124,9 +124,10 @@ These `products` columns serve the price-comparison catalog (`/api/catalog/*`, [
 | `previous_price` | Price on the newest day whose price differs from `latest_price`; `NULL` if the price never changed. |
 | `price_since` | First day of the current price (the day after `previous_price` was last seen), or `first_date` if the price never changed. |
 | `is_current` | `1` when `last_date` is within 7 days of the newest `last_date` of the product's retailer **and** within `CURRENT_WINDOW_DAYS` (45) days of the newest `last_date` in the database; else `0`. Products of retailers that stopped being scraped therefore drop out of the catalog. |
+| `is_case_price` | `1` for products of stores that sell whole cases while the title describes one item (`CASE_PRICE_RETAILERS`: BizimMarket); else `0`. The catalog never uses such an offer as an item's lowest price while another offer exists and never lists it as a deal; it gets no unit price. See [Price clean-up](#price-clean-up). |
 | `is_store_latest` | `1` when `last_date` is the newest `last_date` among the retailer's products with the same `name_key` (the store's latest prices for that item); else `0`. Catalog search counts only these offers, so an older, cheaper product of the same store does not set an item's price. |
 
-> **Changed 2026-10-18:** `name_key`, `previous_price`, `price_since` and `is_current` were added, and on 2026-10-20 `is_store_latest`; a database built before either change returns 503 `database_outdated` on `/api/catalog/*` until it is rebuilt; previously `products` had none of these columns. See [change history](README.md#change-history).
+> **Changed 2026-10-18:** `name_key`, `previous_price`, `price_since` and `is_current` were added, on 2026-10-20 `is_store_latest` and on 2026-10-23 `is_case_price`; a database built before any of these changes returns 503 `database_outdated` on `/api/catalog/*` until it is rebuilt; previously `products` had none of these columns. See [change history](README.md#change-history).
 
 ### Product details and unit prices
 
@@ -134,7 +135,7 @@ These `products` columns serve the price-comparison catalog (`/api/catalog/*`, [
 |---|---|
 | `brand`, `barcode`, `image_url`, `product_url` | Newest non-empty value the scraper sent ([Raw CSV ingestion](#raw-csv-ingestion), "Product details"); `NULL` for stores that send none. |
 | `regular_price` | The undiscounted price sent on `last_date`, else `NULL`. |
-| `unit_price` | `latest_price` divided by the package contents parsed from `product_name`; `NULL` when the title has no contents size, the size is a capacity or only dimensions, or `latest_price` is not positive. |
+| `unit_price` | `latest_price` divided by the package contents parsed from `product_name`; `NULL` when the title has no contents size, the size is a capacity or only dimensions, `latest_price` is missing or not positive, or the product is a case price (`is_case_price`). |
 | `unit_price_unit` | Unit of `unit_price`: `ml` or `g` (to be shown as TL/L and TL/kg), `adet` (per piece), `yikama` (per wash), `m` or `m2`. |
 
 Titles are parsed by `parse` in `inflation_dashboard/domain/product_attributes.py` (rules in its module docstring, examples in `tests/test_product_attributes.py`):
@@ -147,6 +148,22 @@ Titles are parsed by `parse` in `inflation_dashboard/domain/product_attributes.p
 - **Scraper typos:** a contents size of 100 kg or 100 L or more is read as g or ml (`Yoğurt 1750 kg`), and one below 1 ml as litres (`Su 0.75 ml`).
 
 > **Changed 2026-10-23:** these seven columns were added; previously `products` had no details or unit prices. The API does not read them yet, so older databases keep working. See [change history](README.md#change-history).
+
+### Price clean-up
+
+Some scraped prices are not real prices. Before products are summarized, `clean_prices` in `scripts/build_database.py` applies the rules of `inflation_dashboard/domain/price_cleaning.py` to `observations`; removed prices are **missing** (the day has no observation), so they never reach `latest_price`, `min_price`, histories, the catalog or the dashboard. A product whose every price was removed keeps its `products` row with `NULL` prices and is not current. The rules, in order:
+
+| Rule | What happens | Count on 2026-10-23 |
+|---|---|---|
+| Price ≤ 0 | removed | 7,583 prices removed |
+| Dotted thousands (`THOUSANDS_DOT_RETAILERS`: sehzade writes 1,769 TL as `1.769`) | a price under 10 becomes ×1000 when a reference confirms it (the product's own prices of 10 or more, else the median of the same item's prices in other stores, within a factor of 2 of price × 1000); an unconfirmed price with three decimals is removed; other prices stay | 1,720 prices repaired (125 products), 832 removed |
+| Placeholder: the 999 family (`999`, `999.9`, `999.99`, `9999` … seven nines) | removed when a reference disagrees by more than a factor of 2.5 (the product's own other prices, else the median of the same item's prices in other stores, BizimMarket excluded); without a reference the price stays, since 999.99 TL is a common real price for clothes and home goods | 13,802 prices removed (706 products); 370,769 family prices kept |
+| Case prices (`CASE_PRICE_RETAILERS`: BizimMarket) | prices kept, products flagged `is_case_price = 1`, no unit price | 4,867 products |
+| Duplicate store folders (`RETAILER_ALIASES`) | `Cosmetics / Watson` → `Cosmetics / Watsons`, `ConstructionSuppliesMarkets / Koçtaş` → `ConstructionSuppliesMarkets / Koctas`, `Communication / Vatan Computer` → `Communication / VatanComputer`; products with the same `product_id` merge, and on a day both folders priced, the later partition (alphabetical file order) wins | 1,099,342 + 72,296 + 111,376 rows relabelled; 208 → 205 retailers |
+
+"Same item" means the same `name_key` ([Catalog columns](#catalog-columns)). A reference is the median of a product's positive prices that are not in the 999 family. How the rules were chosen from a sample of the data: most 999.99 prices are real (Defacto, Koton and LC Waikiki clothes priced 999.99 for months, or sales from 1,999.99), while placeholders sit far from the product's other prices (EnglishHome `9999.99` for a 1,999.99 bathrobe) or from other stores (a mower at `9999` in one store and 26,690 in another). BizimMarket (Bizim Toptan) prices are often a whole case even when the title has no count (`Sarıyer Kola 250 ml` at 177 TL, 11.50 elsewhere), and its scraper garbles some prices, so all its offers are flagged.
+
+> **Changed 2026-10-23:** prices are cleaned and the duplicate stores merged during the build; previously every scraped price was stored as sent and the six store folders were six retailers. See [change history](README.md#change-history).
 
 ### Indexes
 

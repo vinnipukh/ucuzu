@@ -170,6 +170,46 @@ def test_deals_and_groups(client: testing.TestClient, catalog_db: Path) -> None:
     assert {s["store"]: s["offer_count"] for s in groups[0]["stores"]} == {"Gurmar": 2, "Kale": 3, "Onur": 1}
 
 
+@pytest.fixture
+def case_price_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    """BizimMarket sells whole cases: its water is "cheaper" than Onur's and its cola has no peer."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import build_database
+
+    raw = tmp_path / "data" / "raw"
+    _write(raw / "01_Food" / "BizimMarket" / "b_2026-01-01.csv", "product_name,price\nSu 1 L,9\nKola 250 ml,3\n")
+    _write(raw / "01_Food" / "BizimMarket" / "b_2026-01-10.csv", "product_name,price\nSu 1 L,5\nKola 250 ml,3\n")
+    _write(raw / "01_Food" / "Onur" / "o_2026-01-10.csv", "product_name,price\nSu 1 L,8\nÇay 1 kg,4\n")
+    db_path = tmp_path / "prices.db"
+    build_database.build(tmp_path / "data", db_path, workers=1)
+    monkeypatch.setenv("PRICES_DB_PATH", str(db_path))
+    clear_inventory_cache()
+    sqlite_catalog_repository.clear_catalog_cache()
+    yield db_path
+    clear_inventory_cache()
+    sqlite_catalog_repository.clear_catalog_cache()
+    sqlite_price_repository.close_local_connections()
+
+
+def test_case_prices_never_rank_cheapest(client: testing.TestClient, case_price_db: Path) -> None:
+    [water] = client.simulate_get("/api/catalog/search", params={"q": "su"}).json["data"]
+    assert (water["min_price"], water["max_price"], water["store"]) == (8.0, 8.0, "Onur")
+    assert water["stores"] == ["Onur", "BizimMarket"]
+    assert water["offer_count"] == 2
+
+    # BizimMarket's cola (3) is the cheapest price but only a case price: it sorts last.
+    by_price = client.simulate_get("/api/catalog/search", params={"sort": "price_asc"}).json["data"]
+    assert [(i["key"], i["min_price"]) for i in by_price] == [("çay 1kg", 4.0), ("su 1l", 8.0), ("kola 250ml", 3.0)]
+
+    item = client.simulate_get("/api/catalog/item", params={"key": "su 1l"}).json["data"]
+    assert [(o["store"], o["is_case_price"]) for o in item["offers"]] == [("Onur", False), ("BizimMarket", True)]
+    assert item["summary"]["min_price"] == 8.0
+    assert item["summary"]["lowest_ever"] == {"price": 8.0, "date": "2026-01-10", "store": "Onur"}
+
+    # BizimMarket's 9 -> 5 drop is not a deal.
+    assert client.simulate_get("/api/catalog/deals").json["data"] == []
+
+
 def test_outdated_database_returns_503(client: testing.TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     db_path = tmp_path / "old.db"
     conn = sqlite3.connect(db_path)

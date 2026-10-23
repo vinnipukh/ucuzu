@@ -11,9 +11,11 @@ Steps:
 2. Ingest every dated CSV under ``data/raw`` (TÜİK-grouped scraper output),
    labelling retailers the way the API/UI expects (``01_Food/Gurmar`` -> ``Markets / Gurmar``).
 3. Ingest ``data/prices_json`` partitions only for retailers that have no raw CSVs.
-4. Write the normalized schema (see SCHEMA), summarize products, compute unit
-   prices from the titles (domain.product_attributes) and atomically replace the
-   target.
+4. Write the normalized schema (see SCHEMA), clean scraper prices
+   (domain.price_cleaning: missing, placeholder and dotted-thousands prices, case
+   prices; ``clean_prices``), summarize products, compute unit prices from the
+   titles (domain.product_attributes) and atomically replace the target.
+   Duplicate store folders are filed under one label (``RETAILER_ALIASES``).
 
 Storage is normalized: each retailer, category, source file and product is stored
 once and ``observations`` holds only integer keys, the date and the price,
@@ -34,6 +36,7 @@ from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
 from datetime import date, datetime, timezone
 from pathlib import Path
+from statistics import median
 
 import pandas as pd
 
@@ -53,6 +56,16 @@ from inflation_dashboard.domain.prices import (  # noqa: E402
     PRICE_COLUMNS,
     build_product_frame,
     header_key,
+)
+from inflation_dashboard.domain.price_cleaning import (  # noqa: E402
+    CASE_PRICE_RETAILERS,
+    PLACEHOLDER_PRICES,
+    THOUSANDS_DOT_LIMIT,
+    THOUSANDS_DOT_RETAILERS,
+    is_placeholder,
+    is_placeholder_family,
+    reference_price,
+    repair_thousands,
 )
 from inflation_dashboard.domain.product_attributes import parse, unit_price  # noqa: E402
 
@@ -130,7 +143,9 @@ CREATE TABLE sources (
 -- brand, barcode, image_url and product_url are the newest non-empty values the
 -- scraper sent; regular_price (the undiscounted price) only when it was sent on
 -- last_date. unit_price is latest_price per unit_price_unit (ml, g, adet, yikama,
--- m or m2) parsed from the title; NULL when the title has no contents size.
+-- m or m2) parsed from the title; NULL when the title has no contents size or the
+-- price is a case price. is_case_price marks stores whose prices are whole cases
+-- (domain.price_cleaning.CASE_PRICE_RETAILERS); the catalog never ranks them cheapest.
 CREATE TABLE products (
     product_key INTEGER PRIMARY KEY,
     retailer_key INTEGER NOT NULL REFERENCES retailers,
@@ -155,6 +170,7 @@ CREATE TABLE products (
     regular_price REAL,
     unit_price REAL,
     unit_price_unit TEXT,
+    is_case_price INTEGER NOT NULL DEFAULT 0,
     UNIQUE (retailer_key, product_id)
 );
 -- One row per product per day, clustered so a product's history is one range read.
@@ -248,6 +264,13 @@ def raw_retailer_label(relative_dirs: tuple[str, ...]) -> str | None:
 # Partition stems whose plain mapping differs from the retailer label (stem mapping -> label).
 STEM_ALIASES = {
     "Health / Diagnostic_Surgical_Services": "Health / Diagnostic&Surgical Services",
+}
+# Stores the scrapers write under two folder names (old label -> label written now);
+# the build files both under one label. Products with the same product_id merge.
+RETAILER_ALIASES = {
+    "Cosmetics / Watson": "Cosmetics / Watsons",
+    "ConstructionSuppliesMarkets / Koçtaş": "ConstructionSuppliesMarkets / Koctas",
+    "Communication / Vatan Computer": "Communication / VatanComputer",
 }
 
 
@@ -390,6 +413,8 @@ class Loader:
         self.details: dict[int, dict[str, tuple[str, object]]] = {}
         self.ingested_at = datetime.now(timezone.utc).isoformat()
         self.staged_rows = 0
+        # Counts for the build summary: relabelled rows (RETAILER_ALIASES) and clean_prices rules.
+        self.cleanup: Counter = Counter()
 
     def _key(self, table: dict[str, int], name: str) -> int:
         key = table.get(name)
@@ -403,8 +428,12 @@ class Loader:
         Assigns retailer, category, source and product keys; a product's name and
         category follow its latest-dated row. ``rows`` are ``(product_id, product_name,
         category, price, *details)`` tuples; ``details`` (``DETAIL_COLUMNS``, optional)
-        keep their newest non-empty value per product.
+        keep their newest non-empty value per product. Retailers in
+        ``RETAILER_ALIASES`` are stored under their alias.
         """
+        if retailer in RETAILER_ALIASES:
+            self.cleanup[f"rows filed from {retailer} under {RETAILER_ALIASES[retailer]}"] += len(rows)
+            retailer = RETAILER_ALIASES[retailer]
         retailer_key = self._key(self.retailers, retailer)
         cursor = self.conn.execute(
             "INSERT INTO sources (file_path, retailer_key, date, file_size, mtime, rows_ingested, ingested_at) "
@@ -443,7 +472,8 @@ class Loader:
 
         Inserts retailers, categories and products (with their details), copies the
         staged rows into ``observations`` keeping the last staged row per (product,
-        date), then fills each product's first/last date, min/max price, observation
+        date), cleans prices (``clean_prices``) and flags case prices
+        (``is_case_price``), then fills each product's first/last date, min/max price, observation
         count, latest price, latest price change (``previous_price``, ``price_since``),
         ``is_current``, ``is_store_latest`` and unit price (``write_unit_prices``).
         """
@@ -473,6 +503,13 @@ class Loader:
             ORDER BY product_key, date
             """
         )
+        conn.commit()
+        self.cleanup.update(clean_prices(conn, self.retailers))
+        case_keys = [key for name, key in self.retailers.items() if name in CASE_PRICE_RETAILERS]
+        flagged = conn.execute(
+            f"UPDATE products SET is_case_price = 1 WHERE retailer_key IN ({','.join('?' * len(case_keys))})", case_keys
+        ).rowcount
+        self.cleanup["products flagged as case prices"] = flagged
         conn.commit()
         print("Summarizing products...")
         conn.execute(
@@ -522,7 +559,7 @@ class Loader:
         conn.execute("UPDATE products SET price_since = first_date WHERE price_since IS NULL")
         conn.execute(
             """
-            UPDATE products SET is_current = (products.last_date >= r.cutoff AND products.last_date >= g.cutoff)
+            UPDATE products SET is_current = coalesce(products.last_date >= r.cutoff AND products.last_date >= g.cutoff, 0)
             FROM (SELECT retailer_key, date(max(last_date), '-7 days') AS cutoff FROM products GROUP BY retailer_key) AS r,
                  (SELECT date(max(last_date), ?) AS cutoff FROM products) AS g
             WHERE products.retailer_key = r.retailer_key
@@ -560,7 +597,7 @@ def write_unit_prices(conn: sqlite3.Connection, workers: int, chunk: int = 20_00
     """Fill ``products.unit_price``/``unit_price_unit`` from each title and latest price, in worker processes."""
     print("Computing unit prices...")
     started = time.perf_counter()
-    rows = conn.execute("SELECT product_key, product_name, latest_price FROM products").fetchall()
+    rows = conn.execute("SELECT product_key, product_name, latest_price FROM products WHERE is_case_price = 0").fetchall()
     chunks = [rows[i:i + chunk] for i in range(0, len(rows), chunk)]
     priced = 0
     with ProcessPoolExecutor(max_workers=workers) as pool:
@@ -569,6 +606,103 @@ def write_unit_prices(conn: sqlite3.Connection, workers: int, chunk: int = 20_00
             priced += len(result)
     conn.commit()
     print(f"  {priced:,} of {len(rows):,} products have a unit price ({time.perf_counter() - started:.0f}s)")
+
+
+def _histories(conn: sqlite3.Connection, candidates_sql: str, params: list) -> dict[int, tuple[int, str, list]]:
+    """``{product_key: (retailer_key, name_key, [(date, price), ...])}`` for every product
+    sharing a ``name_key`` with the products ``candidates_sql`` selects (product keys)."""
+    histories: dict[int, tuple[int, str, list]] = {}
+    for product_key, retailer_key, key, day, price in conn.execute(
+        f"""
+        SELECT p.product_key, p.retailer_key, p.name_key, o.date, o.price
+        FROM products AS p JOIN observations AS o ON o.product_key = p.product_key
+        WHERE p.name_key IN (SELECT name_key FROM products WHERE product_key IN ({candidates_sql}))
+        """,
+        params,
+    ):
+        histories.setdefault(product_key, (retailer_key, key, []))[2].append((day, price))
+    return histories
+
+
+def _peer_references(histories: dict[int, tuple[int, str, list]], excluded: set[int]) -> dict[str, list[tuple[int, float]]]:
+    """``{name_key: [(retailer_key, reference price), ...]}`` from products outside ``excluded`` retailers."""
+    peers: dict[str, list[tuple[int, float]]] = {}
+    for retailer_key, key, history in histories.values():
+        if retailer_key in excluded:
+            continue
+        reference = reference_price(price for _, price in history)
+        if reference is not None:
+            peers.setdefault(key, []).append((retailer_key, reference))
+    return peers
+
+
+def _peer_reference(peers: dict[str, list[tuple[int, float]]], key: str, retailer_key: int) -> float | None:
+    """Median reference price of the same item in other stores."""
+    references = [reference for other, reference in peers.get(key, ()) if other != retailer_key]
+    return median(references) if references else None
+
+
+def clean_prices(conn: sqlite3.Connection, retailers: dict[str, int]) -> Counter:
+    """Apply ``domain.price_cleaning`` to ``observations`` and return counts per rule.
+
+    Deletes prices of 0 or less, repairs or deletes dotted-thousands prices of
+    ``THOUSANDS_DOT_RETAILERS``, then deletes 999-family placeholder prices. Peers
+    (same ``name_key``, other stores) never include ``CASE_PRICE_RETAILERS``; the
+    dotted-thousands stores are left out of their own repair's peers.
+    """
+    counts: Counter = Counter()
+    print("Cleaning prices...")
+    counts["prices <= 0 dropped"] = conn.execute("DELETE FROM observations WHERE price <= 0").rowcount
+    case_keys = {key for name, key in retailers.items() if name in CASE_PRICE_RETAILERS}
+
+    thousands_keys = [key for name, key in retailers.items() if name in THOUSANDS_DOT_RETAILERS]
+    if thousands_keys:
+        marks = ",".join("?" * len(thousands_keys))
+        candidates = (
+            f"SELECT o.product_key FROM observations AS o JOIN products AS p ON p.product_key = o.product_key "
+            f"WHERE p.retailer_key IN ({marks}) AND o.price < ?"
+        )
+        histories = _histories(conn, candidates, [*thousands_keys, THOUSANDS_DOT_LIMIT])
+        peers = _peer_references(histories, case_keys | set(thousands_keys))
+        updates, deletes, products = [], [], set()
+        for product_key, (retailer_key, key, history) in histories.items():
+            if retailer_key not in thousands_keys or all(price >= THOUSANDS_DOT_LIMIT for _, price in history):
+                continue
+            own = reference_price(price for _, price in history if price >= THOUSANDS_DOT_LIMIT)
+            peer = _peer_reference(peers, key, retailer_key)
+            for day, price in history:
+                repaired = repair_thousands(price, own, peer)
+                if repaired is None:
+                    deletes.append((product_key, day))
+                elif repaired != price:
+                    updates.append((repaired, product_key, day))
+                    products.add(product_key)
+        conn.executemany("UPDATE observations SET price = ? WHERE product_key = ? AND date = ?", updates)
+        conn.executemany("DELETE FROM observations WHERE product_key = ? AND date = ?", deletes)
+        counts[f"dotted-thousands prices repaired x1000 ({len(products):,} products)"] = len(updates)
+        counts["dotted-thousands prices dropped (unconfirmed)"] = len(deletes)
+
+    family = sorted(PLACEHOLDER_PRICES)
+    candidates = f"SELECT product_key FROM observations WHERE price IN ({','.join('?' * len(family))})"
+    histories = _histories(conn, candidates, family)
+    peers = _peer_references(histories, case_keys)
+    deletes, products, kept = [], set(), 0
+    for product_key, (retailer_key, key, history) in histories.items():
+        if not any(is_placeholder_family(price) for _, price in history):
+            continue
+        own = reference_price(price for _, price in history)
+        peer = _peer_reference(peers, key, retailer_key)
+        for day, price in history:
+            if is_placeholder(price, own, peer):
+                deletes.append((product_key, day))
+                products.add(product_key)
+            elif is_placeholder_family(price):
+                kept += 1
+    conn.executemany("DELETE FROM observations WHERE product_key = ? AND date = ?", deletes)
+    counts[f"placeholder prices dropped ({len(products):,} products)"] = len(deletes)
+    counts["999-family prices kept as real"] = kept
+    conn.commit()
+    return counts
 
 
 def ingest_raw(loader: Loader, raw_dir: Path, workers: int) -> set[str]:
@@ -692,6 +826,9 @@ def build(data_dir: Path, db_path: Path, workers: int) -> None:
         f"\nBuilt {db_path} ({size_mb:,.0f} MB): {retailers} retailers, {products:,} products, "
         f"{observations:,} observations in {time.perf_counter() - started:.0f}s"
     )
+    print("Price clean-up (domain.price_cleaning, RETAILER_ALIASES):")
+    for rule, count in loader.cleanup.items():
+        print(f"  {count:>9,}  {rule}")
 
 
 def main() -> int:
