@@ -6,12 +6,14 @@ import pandas as pd
 import pytest
 
 from inflation_dashboard.domain.prices import (
+    DETAIL_COLUMNS,
     HISTORY_COLUMNS,
     build_product_frame,
     coerce_price,
     coerce_price_series,
     first_non_empty_column,
     parse_date_from_name,
+    product_details,
 )
 
 DATE = pd.Timestamp("2026-01-15")
@@ -149,7 +151,7 @@ def test_build_product_frame_default_retailer() -> None:
     )
     result = build_product_frame(frame, "Markets / Gurmar", "price", DATE, "gurmar.csv")
 
-    assert list(result.columns) == HISTORY_COLUMNS
+    assert list(result.columns) == HISTORY_COLUMNS + DETAIL_COLUMNS
     # The bad-price row is dropped; the missing name/id fall back to each other.
     assert result["product_id"].tolist() == ["p1", "p2", "Orphan"]
     assert result["product_name"].tolist() == ["Milk", "p2", "Orphan"]
@@ -173,7 +175,7 @@ def test_build_product_frame_drops_rows_without_identity() -> None:
     frame = pd.DataFrame({"product_id": [None, "  "], "name": [None, ""], "price": [1.0, 2.0]})
     result = build_product_frame(frame, "Markets / Gurmar", "price", DATE, "f.csv")
     assert result.empty
-    assert list(result.columns) == HISTORY_COLUMNS
+    assert list(result.columns) == HISTORY_COLUMNS + DETAIL_COLUMNS
 
 
 def test_build_product_frame_houses_rent() -> None:
@@ -203,3 +205,51 @@ def test_build_product_frame_watsons() -> None:
     assert result["product_id"].tolist() == ["S1", "S2"]
     assert result["product_name"].tolist() == ["Nivea (S1)", "S2"]
     assert result["category"].tolist() == ["Nivea", "Uncategorized"]
+
+
+# --- product_details -------------------------------------------------------
+
+
+def test_product_details_from_a101_headers() -> None:
+    frame = pd.DataFrame(
+        {
+            "marka": [" Pınar ", None],
+            "ad": ["Pınar Süt 1 L", "Ekmek"],
+            "fiyat": ["49,50", "10"],
+            "normal_fiyat": ["59,50", "0"],
+            "barkod": [8690526010000.0, None],
+            "resim_url": ["https://cdn.a101.com.tr/1.jpg", "/relative.jpg"],
+            "url": ["https://www.a101.com.tr/p/1", ""],
+        }
+    )
+    details = product_details(frame, "fiyat")
+    assert list(details.columns) == DETAIL_COLUMNS
+    assert details.iloc[0].tolist() == [
+        "Pınar", "8690526010000", "https://cdn.a101.com.tr/1.jpg", "https://www.a101.com.tr/p/1", 59.5,
+    ]
+    # Missing brand, junk barcode, relative URL and a zero regular price are dropped.
+    assert details.iloc[1].isna().all()
+
+
+def test_product_details_never_reuse_the_price_column() -> None:
+    frame = pd.DataFrame({"name": ["Su"], "original_price": ["5"]})
+    assert product_details(frame, "original_price")["regular_price"].isna().all()
+    result = build_product_frame(frame, "Markets / Gurmar", "original_price", DATE, "g.csv")
+    assert result["regular_price"].isna().all()
+
+
+def test_build_product_frame_keeps_details() -> None:
+    frame = pd.DataFrame(
+        {
+            "product_name": ["Hapeloğlu Çay 1 kg"],
+            "price": ["100"],
+            "regular_price": ["120"],
+            "Product URL": ["https://hapeloglu.com/p/1"],
+            "Image URL": ["https://hapeloglu.com/i/1.jpg"],
+            "Brand": ["Çaykur"],
+            "barcode": ["86900000000001"],
+        }
+    )
+    row = build_product_frame(frame, "Markets / Hapeloglu", "price", DATE, "h.csv").iloc[0]
+    assert (row["brand"], row["barcode"], row["regular_price"]) == ("Çaykur", "86900000000001", 120.0)
+    assert (row["product_url"], row["image_url"]) == ("https://hapeloglu.com/p/1", "https://hapeloglu.com/i/1.jpg")

@@ -6,7 +6,10 @@ with every product's full price history; ``scripts/build_database.py`` loads it 
 any other partition. CSVs are parsed with the database build's own reader, folder
 labels and header aliases, so a database built from the JSON matches one built from
 the CSVs (the build keeps the last row per product and date, and a product's name and
-category from its newest row; so does this script).
+category from its newest row; so does this script). Product details scrapers send
+(``brand``, ``barcode``, ``image_url``, ``product_url``, ``regular_price``) are kept
+as optional JSON fields: the newest non-empty value of each wins, and the regular
+price only when it was sent on the product's newest date.
 
 Two uses:
 
@@ -49,10 +52,22 @@ for path in (SCRIPTS_DIR, REPO_ROOT):
 import build_database  # noqa: E402
 import data_files  # noqa: E402
 
+from inflation_dashboard.domain.prices import DETAIL_COLUMNS  # noqa: E402
+
 # Kept out of this repository even though upstream still has them (docs/DATA_CONTRACT.md).
 DROPPED_RETAILERS = frozenset({"Communication / Xiaomi", "Communication / Teknoraks"})
 
 Job = tuple[str, str, str, str]  # (absolute path, relative path, retailer label, ISO date)
+
+
+Details = dict[str, tuple[str, Any]]  # detail column -> (date, value)
+
+
+def newer_details(target: Details, source: Details) -> None:
+    """Copy into ``target`` each detail ``source`` has with a date at least as new."""
+    for column, (day, value) in source.items():
+        if column not in target or day >= target[column][0]:
+            target[column] = (day, value)
 
 
 class Layer:
@@ -60,22 +75,29 @@ class Layer:
 
     Rows are applied in file order; the last row for a product and date wins, and a
     product's name and category follow its newest-dated row (ties: the later row),
-    exactly like ``build_database.Loader``.
+    exactly like ``build_database.Loader``. Details keep their newest non-empty value.
     """
 
     def __init__(self) -> None:
         self.prices: dict[str, dict[str, float]] = {}
         self.meta: dict[str, tuple[str, str, str]] = {}  # product_id -> (date, name, category)
+        self.details: dict[str, Details] = {}
         self.ids_by_name: dict[str, set[str]] = {}  # every name a non-name id was seen with
 
-    def add(self, day: str, rows: Iterable[tuple[str, str, str, float]]) -> None:
-        for product_id, name, category, price in rows:
+    def add(self, day: str, rows: Iterable[tuple]) -> None:
+        """Apply ``(product_id, name, category, price, *details)`` rows scraped on ``day``."""
+        for product_id, name, category, price, *details in rows:
             self.prices.setdefault(product_id, {})[day] = price
             if product_id != name:
                 self.ids_by_name.setdefault(name, set()).add(product_id)
             current = self.meta.get(product_id)
             if current is None or day >= current[0]:
                 self.meta[product_id] = (day, name, category)
+            if any(value is not None for value in details):
+                newer_details(
+                    self.details.setdefault(product_id, {}),
+                    {column: (day, value) for column, value in zip(DETAIL_COLUMNS, details) if value is not None},
+                )
 
     @classmethod
     def from_json(cls, payload: dict[str, Any]) -> "Layer":
@@ -93,6 +115,10 @@ class Layer:
             )
             if layer.meta[str(product_id)][1] != str(product_id):
                 layer.ids_by_name.setdefault(layer.meta[str(product_id)][1], set()).add(str(product_id))
+            # Stored details count as seen on the product's newest date.
+            details = {c: (max(prices), product[c]) for c in DETAIL_COLUMNS if product.get(c) is not None}
+            if details:
+                layer.details[str(product_id)] = details
         return layer
 
 
@@ -123,11 +149,14 @@ def rekey_by_name(layers: list[Layer]) -> int:
                 layer.meta[product_id] = (max(kept), *layer.meta[product_id][1:])
             else:
                 del layer.prices[product_id], layer.meta[product_id]
+                layer.details.pop(product_id, None)
             moved += 1
         for product_id in [pid for pid in layer.prices if pid not in all_ids and len(ids_by_name.get(pid, ())) == 1]:
             (target,) = ids_by_name[product_id]
             prices = layer.prices.pop(product_id)
             meta = layer.meta.pop(product_id)
+            if product_id in layer.details:
+                newer_details(layer.details.setdefault(target, {}), layer.details.pop(product_id))
             merged = layer.prices.setdefault(target, {})
             for day, price in prices.items():
                 merged.setdefault(day, price)
@@ -144,7 +173,9 @@ def merge(layers: list[Layer]) -> tuple[dict[str, dict[str, Any]], Counter]:
     Returns ``(payload, stats)``; ``stats`` counts prices kept from each layer
     (``layer0``, ``layer1``, ...) and conflicts where a lower layer had a different
     price for the same product and date (``conflicts``). The newest row names the
-    product; its category is the newest one that is not ``Uncategorized``.
+    product; its category is the newest one that is not ``Uncategorized``. Each
+    detail is the newest one across layers (ties: the higher-priority layer); the
+    regular price is dropped unless it is from the product's newest date.
     """
     stats: Counter = Counter()
     prices: dict[str, dict[str, float]] = {}
@@ -169,9 +200,16 @@ def merge(layers: list[Layer]) -> tuple[dict[str, dict[str, Any]], Counter]:
             category = max(categorized, key=newest)[1][2]
         by_day = dict(sorted(prices[product_id].items()))
         values = list(by_day.values())
+        details: Details = {}
+        for layer in reversed(layers):  # higher-priority layers last, so they win ties
+            newer_details(details, layer.details.get(product_id, {}))
+        newest_day = next(reversed(by_day))
+        product = {"name": name, "category": category}
+        for column in DETAIL_COLUMNS:
+            if column in details and (column != "regular_price" or details[column][0] == newest_day):
+                product[column] = details[column][1]
         payload[product_id] = {
-            "name": name,
-            "category": category,
+            **product,
             "latest_price": values[-1],
             "min_price": min(values),
             "max_price": max(values),

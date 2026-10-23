@@ -26,6 +26,7 @@ Changing tables, indexes, views, retailer labelling, accepted file formats, head
 
 - [ ] `scripts/build_database.py`.
 - [ ] `tests/test_build_database.py`, in the same commit.
+- [ ] Title parsing or unit-price rules: `inflation_dashboard/domain/product_attributes.py` with a real title for each new case in `tests/test_product_attributes.py`, and the rules list in [DATABASE.md § Product details and unit prices](DATABASE.md#product-details-and-unit-prices).
 - [ ] [DATABASE.md](DATABASE.md): pipeline, label rules, aliases, skip reasons, schema and indexes.
 - [ ] [DATA_CONTRACT.md](DATA_CONTRACT.md): input layout and formats.
 - [ ] `inflation_dashboard/adapters/sqlite_price_repository.py` if the views it queries change.
@@ -41,7 +42,8 @@ Bringing new scraper output into `data/prices_json` or `data/inflation`:
 - [ ] For each oversized file, either `uv run python scripts/data_files.py split` (commits 80 MB `.partNNN` chunks and lists the original in the managed `.gitignore` block) or add it to `.gitignore`.
 - [ ] Never commit `*.db`, `*.db-wal`, `*.db-shm`, `.env`, cookies or browser profiles.
 - [ ] Commit and push in batches of about **500 MB**, so no single push approaches GitHub's 2 GB limit.
-- [ ] Rebuild the database and check the build summary: no `JSON ignored:` lines, and the converter's skip counts for new retailers.
+- [ ] Regenerate the brand list with `uv run python scripts/build_brand_list.py` and review its diff; corrections go in `data/matching/brand_overrides.json`.
+- [ ] Rebuild the database and check the build summary: no `JSON ignored:` lines, the converter's skip counts for new retailers, and the number of products with a unit price.
 - [ ] If the new data needs a new folder rule or header alias, follow the schema/data layout checklist above.
 - [ ] If the data layout or the import method changed, add an entry to the change history in [docs/README.md](README.md#change-history).
 

@@ -1,9 +1,10 @@
 """Price and product normalization shared by the database build and the API.
 
 Defines the canonical column vocabularies scrapers use (``PRICE_COLUMNS``,
-``ID_COLUMNS``, ``NAME_COLUMNS``, ``CATEGORY_COLUMNS``), the history row shape
-(``HISTORY_COLUMNS``) and the functions that turn one scraped CSV frame into
-normalized history rows. Framework-free: no Falcon or database imports.
+``ID_COLUMNS``, ``NAME_COLUMNS``, ``CATEGORY_COLUMNS``, ``DETAIL_HEADERS``), the
+history row shape (``HISTORY_COLUMNS``) and the functions that turn one scraped CSV
+frame into normalized history rows plus product details (``DETAIL_COLUMNS``).
+Framework-free: no Falcon or database imports.
 """
 
 from __future__ import annotations
@@ -28,6 +29,18 @@ NAME_COLUMNS = ["product-name", "product_name", "name", "Product Name", "brand",
 CATEGORY_COLUMNS = ["category", "Category", "Ana Kategori", "Rooms"]
 DATE_PATTERN = re.compile(r"(20\d{2})[-_](\d{2})[-_](\d{2})")
 HISTORY_COLUMNS = ["date", "retailer", "product_id", "product_name", "category", "price", "source_file"]
+# Optional product details some scrapers send, kept beside each history row.
+DETAIL_COLUMNS = ["brand", "barcode", "image_url", "product_url", "regular_price"]
+# Header spellings per detail, as normalized by ``header_key``, in priority order.
+DETAIL_HEADERS = {
+    "brand": ("brand", "marka", "markaadi"),
+    "barcode": ("barcode", "barkod", "barkodno", "ean", "ean13", "gtin"),
+    "image_url": ("imageurl", "image", "resimurl", "resim", "img", "imgurl", "gorsel", "gorselurl", "photourl"),
+    "product_url": ("producturl", "url", "link", "urunurl", "urunlinki", "productlink"),
+    "regular_price": (
+        "regularprice", "normalfiyat", "originalprice", "productoriginalcost", "listprice", "oldprice", "eskifiyat",
+    ),
+}
 
 
 def parse_date_from_name(name: str) -> pd.Timestamp | pd.NaT:
@@ -144,6 +157,50 @@ def coerce_price_series(series: pd.Series) -> pd.Series:
     return pd.to_numeric(out, errors="coerce")
 
 
+def header_key(column: object) -> str:
+    """Normalize a CSV header for alias matching (casefold; drop spaces, ``_``, ``-``, dotted-İ mark)."""
+    text = str(column).casefold().replace("̇", "")
+    return re.sub(r"[\s_\-]", "", text)
+
+
+def product_details(frame: pd.DataFrame, price_column: str | None = None) -> pd.DataFrame:
+    """Extract ``DETAIL_COLUMNS`` from a scraped frame (all ``NA`` where a scraper has none).
+
+    Headers are matched with :func:`header_key` against ``DETAIL_HEADERS``; the
+    column already used as the price is never the regular price. Values are cleaned:
+    brands are stripped, barcodes must be 8-14 digits, URLs must be absolute
+    ``http(s)`` links and regular prices positive numbers.
+    """
+    by_key: dict[str, object] = {}
+    for column in frame.columns:
+        if column != price_column:
+            by_key.setdefault(header_key(column), column)
+    details = pd.DataFrame(index=frame.index)
+    for detail, headers in DETAIL_HEADERS.items():
+        source = next((by_key[key] for key in headers if key in by_key), None)
+        if source is None:
+            if detail == "regular_price":
+                details[detail] = pd.Series(float("nan"), index=frame.index)
+            else:
+                details[detail] = pd.Series(pd.NA, index=frame.index, dtype="string")
+            continue
+        column = frame[source]
+        if detail == "regular_price":
+            values = coerce_price_series(column)
+            details[detail] = values.where(values > 0)
+            continue
+        if detail == "barcode" and pd.api.types.is_float_dtype(column):
+            column = column.map(lambda value: f"{value:.0f}" if pd.notna(value) else pd.NA)
+        text = column.astype("string").str.strip().str.replace(r"\s+", " ", regex=True)
+        if detail == "barcode":
+            text = text.str.replace(r"\.0$", "", regex=True)
+            text = text.where(text.str.fullmatch(r"\d{8,14}").fillna(False))
+        elif detail.endswith("_url"):
+            text = text.where(text.str.match(r"https?://").fillna(False))
+        details[detail] = text.replace("", pd.NA)
+    return details
+
+
 def first_non_empty_column(frame: pd.DataFrame, columns: list[str]) -> pd.Series:
     """Coalesce the first non-blank value per row across ``columns``, in priority order.
 
@@ -169,14 +226,14 @@ def build_product_frame(
     date_value: pd.Timestamp,
     source_file: str,
 ) -> pd.DataFrame:
-    """Normalize one scraped CSV frame into ``HISTORY_COLUMNS`` rows.
+    """Normalize one scraped CSV frame into ``HISTORY_COLUMNS`` + ``DETAIL_COLUMNS`` rows.
 
     ``HousesRent /`` frames with a ``District`` column use district + rooms as the
     product, and ``Cosmetics / Watson`` frames with ``brand`` use sku/brand;
     everything else takes the id, name and category from the canonical column
     lists (name falls back to id and vice versa; category to ``Uncategorized``).
-    Prices go through :func:`coerce_price_series`. Rows without an id, name or
-    price are dropped.
+    Prices go through :func:`coerce_price_series`; details come from
+    :func:`product_details`. Rows without an id, name or price are dropped.
     """
     # Retailer-specific layouts apply only when their columns are present; newer
     # scrapes of the same retailers use the generic name/price layout.
@@ -211,9 +268,10 @@ def build_product_frame(
             "source_file": source_file,
         }
     )
+    product_data = product_data.join(product_details(frame, price_column))
     product_data = product_data.dropna(subset=["product_id", "product_name", "price"])
     product_data = product_data[
         (product_data["product_id"].astype(str).str.strip() != "")
         & (product_data["product_name"].astype(str).str.strip() != "")
     ]
-    return product_data[HISTORY_COLUMNS]
+    return product_data[HISTORY_COLUMNS + DETAIL_COLUMNS]

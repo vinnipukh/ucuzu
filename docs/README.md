@@ -46,7 +46,7 @@ Dated material: findings reflect the code at the time they were written.
 
 Plans for agent-driven work; they describe intended changes, not current behaviour.
 
-- [../tasks/](../tasks/) — PRDs: `prd-documentation-overhaul.md` (done, except the deferred US-018) and `prd-change-history.md` (done).
+- [../tasks/](../tasks/) — PRDs: `prd-documentation-overhaul.md` (done, except the deferred US-018), `prd-change-history.md` (done) and `prd-cimri-clone.md` (in progress: the cimri-clone roadmap, one session per phase).
 - [../scripts/ralph/](../scripts/ralph/CLAUDE.md) — instructions, `prd.json` and progress log for the Ralph agent loop.
 
 ## Archive
@@ -61,6 +61,15 @@ Historical material; not current setup guidance.
 ## Change history
 
 What changed in behaviour and documentation, newest first, so a difference from older code can be checked against an intended change. Each entry names its commit; API changes per contract version are also in [FALCON_API_CONTRACT.md §9](FALCON_API_CONTRACT.md#9-changes).
+
+### 2026-10-23 — product details, title parser and unit prices (cimri clone phase 1)
+
+**Breaking / behaviour changes**
+
+- The build, `build_product_frame` and `scripts/csv_to_json.py` keep five optional product details scrapers send: `brand`, `barcode`, `image_url`, `product_url` and `regular_price` (A101, Macrocenter, Hapeloglu, Arden, Cagri, GoldenRose, DR, Nezih, Karaca and 50 more). They are new optional fields in `data/prices_json` and new `products` columns; the newest non-empty value wins, and the regular price only when it was sent on the product's newest date ([DATABASE.md § Raw CSV ingestion](DATABASE.md#raw-csv-ingestion), [DATA_CONTRACT.md § Partitioned JSON input](DATA_CONTRACT.md#partitioned-json-input-dataprices_json)). In the rebuilt database 64,567 products have a brand, 11,407 a barcode, 68,541 an image, 146,137 a store link and 66,454 a regular price. The API does not return them yet.
+- New title parser `inflation_dashboard/domain/product_attributes.py` (size, multipack, pieces, attributes, model codes, capacity vs contents) and new `products.unit_price` / `unit_price_unit`, computed by the build from `latest_price`: TL per ml, g, piece, wash, m or m² ([DATABASE.md § Product details and unit prices](DATABASE.md#product-details-and-unit-prices)). The parser finds a size in 87.2% of current Markets titles (89.8% without Tarım Kredi, whose titles are cut off); 312,549 products (64,740 current Markets offers) have a unit price.
+- New `data/matching/brands.json` (4,139 brands), built by `scripts/build_brand_list.py` from the retailers' brand columns, the Watsons brand list and first words of titles sold in 3+ stores, with reviewed corrections in `data/matching/brand_overrides.json`; regenerate it after each import ([DATA_CONTRACT.md § Matching data](DATA_CONTRACT.md#matching-data-datamatching), [SETUP.md § 4.5](SETUP.md#45-rebuild-and-check)).
+- The 59 retailers that send details were re-imported from InflationResearchStudy `7d6b8e4` (312,088 new prices). This also applied the 2026-10-23 id and category aliases to retailers not re-imported then: Gurmar, Hapeloglu, Karaca, Koctas, Nezih, DR, Chakra, Nalburcuk, Nalburadam, yapimaks, TasciYapiMarket, Huawei, Samsung, PozitifTeknoloji, HanCivata and others are now keyed by the store's own id, so their `product_id` values in the API change, and name-keyed duplicates of id-keyed products were merged (products 980,699 → 953,201).
 
 ### 2026-10-23 — categories and product ids from more scrapers
 

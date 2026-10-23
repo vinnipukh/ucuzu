@@ -11,8 +11,9 @@ Steps:
 2. Ingest every dated CSV under ``data/raw`` (TÜİK-grouped scraper output),
    labelling retailers the way the API/UI expects (``01_Food/Gurmar`` -> ``Markets / Gurmar``).
 3. Ingest ``data/prices_json`` partitions only for retailers that have no raw CSVs.
-4. Write the normalized schema (see SCHEMA), summarize products and atomically
-   replace the target.
+4. Write the normalized schema (see SCHEMA), summarize products, compute unit
+   prices from the titles (domain.product_attributes) and atomically replace the
+   target.
 
 Storage is normalized: each retailer, category, source file and product is stored
 once and ``observations`` holds only integer keys, the date and the price,
@@ -46,11 +47,14 @@ import data_files  # noqa: E402
 from inflation_dashboard.domain.catalog import name_key  # noqa: E402
 from inflation_dashboard.domain.prices import (  # noqa: E402
     CATEGORY_COLUMNS,
+    DETAIL_COLUMNS,
     ID_COLUMNS,
     NAME_COLUMNS,
     PRICE_COLUMNS,
     build_product_frame,
+    header_key,
 )
+from inflation_dashboard.domain.product_attributes import parse, unit_price  # noqa: E402
 
 DATA_DIR = REPO_ROOT / "data"
 
@@ -123,6 +127,10 @@ CREATE TABLE sources (
 -- CURRENT_WINDOW_DAYS of the newest date in the database. is_store_latest marks
 -- products whose last_date is the newest among the retailer's products with the
 -- same name_key (the store's latest prices for that item).
+-- brand, barcode, image_url and product_url are the newest non-empty values the
+-- scraper sent; regular_price (the undiscounted price) only when it was sent on
+-- last_date. unit_price is latest_price per unit_price_unit (ml, g, adet, yikama,
+-- m or m2) parsed from the title; NULL when the title has no contents size.
 CREATE TABLE products (
     product_key INTEGER PRIMARY KEY,
     retailer_key INTEGER NOT NULL REFERENCES retailers,
@@ -140,6 +148,13 @@ CREATE TABLE products (
     price_since TEXT,
     is_current INTEGER NOT NULL DEFAULT 0,
     is_store_latest INTEGER NOT NULL DEFAULT 0,
+    brand TEXT,
+    barcode TEXT,
+    image_url TEXT,
+    product_url TEXT,
+    regular_price REAL,
+    unit_price REAL,
+    unit_price_unit TEXT,
     UNIQUE (retailer_key, product_id)
 );
 -- One row per product per day, clustered so a product's history is one range read.
@@ -262,10 +277,7 @@ def retailer_stem(retailer: str) -> str:
     return stem
 
 
-def _header_key(column: object) -> str:
-    """Normalize a CSV header for alias matching (casefold; drop spaces, ``_``, ``-``, dotted-İ mark)."""
-    text = str(column).casefold().replace("̇", "")
-    return re.sub(r"[\s_\-]", "", text)
+_header_key = header_key
 
 
 def normalize_columns(frame: pd.DataFrame) -> pd.DataFrame:
@@ -305,8 +317,15 @@ def _read_csv(path: Path) -> pd.DataFrame:
     raise ValueError("undecodable")
 
 
+def _detail(value: object) -> object:
+    return None if value is None or pd.isna(value) else value
+
+
 def _ingest_file(args: tuple[str, str, str, str]) -> tuple[str, list[tuple], str | None]:
-    """Parse one CSV into (product_id, product_name, category, price) rows (worker process)."""
+    """Parse one CSV into ``(product_id, product_name, category, price, *details)`` rows (worker process).
+
+    ``details`` are the ``DETAIL_COLUMNS`` values, ``None`` where missing.
+    """
     path_str, rel, retailer, date_str = args
     try:
         frame = normalize_columns(_read_csv(Path(path_str)))
@@ -327,6 +346,7 @@ def _ingest_file(args: tuple[str, str, str, str]) -> tuple[str, list[tuple], str
             str(row.product_name).strip(),
             str(row.category or UNCATEGORIZED).strip(),
             float(row.price),
+            *(_detail(getattr(row, column)) for column in DETAIL_COLUMNS),
         )
         for row in products.itertuples(index=False)
     ]
@@ -366,6 +386,8 @@ class Loader:
         self.categories: dict[str, int] = {}
         # (retailer_key, product_id) -> [product_key, latest_date, product_name, category_key]
         self.products: dict[tuple[int, str], list] = {}
+        # product_key -> {detail: (date, value)}, the newest non-empty value per detail
+        self.details: dict[int, dict[str, tuple[str, object]]] = {}
         self.ingested_at = datetime.now(timezone.utc).isoformat()
         self.staged_rows = 0
 
@@ -375,13 +397,13 @@ class Loader:
             key = table[name] = len(table) + 1
         return key
 
-    def add(self, file_path: str, retailer: str, date_str: str, size: int, mtime: float,
-            rows: list[tuple[str, str, str, float]]) -> None:
+    def add(self, file_path: str, retailer: str, date_str: str, size: int, mtime: float, rows: list[tuple]) -> None:
         """Register one source file and stage its rows as observations.
 
         Assigns retailer, category, source and product keys; a product's name and
         category follow its latest-dated row. ``rows`` are ``(product_id, product_name,
-        category, price)`` tuples.
+        category, price, *details)`` tuples; ``details`` (``DETAIL_COLUMNS``, optional)
+        keep their newest non-empty value per product.
         """
         retailer_key = self._key(self.retailers, retailer)
         cursor = self.conn.execute(
@@ -391,7 +413,7 @@ class Loader:
         )
         source_key = cursor.lastrowid
         staged = []
-        for product_id, product_name, category, price in rows:
+        for product_id, product_name, category, price, *details in rows:
             category_key = self._key(self.categories, category)
             entry = self.products.get((retailer_key, product_id))
             if entry is None:
@@ -399,25 +421,43 @@ class Loader:
             elif date_str >= entry[1]:
                 entry[1], entry[2], entry[3] = date_str, product_name, category_key
             staged.append((entry[0], date_str, price, category_key, source_key))
+            if any(value is not None for value in details):
+                known = self.details.setdefault(entry[0], {})
+                for column, value in zip(DETAIL_COLUMNS, details):
+                    if value is not None and (column not in known or date_str >= known[column][0]):
+                        known[column] = (date_str, value)
         self.conn.executemany("INSERT INTO staging.obs VALUES (?, ?, ?, ?, ?)", staged)
         self.staged_rows += len(staged)
 
-    def finish(self) -> None:
+    def _detail_values(self, product_key: int, latest_date: str) -> tuple:
+        """A product's ``DETAIL_COLUMNS`` values; the regular price only if sent on its latest date."""
+        known = self.details.get(product_key, {})
+        values = []
+        for column in DETAIL_COLUMNS:
+            date_str, value = known.get(column, (None, None))
+            values.append(None if column == "regular_price" and date_str != latest_date else value)
+        return tuple(values)
+
+    def finish(self, workers: int = 1) -> None:
         """Write the key tables, deduplicated observations and product summaries.
 
-        Inserts retailers, categories and products, copies the staged rows into
-        ``observations`` keeping the last staged row per (product, date), then fills each
-        product's first/last date, min/max price, observation count, latest price,
-        latest price change (``previous_price``, ``price_since``), ``is_current`` and
-        ``is_store_latest``.
+        Inserts retailers, categories and products (with their details), copies the
+        staged rows into ``observations`` keeping the last staged row per (product,
+        date), then fills each product's first/last date, min/max price, observation
+        count, latest price, latest price change (``previous_price``, ``price_since``),
+        ``is_current``, ``is_store_latest`` and unit price (``write_unit_prices``).
         """
         conn = self.conn
         conn.executemany("INSERT INTO retailers VALUES (?, ?)", [(k, n) for n, k in self.retailers.items()])
         conn.executemany("INSERT INTO categories VALUES (?, ?)", [(k, n) for n, k in self.categories.items()])
+        columns = ", ".join(DETAIL_COLUMNS)
         conn.executemany(
-            "INSERT INTO products (product_key, retailer_key, product_id, product_name, name_key, category_key) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            [(e[0], rk, pid, e[2], name_key(e[2]), e[3]) for (rk, pid), e in self.products.items()],
+            f"INSERT INTO products (product_key, retailer_key, product_id, product_name, name_key, category_key, {columns}) "
+            f"VALUES (?, ?, ?, ?, ?, ?{', ?' * len(DETAIL_COLUMNS)})",
+            [
+                (e[0], rk, pid, e[2], name_key(e[2]), e[3], *self._detail_values(e[0], e[1]))
+                for (rk, pid), e in self.products.items()
+            ],
         )
         conn.commit()
         print(f"Writing observations ({self.staged_rows:,} staged rows, last row per product/day wins)...")
@@ -503,6 +543,32 @@ class Loader:
             """
         )
         conn.commit()
+        write_unit_prices(conn, workers)
+
+
+def _unit_prices(rows: list[tuple[int, str, float | None]]) -> list[tuple[float, str, int]]:
+    """``(product_key, product_name, latest_price)`` -> ``(unit_price, unit, product_key)`` (worker process)."""
+    out = []
+    for product_key, product_name, price in rows:
+        priced = unit_price(parse(product_name), price)
+        if priced:
+            out.append((priced[0], priced[1], product_key))
+    return out
+
+
+def write_unit_prices(conn: sqlite3.Connection, workers: int, chunk: int = 20_000) -> None:
+    """Fill ``products.unit_price``/``unit_price_unit`` from each title and latest price, in worker processes."""
+    print("Computing unit prices...")
+    started = time.perf_counter()
+    rows = conn.execute("SELECT product_key, product_name, latest_price FROM products").fetchall()
+    chunks = [rows[i:i + chunk] for i in range(0, len(rows), chunk)]
+    priced = 0
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        for result in pool.map(_unit_prices, chunks):
+            conn.executemany("UPDATE products SET unit_price = ?, unit_price_unit = ? WHERE product_key = ?", result)
+            priced += len(result)
+    conn.commit()
+    print(f"  {priced:,} of {len(rows):,} products have a unit price ({time.perf_counter() - started:.0f}s)")
 
 
 def ingest_raw(loader: Loader, raw_dir: Path, workers: int) -> set[str]:
@@ -540,8 +606,9 @@ def ingest_raw(loader: Loader, raw_dir: Path, workers: int) -> set[str]:
 def ingest_json_fallback(loader: Loader, json_dir: Path, covered: set[str]) -> None:
     """Load ``prices_json`` partitions for retailers not in ``covered``.
 
-    Reads only ``name``, ``category`` and ``prices`` per product and adds one
-    synthetic source row (``<file>.json#YYYY-MM-DD``) per date.
+    Reads ``name``, ``category``, ``prices`` and the optional detail fields
+    (``DETAIL_COLUMNS``, attached to the product's newest date) per product and adds
+    one synthetic source row (``<file>.json#YYYY-MM-DD``) per date.
     """
     if not json_dir.is_dir():
         return
@@ -551,13 +618,16 @@ def ingest_json_fallback(loader: Loader, json_dir: Path, covered: set[str]) -> N
             print(f"JSON ignored: {json_file.name} ({retailer} has raw CSVs; fold them in with scripts/csv_to_json.py)")
             continue
         payload = json.loads(json_file.read_text(encoding="utf-8"))
-        by_day: dict[str, list[tuple[str, str, str, float]]] = {}
+        by_day: dict[str, list[tuple]] = {}
         for product_id, product in payload.items():
             name = product.get("name") or str(product_id)
             category = product.get("category") or UNCATEGORIZED
-            for day, price in (product.get("prices") or {}).items():
-                if price is not None:
-                    by_day.setdefault(str(day), []).append((str(product_id), name, category, float(price)))
+            prices = {str(day): price for day, price in (product.get("prices") or {}).items() if price is not None}
+            details = tuple(product.get(column) for column in DETAIL_COLUMNS)
+            newest = max(prices) if prices else None
+            for day, price in prices.items():
+                row = (str(product_id), name, category, float(price))
+                by_day.setdefault(day, []).append(row + details if day == newest else row)
         # One synthetic source row per date keeps the API's newest-N-files selection meaningful.
         stat = json_file.stat()
         for day in sorted(by_day):
@@ -599,7 +669,7 @@ def build(data_dir: Path, db_path: Path, workers: int) -> None:
         loader = Loader(conn)
         covered = ingest_raw(loader, data_dir / "raw", workers)
         ingest_json_fallback(loader, data_dir / "prices_json", covered)
-        loader.finish()
+        loader.finish(workers)
         conn.execute("DETACH DATABASE staging")
         print("Creating indexes and views...")
         conn.executescript(INDEXES + VIEWS)

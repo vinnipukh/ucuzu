@@ -106,7 +106,7 @@ uv run python scripts/csv_to_json.py --source ../InflationResearchStudy/Inflatio
 For every upstream retailer it prints one line, for example `wrote Markets_Migros.json: 21,034 products, 135 dates; … 4,812 new from --source`. What it does:
 
 - Reads the upstream CSVs with the database build's own reader, so folder names, date formats and header aliases follow [Raw CSV ingestion](DATABASE.md#raw-csv-ingestion). Files the build would skip (no date, no price column, empty) are skipped and counted.
-- Adds each new product and date to `data/prices_json/<Group>_<Store>.json`, creating the file for a new store. Prices this repository already has are kept; differing upstream prices are counted as `conflicting prices ignored`. A product's name follows its newest scrape, and its category is the newest one that is not `Uncategorized`. Products an older scrape keyed by name move onto the store's own product id once the scraper writes one ([DATA_CONTRACT.md § Partitioned JSON input](DATA_CONTRACT.md#partitioned-json-input-dataprices_json)).
+- Adds each new product and date to `data/prices_json/<Group>_<Store>.json`, creating the file for a new store. Prices this repository already has are kept; differing upstream prices are counted as `conflicting prices ignored`. A product's name follows its newest scrape, and its category is the newest one that is not `Uncategorized`. Brand, barcode, image and product URLs and the regular price are kept when the scraper sends them (newest non-empty value; the regular price only from the newest scrape). Products an older scrape keyed by name move onto the store's own product id once the scraper writes one ([DATA_CONTRACT.md § Partitioned JSON input](DATA_CONTRACT.md#partitioned-json-input-dataprices_json)).
 - Folds in and deletes that retailer's remaining CSVs under `data/raw/`, which take priority over upstream. Otherwise the build would ignore the JSON file while the CSVs exist.
 - Skips the stores this repository has dropped (`DROPPED_RETAILERS` in the script: Xiaomi, Teknoraks; see [DATA_CONTRACT.md](DATA_CONTRACT.md#rules-for-committed-data)).
 
@@ -143,12 +143,13 @@ uv run python scripts/data_files.py split    # commit them as 80 MB .partNNN chu
 ### 4.5 Rebuild and check
 
 ```bash
+uv run python scripts/build_brand_list.py
 uv run python scripts/build_database.py
 uv run pytest
 uv run python scripts/verify_falcon_api.py
 ```
 
-Compare the build summary with the previous one: retailer and product counts should grow, and no `JSON ignored:` line should appear. A new store that `csv_to_json.py` skipped as `undated or unlabelled` or `no price column` needs a folder rule or a header alias in `scripts/build_database.py` (with a test in `tests/test_build_database.py`); see the schema/data layout checklist in [DEVELOPMENT.md](DEVELOPMENT.md).
+`build_brand_list.py` regenerates `data/matching/brands.json` from the new data; review new brands in its diff and put corrections in `data/matching/brand_overrides.json` ([DATA_CONTRACT.md § Matching data](DATA_CONTRACT.md#matching-data-datamatching)). Compare the build summary with the previous one: retailer and product counts should grow, no `JSON ignored:` line should appear, and the `products have a unit price` count should not drop. A new store that `csv_to_json.py` skipped as `undated or unlabelled` or `no price column` needs a folder rule or a header alias in `scripts/build_database.py` (with a test in `tests/test_build_database.py`); see the schema/data layout checklist in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ### 4.6 Commit in batches
 

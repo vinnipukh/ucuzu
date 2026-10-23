@@ -213,3 +213,32 @@ def test_split_and_join_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     # Re-splitting keeps a single managed .gitignore block.
     data_files.split(data)
     assert (tmp_path / ".gitignore").read_text(encoding="utf-8").count(data_files.BLOCK_START) == 1
+
+
+def test_build_stores_product_details_and_unit_prices(tmp_path: Path) -> None:
+    raw = tmp_path / "raw" / "01_Food" / "A101"
+    raw.mkdir(parents=True)
+    header = "urun_id,marka,ad,fiyat,normal_fiyat,barkod,resim_url,url\n"
+    (raw / "a101_2026-01-01.csv").write_text(
+        header
+        + "1,Pınar,Pınar Süt 1 L,50,60,8690526010000,https://a.com/1.jpg,https://a.com/1\n"
+        + "2,,Yumurta 30'lu,150,,,,\n"
+        + "3,,Oje 112,40,,,,\n",
+        encoding="utf-8",
+    )
+    # The regular price of product 1 was only sent on the first day, so it is not current.
+    (raw / "a101_2026-01-02.csv").write_text(header + "1,Pınar,Pınar Süt 1 L,45,,,,\n", encoding="utf-8")
+    db_path = tmp_path / "prices.db"
+
+    build_database.build(tmp_path, db_path, workers=1)
+
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute(
+            "SELECT product_id, brand, barcode, image_url, product_url, regular_price, unit_price, unit_price_unit "
+            "FROM products ORDER BY product_id"
+        ).fetchall()
+    assert rows == [
+        ("1", "Pınar", "8690526010000", "https://a.com/1.jpg", "https://a.com/1", None, pytest.approx(0.045), "ml"),
+        ("2", None, None, None, None, None, pytest.approx(5.0), "adet"),
+        ("3", None, None, None, None, None, None, None),
+    ]

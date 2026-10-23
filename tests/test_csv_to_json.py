@@ -182,3 +182,45 @@ def test_retailer_stem_round_trip(stem: str, label: str) -> None:
 def test_retailer_stem_rejects_labels_that_cannot_round_trip(label: str) -> None:
     with pytest.raises(ValueError):
         build_database.retailer_stem(label)
+
+
+def _products(db_path: Path) -> list[tuple]:
+    with sqlite3.connect(db_path) as conn:
+        return conn.execute(
+            "SELECT product_id, brand, barcode, image_url, product_url, regular_price, unit_price, unit_price_unit "
+            "FROM products ORDER BY product_id"
+        ).fetchall()
+
+
+def test_source_import_keeps_the_newest_product_details(tmp_path: Path) -> None:
+    data = tmp_path / "data"
+    upstream = tmp_path / "upstream" / "01_Food" / "Hap"
+    header = "product_id,product_name,price,regular_price,Brand,product_url,image_url\n"
+    _write(upstream / "hap_2026-01-01.csv", header + "1,Çay 1 kg,100,120,Çaykur,https://h.com/1,https://h.com/1.jpg\n")
+    # A newer row without a brand keeps the old brand; its URL replaces the old one. No regular price that day.
+    _write(upstream / "hap_2026-01-02.csv", header + "1,Çay 1 kg,90,,,https://h.com/1b,\n")
+
+    assert csv_to_json.convert(data, [tmp_path / "upstream"], None, workers=1) == 0
+
+    hap = json.loads((data / "prices_json" / "Markets_Hap.json").read_text(encoding="utf-8"))
+    assert hap["1"] == {
+        "name": "Çay 1 kg",
+        "category": "Uncategorized",
+        "brand": "Çaykur",
+        "image_url": "https://h.com/1.jpg",
+        "product_url": "https://h.com/1b",
+        "latest_price": 90.0,
+        "min_price": 90.0,
+        "max_price": 100.0,
+        "prices": {"2026-01-01": 100.0, "2026-01-02": 90.0},
+    }
+
+    # A later import with a regular price on the newest day keeps it; the database gets every detail.
+    _write(upstream / "hap_2026-01-03.csv", header + "1,Çay 1 kg,80,95,Çaykur,,\n")
+    assert csv_to_json.convert(data, [tmp_path / "upstream"], None, workers=1) == 0
+    hap = json.loads((data / "prices_json" / "Markets_Hap.json").read_text(encoding="utf-8"))
+    assert hap["1"]["regular_price"] == 95.0
+    build_database.build(data, tmp_path / "prices.db", workers=1)
+    assert _products(tmp_path / "prices.db") == [
+        ("1", "Çaykur", None, "https://h.com/1.jpg", "https://h.com/1b", 95.0, pytest.approx(0.08), "g"),
+    ]

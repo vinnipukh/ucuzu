@@ -1,0 +1,30 @@
+{
+  "add": [
+    "Air Wick",
+    "Ben & Jerry's",
+    "Carte D'Or",
+    "Coca-Cola",
+    "Dr. Oetker",
+    "Giorgio Armani",
+    "Golden Rose",
+    "Head & Shoulders",
+    "Jack Daniel's",
+    "Johnson's Baby",
+    "La Lorraine",
+    "La Roche-Posay",
+    "Michael Kors",
+    "Mr. Muscle",
+    "Tommy Hilfiger"
+  ],
+  "remove": [
+    "ad", "adapt", "admire", "alman", "approach", "asparagus", "ataturk", "audio", "babe", "backpack", "balyoz",
+    "bee", "ben", "camsakizi", "cipura", "climate", "comfy", "cooker", "cooler", "cotton", "d a", "de", "dereotu",
+    "designer", "dr", "electro", "electronics", "es", "evidence", "five", "from", "gamer", "general", "handheld",
+    "headphone", "ideal", "image", "insight", "istanbul", "izmir", "jumbo", "kameralar", "karabina",
+    "karbonmonoksit", "karnabahar", "kasmir", "kazma", "kivrik", "l m", "la", "labor", "levrek", "magic",
+    "masaustu", "method", "mic", "mission", "movie", "mr", "musmula", "nigde", "ny", "pacasi", "pirasa",
+    "programlanabilir", "push", "qu", "ra", "radio", "rebuilding", "repeat", "retractable", "rozmarin", "saksuka",
+    "sarmal", "semizotu", "service", "shaver", "shoulder", "some", "spider", "sub", "summit", "system", "tere",
+    "tuna", "tune", "uretici", "vacuum", "vinil", "wet", "yanlari", "yoresel", "yu", "zimbali"
+  ]
+}

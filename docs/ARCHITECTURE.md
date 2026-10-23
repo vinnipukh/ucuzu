@@ -25,8 +25,9 @@ flowchart LR
 
 ```text
 inflation_dashboard/
-  domain/prices.py                 price/date normalization, HISTORY_COLUMNS
+  domain/prices.py                 price/date normalization, HISTORY_COLUMNS, product details (brand, barcode, URLs, regular price)
   domain/catalog.py                catalog rules: name_key (cross-store item match), split_retailer, excluded groups
+  domain/product_attributes.py     title parser (brand, size, pack, attributes, model codes) and unit prices
   application/use_cases.py         history, averages, movers, coverage calculations (pandas)
   application/chart_specs.py       column contracts for each response table
   application/epeykatfg_monthly.py reads the EpeyKatfg monthly inflation CSV
@@ -40,6 +41,7 @@ scripts/
   run_falcon_server.py             launcher (Granian / Gunicorn / Waitress)
   build_database.py                builds data/prices.db from data/
   csv_to_json.py                   merges scraper CSVs into the per-retailer data/prices_json files
+  build_brand_list.py              builds data/matching/brands.json for the title parser
   data_files.py                    split/join/check files over the 85 MB limit
   verify_falcon_api.py             in-process API smoke and boundary checks
   test_sqlite_adapter.py, test_new_endpoints.py, benchmark_*.py   manual tooling
